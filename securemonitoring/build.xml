@@ -17,8 +17,7 @@
   
     <!-- prefix for all environment variables -->
     <property environment="env"/>
-    <property name="cougaar.install.path" value="${env.COUGAAR_INSTALL_PATH}"/>
-    <property name="cougaar.workspace" value="${env.COUGAAR_WORKSPACE}"/>
+
     <property name="securityservices.base" value="."/>
     <property name="securityservices.sys" value="${securityservices.base}${file.separator}sys"/>
     <property name="securityservices.lib" value="${securityservices.base}${file.separator}lib"/>
@@ -47,11 +46,32 @@
     <!-- Import the custom build file -->
     <import file="${custom.build.file}" optional="true"/>
 
-    <target name="tstamp" depends="checkversion">
+    <target name="init-prop" depends="ant-contrib-setup"> 
+      <if>
+        <isset property="anthill.cougaar.branch.name"/>
+        <then>
+          <!-- For anthill integration -->
+          <!-- The branch name of the Cougaar Standard Edition -->
+          <property name="branch.name" value="${anthill.cougaar.branch.name}"/>
+          <!-- The parent directory of org.cougaar.install.path -->
+          <property name="org.cougaar.install.path.parent" value="${user.home}/nightly-cougaar"/>
+          <property name="cougaar.install.path" value="${org.cougaar.install.path.parent}/${branch.name}/cip"/>
+          <mkdir dir="${cougaar.install.path}"/>
+          <property name="cougaar.workspace" value="${cougaar.install.path}/workspace"/>
+        </then>
+        <else>
+          <property name="cougaar.install.path" value="${env.COUGAAR_INSTALL_PATH}"/>
+          <property name="cougaar.workspace" value="${env.COUGAAR_WORKSPACE}"/>
+        </else>
+      </if>
+      <echo message="CIP=${cougaar.install.path}"/>
+    </target> 
+
+    <target name="tstamp" depends="checkversion, ant-contrib-setup, init-prop">
         <tstamp>
             <format property="currentTime" pattern="MM/dd/yyyy hh:mm:ss"/>
         </tstamp>
-        <echo message="Build started at ${currentTime} - CIP=${cougaar.install.path}"/>
+        <echo message="Build started at ${currentTime}"/>
     </target>
 
     <target name="checkversion">
@@ -74,7 +94,7 @@
               if="vm.version.incorrect"/>
     </target>
 
-    <target name="ant-contrib-setup" depends="tstamp" unless="ant.contrib.ext.loaded">
+    <target name="ant-contrib-setup" unless="ant.contrib.ext.loaded">
         <taskdef resource="net/sf/antcontrib/antcontrib.properties">
           <classpath>
              <pathelement location="${securityservices.base}/build/lib/ant-contrib-1.0b1.jar"/>
@@ -83,7 +103,7 @@
         <property name="ant.contrib.ext.loaded" value="true"/>
     </target>
 
-    <target name="init" depends="tstamp, ant-contrib-setup">
+    <target name="init" depends="tstamp, ant-contrib-setup, init-prop">
     	<echo message="Initializing ${project.description} build..."/>
         <mkdir dir="${securityservices.classes}"/>
         <mkdir dir="${securityservices.signed}"/>
@@ -550,7 +570,7 @@
             failonerror="true"/>
     </target>
 
-    <target name="interactive" depends="ant-contrib-setup">
+    <target name="interactive" depends="tstamp">
        <dirname property="current.directory.name" file="${securityservices.base}/build.xml"/>
        <echo level="info" message="${current.directory.name}"/>
        <basename property="current.module.name" file="${current.directory.name}"/>
