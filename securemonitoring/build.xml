@@ -426,7 +426,49 @@
              </sequential>
            </for>
          </case>
-         <case value="8">
+          <case value="8">
+          <!-- binary distribution, zip everything in staging -->
+          <if>
+            <equals arg1="installer" arg2="${current.module.name}"/>
+            <then>
+              <echo message="Installer has no binary distribution"/>
+            </then>
+            <else>
+              <for list="${module.build.list}" delimiter="," param="build.module.name">
+                <sequential>
+                  <!-- <input message="Enter the version of the @{build.module.name} module:" addproperty="module.version"/> -->
+                  <!-- <zip zipfile="${project.name}${module.version}.zip" basedir="staging"/> -->
+                  <antcall target="call-ant-submodule">
+                    <param name="ant.target.name" value="create-binary-dist"/>
+                    <param name="build.module.name" value="@{build.module.name}"/>
+                  </antcall>
+                </sequential>
+              </for>
+            </else>
+          </if>
+         </case>
+         <case value="9">
+         <!-- source distribution -->
+         <!-- zip build, build.properties, build.xml, custom-build.xml, lib, src, test -->
+          <if>
+            <equals arg1="installer" arg2="${current.module.name}"/>
+            <then>
+              <echo message="Installer has no source distribution"/>
+            </then>
+            <else>
+               <for list="${module.build.list}" delimiter="," param="build.module.name">
+                 <sequential>
+                   <!-- <input message="Enter the version of the @{build.module.name} module:" addproperty="module.version"/> -->
+                   <antcall target="call-ant-submodule">
+                    <param name="ant.target.name" value="create-src-dist"/>
+                    <param name="build.module.name" value="@{build.module.name}"/>
+                   </antcall>
+                 </sequential>
+               </for>
+             </else>
+           </if>
+         </case>
+         <case value="10">
            <for list="${module.subordinates}" delimiter="," param="build.module.name">
              <sequential>
                 <echo message="Copying build.xml file to ${securityservices.base}/../@{build.module.name}"/>
@@ -435,7 +477,7 @@
              </sequential>
            </for>
          </case>
-         <case value="9">
+         <case value="11">
            <input message="Enter commit message:" addproperty="commit.message"/>
            <antcall target="commit-build-file">
              <param name="build.module.name" value="installer"/>
@@ -494,13 +536,21 @@
        <echo level="info" message="7: Invoke 'ant clean' on all modules listed above."/>
        <if>
          <equals arg1="installer" arg2="${current.module.name}"/>
-         <then>
-           <echo level="info" message="8: Copy            build.xml to all other modules"/>
-           <echo level="info" message="9: Copy and commit build.xml to all other modules"/>
-           <input message="Enter your choice:" validargs="1,2,3,4,5,6,7,8,9" addproperty="build.choice"/>
+         <then>  
+           <echo level="info" message="8: Create binary distribution for all modules."/>
+           <echo level="info" message="     The modules listed above must have been checked out and built previously."/>
+           <echo level="info" message="9: Create source distribution for all modules."/>
+           <echo level="info" message="     The modules listed above must have been checked out previously."/>
+           <echo level="info" message="10: Copy            build.xml to all other modules"/>
+           <echo level="info" message="11: Copy and commit build.xml to all other modules"/>
+           <input message="Enter your choice:" validargs="1,2,3,4,5,6,7,8,9,10,11" addproperty="build.choice"/>
          </then>
          <else>
-           <input message="Enter your choice:" validargs="1,2,3,4,5,6,7" addproperty="build.choice"/>
+           <echo level="info" message="8: Create binary distribution for ${current.module.name}."/>
+           <echo level="info" message="     The modules listed above must have been checked out and built previously."/>
+           <echo level="info" message="9: Create source distribution for ${current.module.name}."/>
+           <echo level="info" message="     The modules listed above must have been checked out previously."/>
+           <input message="Enter your choice:" validargs="1,2,3,4,5,6,7,8,9" addproperty="build.choice"/>
          </else>
        </if>
        <antcall target="process-interactive-command"/>
@@ -515,7 +565,7 @@
             packagenames="edu.*, org.cougaar.core.security.*" 
             excludepackagenames="org.cougaar.core.security.test.*"
             author="true" version="true"/>
-	<zip zipfile="${securityservices.staging}/${project.name}-docs.zip" basedir="${securityservices.docdir}"/>	
+	      <zip zipfile="${securityservices.staging}/${project.name}-docs.zip" basedir="${securityservices.docdir}"/>	
         <echo message="Generated JavaDocs"/>
     </target>
 	
@@ -584,6 +634,40 @@
             storepass="keystore" verbose="false"/>
 
     </target>
+    
+    <target name="create-binary-dist">
+      <input message="Enter the version of the ${project.name} module:" addproperty="module.version"/>
+      <if>
+        <available file="${securityservices.staging}" type="dir"/>
+        <then>
+          <!-- copy the depended modules into the staging area.  staging dir is cleaned up prior
+               to creating a zip file, so there isn't a need to remove it -->
+          <copy todir="${securityservices.staging}/lib"
+              failonerror="false">
+            <fileset dir="${securityservices.lib}/security">
+                <patternset>
+                    <include name="*.jar"/>
+                </patternset>
+            </fileset>
+          </copy>
+          <echo message="creating binary distribution for ${project.name} v${module.version}"/>
+          <zip zipfile="${project.name}${module.version}.zip" basedir="${securityservices.staging}"/>
+        </then>
+        <else>
+          <echo level="error" message="staging directory does not exist.  Please build ${project.name} before creating binary distribution."/>
+        </else>
+      </if>
+    </target>
+    
+    <target name="create-src-dist">
+      <input message="Enter the version of the ${project.name} module:" addproperty="module.version"/>
+    <!-- zip build, build.properties, build.xml, custom-build.xml, lib, src, test -->
+      <echo message="creating source distribution for ${project.name} v${module.version}"/>
+      <zip zipfile="${project.name}${module.version}-src.zip" basedir="."
+        includes="build/**, build.properties, build.xml, custom-build.xml, doc/**, lib/**, src/**, test/**"
+        excludes="**/CVS"/>
+    </target>
+    
 </project>
 
 <!-- End Cougaar securityservices ant build script -->
