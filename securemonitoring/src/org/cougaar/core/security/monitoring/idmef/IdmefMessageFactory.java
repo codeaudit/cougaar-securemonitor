@@ -26,7 +26,6 @@
 package org.cougaar.core.security.monitoring.idmef;
 
 // java packages
-import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.security.monitoring.plugin.SensorInfo;
 import org.cougaar.core.security.util.SystemUtils;
@@ -209,7 +208,6 @@ final public class IdmefMessageFactory {
     String agentName = "unknown";
     Address agentAddress = null;
         
-    m_ldm = ldm;
     m_osName = System.getProperty( "os.name" );
     m_osVersion = System.getProperty( "os.version" ); 
       
