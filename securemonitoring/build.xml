@@ -378,6 +378,17 @@
            <antcall target="install"/>
          </case>
          <case value="7">
+           <for list="${module.build.list}" delimiter="," param="build.module.name">
+             <sequential>
+               <ant antfile="build.xml"
+                    dir="${securityservices.base}/../@{build.module.name}"
+                    inheritAll="false"
+                    target="clean">
+               </ant>
+             </sequential>
+           </for>
+         </case>
+         <case value="8">
            <for list="${module.subordinates}" delimiter="," param="build.module.name">
              <sequential>
                 <echo message="Copying build.xml file to ${securityservices.base}/../@{build.module.name}"/>
@@ -423,14 +434,15 @@
        <echo level="info" message="4: Update and build the modules listed above."/>
        <echo level="info" message="5: Update, build and install the modules listed above."/>
        <echo level="info" message="6: Build and install current module (${current.module.name}) only."/>
+       <echo level="info" message="7: Invoke 'ant clean' on all modules listed above."/>
        <if>
          <equals arg1="installer" arg2="${current.module.name}"/>
          <then>
-           <echo level="info" message="7: Copy and commit build.xml to all other modules"/>
-           <input message="Enter your choice:" validargs="1,2,3,4,5,6,7" addproperty="build.choice"/>
+           <echo level="info" message="8: Copy and commit build.xml to all other modules"/>
+           <input message="Enter your choice:" validargs="1,2,3,4,5,6,7,8" addproperty="build.choice"/>
          </then>
          <else>
-           <input message="Enter your choice:" validargs="1,2,3,4,5,6" addproperty="build.choice"/>
+           <input message="Enter your choice:" validargs="1,2,3,4,5,6,7" addproperty="build.choice"/>
          </else>
        </if>
        <antcall target="process-interactive-command"/>
@@ -452,8 +464,12 @@
     <!-- Delete the ant-generated and $CIP/workspace directory -->
     <target name="clean">
         <echo message="+++++ Cleaning environment"/>
-        <delete dir="${securityservices.classes}" includeEmptyDirs="true" quiet="true"/>
-        <delete dir="${securityservices.output}" includeEmptyDirs="true" quiet="true"/>
+        <delete dir="${securityservices.classes}"  includeEmptyDirs="true" quiet="true"/>
+        <delete dir="${securityservices.output}"   includeEmptyDirs="true" quiet="true"/>
+        <delete dir="${securityservices.regress}"  includeEmptyDirs="true" quiet="true"/>
+        <delete dir="${securityservices.staging}"  includeEmptyDirs="true" quiet="true"/>
+        <delete dir="${securityservices.base}" quiet="true"
+                includes="*.zip"/>
         <delete dir="${cougaar.workspace}" includeEmptyDirs="true" quiet="true"/>
         <echo message="+++++ Cleaned environment"/>
     </target>
