@@ -78,12 +78,6 @@
         </else>
       </if>
 
-      <!-- Base class path -->
-      <path id="base.core.class.path">    
-          <pathelement location="${cougaar.install.path}/sys/log4j.jar"/>
-          <path refid="dependency.artificats.dir.path"/>
-      </path>
-
       <!-- prefix for all environment variables -->
       <property environment="env"/>
       <property name="securityservices.sys" value="${securityservices.base}${file.separator}sys"/>
@@ -126,6 +120,13 @@
         </else>
       </if>
       <echo message="CIP=${cougaar.install.path}"/>
+
+      <!-- Base class path -->
+      <path id="base.core.class.path">    
+          <path refid="dependency.artificats.dir.path"/>
+          <pathelement location="${cougaar.install.path}/sys/log4j.jar"/>
+      </path>
+
     </target> 
 
     <target name="tstamp" depends="checkversion, ant-contrib-setup, init-prop">
