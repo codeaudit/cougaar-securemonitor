@@ -106,7 +106,7 @@ public abstract class QueryBase extends ComponentPlugin {
           getServiceBroker().getService(this, LoggingService.class, null); 
       }
       _csu = new CommunityServiceUtil(getServiceBroker());
-      if (enableMnR.equals("1")) {
+      if (enableMnR != null && enableMnR.equals("1")) {
         return;
       }
       _csu.amIRoot(new RootListener());
