@@ -38,7 +38,10 @@
     <!-- The base directories where the regression test result files are located -->
     <property name="securityservices.results" value="${securityservices.regress}${file.separator}results"/>
 
-    <property file="build.properties"/>
+    <dirname property="imported.basedir" file="${ant.file.imported}"/>
+    <property file="${imported.basedir}/build.properties"/>
+
+    <!-- <echo message="Loaded ${imported.basedir}/build.properties: ${module.superiors}"/> -->
     <!-- The name of a custom build file -->
     <property name="custom.build.file" value="custom-build.xml"/>
     <!-- Import the custom build file -->
@@ -288,8 +291,7 @@
     	   file="${securityservices.staging}/Manifest/${project.name}.txt"/>
      	<echo message="#### Building Zip file"/>
 	<zip zipfile="${project.name}.zip" basedir="staging"/>	
-        <echo message="+++++ Generated ZIP file"/>
-        <echo message="Cougaar security services Build Complete"/>
+        <echo message="#### Generated ZIP file"/>
     </target>
 
     <!-- The INSTALL target does everything but cvs-update and javadoc -->
@@ -317,9 +319,12 @@
        <echo message="******************** Building: ${securityservices.base}/../${build.module.name}"/>
        <antcall target="call-ant-submodule">
        </antcall>
+    </target>
+
+    <target name="update-superiors">
        <echo message="Copying jar file to superior modules: ${module.superiors}"/>
        <for list="${module.superiors}" delimiter="," param="build.module.superior.name">
-         <sequential>
+          <sequential>
             <echo message="Copying jar file to @{build.module.superior.name}/lib/security module"/>
             <copy todir="${securityservices.base}/../@{build.module.superior.name}/lib/security">
                <fileset dir="${securityservices.base}/output/signed">
@@ -329,8 +334,13 @@
                  </patternset>
               </fileset>
             </copy>
-         </sequential>
+          </sequential>
        </for>
+    </target>
+
+    <target name="all-and-update-superiors" depends="all, update-superiors">
+    </target>
+    <target name="install-and-update-superiors" depends="install, update-superiors">
     </target>
 
     <!-- Check out (or update if module has already been checked out) a security services module
@@ -359,35 +369,47 @@
        <switch value="${build.choice}">
          <case value="1">
            <!-- Update modules -->
-           <foreach list="${module.build.list}" delimiter="," target="update-module" param="build.module.name">
+           <foreach list="${module.build.list}" delimiter="," target="update-module"
+                    param="build.module.name" inheritall="true">
            </foreach>
          </case>
          <case value="2">
            <!-- Build modules. The modules should have been previously checked out. -->
-           <foreach list="${module.build.list}" delimiter="," target="build-module" param="build.module.name">
-             <param name="ant.target.name" value="all"/>
-           </foreach>
+           <for list="${module.build.list}" delimiter="," param="build.module.name">
+             <sequential>
+               <antcall target="build-module">
+                  <param name="ant.target.name" value="all-and-update-superiors"/>
+                  <param name="build.module.name" value="@{build.module.name}"/>
+               </antcall>
+             </sequential>
+             <!-- <param name="module.superiors" value="${module.superiors}"/> -->
+           </for>
          </case>
          <case value="3">
            <!-- Build and install modules. The modules should have been previously checked out. -->
-           <foreach list="${module.build.list}" delimiter="," target="build-module" param="build.module.name">
-             <param name="ant.target.name" value="install"/>
+           <foreach list="${module.build.list}" delimiter="," target="build-module"
+                    param="build.module.name" inheritall="true">
+             <param name="ant.target.name" value="install-and-update-superiors"/>
            </foreach>
          </case>
          <case value="4">
            <!-- Update and build modules. -->
-           <foreach list="${module.build.list}" delimiter="," target="update-module" param="build.module.name">
+           <foreach list="${module.build.list}" delimiter="," target="update-module"
+                    param="build.module.name" inheritall="true">
            </foreach>
-           <foreach list="${module.build.list}" delimiter="," target="build-module" param="build.module.name">
-             <param name="ant.target.name" value="all"/>
+           <foreach list="${module.build.list}" delimiter="," target="build-module"
+                    param="build.module.name" inheritall="true">
+             <param name="ant.target.name" value="all-and-update-superiors"/>
            </foreach>
          </case>
          <case value="5">
            <!-- Update, build and install modules. -->
-           <foreach list="${module.build.list}" delimiter="," target="update-module" param="build.module.name">
+           <foreach list="${module.build.list}" delimiter="," target="update-module"
+                    param="build.module.name" inheritall="true">
            </foreach>
-           <foreach list="${module.build.list}" delimiter="," target="build-module" param="build.module.name">
-             <param name="ant.target.name" value="install"/>
+           <foreach list="${module.build.list}" delimiter="," target="build-module"
+                    param="build.module.name" inheritall="true">
+             <param name="ant.target.name" value="install-and-update-superiors"/>
            </foreach>
          </case>
          <case value="6">
@@ -404,21 +426,27 @@
            </for>
          </case>
          <case value="8">
-           <input message="Enter commit message:" addproperty="commit.message"/>
-           <cvs cvsRoot="${env.CVSROOT}" cvsRsh="${env.CVS_RSH}"
-                command="-q commit -m '${commit.message}' build.xml"
-                dest="${securityservices.base}"
-                failonerror="true">
-           </cvs>
            <for list="${module.subordinates}" delimiter="," param="build.module.name">
              <sequential>
                 <echo message="Copying build.xml file to ${securityservices.base}/../@{build.module.name}"/>
                 <copy toDir="${securityservices.base}/../@{build.module.name}"
                       file="build.xml"/>
-                <cvs cvsRoot="${env.CVSROOT}" cvsRsh="${env.CVS_RSH}"
-                      command="-q commit -m '${commit.message}' build.xml"
-                      dest="${securityservices.base}/../@{build.module.name}"
-                      failonerror="true"/>
+             </sequential>
+           </for>
+         </case>
+         <case value="9">
+           <input message="Enter commit message:" addproperty="commit.message"/>
+           <antcall target="commit-build-file">
+             <param name="build.module.name" value="installer"/>
+           </antcall>
+           <for list="${module.subordinates}" delimiter="," param="build.module.name">
+             <sequential>
+                <echo message="Copying build.xml file to ${securityservices.base}/../@{build.module.name}"/>
+                <copy toDir="${securityservices.base}/../@{build.module.name}"
+                      file="build.xml"/>
+                <antcall target="commit-build-file">
+                   <param name="build.module.name" value="@{build.module.name}"/>
+                </antcall>
              </sequential>
            </for>
          </case>
@@ -426,6 +454,13 @@
             <fail message="The value of property build.choice is invalid"/>
          </default>
        </switch>
+    </target>
+
+    <target name="commit-build-file">
+       <cvs cvsRoot="${env.CVSROOT}" cvsRsh="${env.CVS_RSH}"
+            command="-q commit -m '${commit.message}' build.xml"
+            dest="${securityservices.base}/../${build.module.name}"
+            failonerror="true"/>
     </target>
 
     <target name="interactive" depends="ant-contrib-setup">
@@ -459,8 +494,9 @@
        <if>
          <equals arg1="installer" arg2="${current.module.name}"/>
          <then>
-           <echo level="info" message="8: Copy and commit build.xml to all other modules"/>
-           <input message="Enter your choice:" validargs="1,2,3,4,5,6,7,8" addproperty="build.choice"/>
+           <echo level="info" message="8: Copy            build.xml to all other modules"/>
+           <echo level="info" message="9: Copy and commit build.xml to all other modules"/>
+           <input message="Enter your choice:" validargs="1,2,3,4,5,6,7,8,9" addproperty="build.choice"/>
          </then>
          <else>
            <input message="Enter your choice:" validargs="1,2,3,4,5,6,7" addproperty="build.choice"/>
