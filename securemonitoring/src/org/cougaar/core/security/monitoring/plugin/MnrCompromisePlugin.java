@@ -378,34 +378,41 @@ public class MnrCompromisePlugin extends ComponentPlugin {
       }
 
       // check for coordinator action
-    if (task.getVerb().toString().equals(REVOKE_SESSION_KEYS_VERB)) {
-      String coordinatorOn = System.getProperty("org.cougaar.core.security.coordinatorOn");
-      if (coordinatorOn != null && coordinatorOn.equalsIgnoreCase("true")) {
+      if (task.getVerb().toString().equals(REVOKE_AGENT_CERT_VERB)) {
+        String coordinatorOn = System.getProperty("org.cougaar.core.security.coordinatorOn");
+        if (coordinatorOn != null && coordinatorOn.equalsIgnoreCase("true")) {
           // signal compromise to AgentCompromiseSensor
           // sendDiagnosis
-        if (logging.isDebugEnabled()) {
-          logging.debug("Informing coordinator that agent restart completed.");
+          if (logging.isDebugEnabled()) {
+            logging.debug("Informing coordinator that agent restart completed.");
+          }
+
+          PrepositionalPhrase pp = task.getPrepositionalPhrase(BlackboardCompromise.FOR_AGENT_PREP);
+          String agent = (String) pp.getIndirectObject();
+          AgentCompromiseInfo info = new AgentCompromiseInfo(
+          AgentCompromiseInfo.COMPLETION_CODE, agent, AgentCompromiseInfo.COMPLETED);
+          getBlackboardService().publishAdd(info);
         }
-
-        PrepositionalPhrase pp = task.getPrepositionalPhrase(BlackboardCompromise.FOR_AGENT_PREP);
-        String agent = (String) pp.getIndirectObject();
-        AgentCompromiseInfo info = new AgentCompromiseInfo(
-        AgentCompromiseInfo.COMPLETION_CODE, agent, AgentCompromiseInfo.COMPLETED);
-        getBlackboardService().publishAdd(info);
       }
-    }
 
-      PlanningFactory ldm = (PlanningFactory) domainService.getFactory(
-        "planning");
-      AspectValue[] values = new AspectValue[1];
-      values[0] = AspectValue.newAspectValue(AspectType.END_TIME,
+      try {
+        getBlackboardService().publishRemove(sdr);
+
+        PlanningFactory ldm = (PlanningFactory) domainService.getFactory(
+          "planning");
+        AspectValue[] values = new AspectValue[1];
+        values[0] = AspectValue.newAspectValue(AspectType.END_TIME,
                                              (double) System.currentTimeMillis());
-      AllocationResult allocResult = ldm.newAllocationResult(1.0, true,
+        AllocationResult allocResult = ldm.newAllocationResult(1.0, true,
                                                              values);
-      Disposition disp = ldm.createDisposition(task.getPlan(), task,
+        Disposition disp = ldm.createDisposition(task.getPlan(), task,
                                                allocResult);
-      getBlackboardService().publishAdd(disp);
-      getBlackboardService().publishRemove(sdr);
+        getBlackboardService().publishAdd(disp);
+      }
+      catch (Exception ex) {
+        logging.warn("Exception for adding disposition: " + ex);
+        logging.warn("The disposition may already been published, this is the case for multiple CA and PM");
+      }
     }
   }
 
