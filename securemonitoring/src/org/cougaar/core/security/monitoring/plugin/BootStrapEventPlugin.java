@@ -44,8 +44,8 @@ import java.util.Observer;
 
 public class BootStrapEventPlugin extends SensorPlugin implements Observer {  
   /*
-  private Condition sensorCondition;
-  private int numberOfEvents = 0;
+    private Condition sensorCondition;
+    private int numberOfEvents = 0;
   */
   private SensorInfo _sensorInfo;
   private ThreadService _threadService;
@@ -65,6 +65,7 @@ public class BootStrapEventPlugin extends SensorPlugin implements Observer {
   }
   
   protected void execute() {
+    super.execute();
   }
 
   public void setThreadService(ThreadService ts) {
@@ -195,29 +196,29 @@ public class BootStrapEventPlugin extends SensorPlugin implements Observer {
   // This condition is used to test the adaptivity engine
   // A realistic condition should be developed.
   static class BootstrapEventCondition
-    implements Condition
+  implements Condition
   {
-    Double _rate;
-    static final OMCRangeList RANGE = 
-      new OMCRangeList(new Double(0.0), new Double(Integer.MAX_VALUE));
+  Double _rate;
+  static final OMCRangeList RANGE = 
+  new OMCRangeList(new Double(0.0), new Double(Integer.MAX_VALUE));
 
-    public BootstrapEventCondition(int rate) {
-      _rate = new Double((double) rate);
-    }
+  public BootstrapEventCondition(int rate) {
+  _rate = new Double((double) rate);
+  }
     
-    public OMCRangeList getAllowedValues() {
-      return RANGE;
-    }
+  public OMCRangeList getAllowedValues() {
+  return RANGE;
+  }
     
-    public String getName() {
-      return "org.cougaar.core.security.monitoring.BOOTSTRAP_EVENT";
-    }
+  public String getName() {
+  return "org.cougaar.core.security.monitoring.BOOTSTRAP_EVENT";
+  }
 
-    public Comparable getValue() {
-      return _rate;
-    }
-    public void setValue(int rate) {
-    }
+  public Comparable getValue() {
+  return _rate;
+  }
+  public void setValue(int rate) {
+  }
   }
   */
 }
