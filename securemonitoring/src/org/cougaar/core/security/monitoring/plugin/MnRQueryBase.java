@@ -76,17 +76,6 @@ class CapabilitiesObjectPredicate implements UnaryPredicate{
 }
 
 public abstract class MnRQueryBase extends QueryBase {
-  protected DomainService domainService;
-  protected CommunityService communityService;
-  protected LoggingService loggingService;
-  protected CommunityServiceUtil _csu;
-  protected MessageAddress myAddress;
- 
-  private  boolean _isRoot;
-  private boolean _rootReady;
- 
-
-  
   protected void setupSubscriptions() {
     if (myAddress == null) {
       myAddress = getAgentIdentifier();
@@ -95,7 +84,6 @@ public abstract class MnRQueryBase extends QueryBase {
           getServiceBroker().getService(this, LoggingService.class, null); 
       }
       _csu = new CommunityServiceUtil(getServiceBroker());
-
       _csu.amIRoot(new RootListener());
     }
   }
