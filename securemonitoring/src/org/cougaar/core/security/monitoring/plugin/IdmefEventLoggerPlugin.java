@@ -51,7 +51,6 @@ import edu.jhuapl.idmef.IDMEF_Message;
 
 public class IdmefEventLoggerPlugin extends ComponentPlugin {
   
-  private DomainService domainService = null;
   private IncrementalSubscription idmefevents;
   private LoggingService loggingService;
   private MessageAddress myAddress=null;
@@ -114,7 +113,7 @@ public class IdmefEventLoggerPlugin extends ComponentPlugin {
 	eventfile.mkdirs();
       }
       catch (Exception e) {
-	System.err.println("IDMEF Event log file cannot be created as dir structure does not exist \n" + e.toString());
+        loggingService.error("IDMEF Event log file cannot be created as dir structure does not exist \n" + e.toString());
       }
       buffer.append(sep+"IdmefEvents_"+nodeName+"_" + curTime + ".log");
 	
@@ -126,7 +125,7 @@ public class IdmefEventLoggerPlugin extends ComponentPlugin {
      
     }
     catch (IOException e) {
-      System.err.println("IDMEF Event log file not opened properly\n" + e.toString());
+      loggingService.error("IDMEF Event log file not opened properly\n" + e.toString());
     }
     
   }

@@ -74,14 +74,11 @@ class AggQueryMappingPredicate implements UnaryPredicate {
 
 class EventsPredicate implements  UnaryPredicate{
   private UID  originator_uid;
-  private MessageAddress agentAddress;
   public  EventsPredicate(UID uid,MessageAddress address){
     originator_uid=uid;
-    agentAddress=address;
   }
   public boolean execute(Object o) {
     boolean ret = false;
-    CmrRelay cmrRelay=null;
     RemoteConsolidatedEvent consolidatedEvent=null;
     Event event=null;
     if (o instanceof RemoteConsolidatedEvent ) {
@@ -181,7 +178,7 @@ public abstract class MnRAggQueryBase extends ComponentPlugin {
   
   protected AggQueryMapping findAggQueryMappingFromBB(UID givenUID, Collection aggQueryMappingCol ) {
     AggQueryMapping aggQuerymapping=null;
-    ArrayList queryList=null;;
+    ArrayList queryList=null;
     AggQueryResult result=null;
     
     if(aggQueryMappingCol.isEmpty()) {

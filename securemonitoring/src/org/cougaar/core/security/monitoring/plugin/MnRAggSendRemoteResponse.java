@@ -315,7 +315,6 @@ public class MnRAggSendRemoteResponse extends MnRAggQueryBase {
     Iterator iter=detailscol.iterator();
     CmrRelay relay=null;
     DetailsDrillDownQuery detailsQuery=null;
-    CmrFactory factory=null;
    
     while(iter.hasNext()){
       relay=(CmrRelay)iter.next();

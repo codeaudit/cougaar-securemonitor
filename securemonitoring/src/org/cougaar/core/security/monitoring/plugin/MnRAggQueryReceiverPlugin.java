@@ -331,7 +331,6 @@ public class MnRAggQueryReceiverPlugin extends MnRAggQueryBase  {
       } 
     }
     ArrayList subQueries=new ArrayList();
-    UID newUID=null;
     ThreadService ts=(ThreadService) getServiceBroker().getService(this, ThreadService.class, null);
     UIDService uidService=(UIDService) getServiceBroker().getService(this,UIDService.class,null);
     if(uidService==null) {
@@ -434,7 +433,6 @@ public class MnRAggQueryReceiverPlugin extends MnRAggQueryBase  {
     Iterator iter=newAggQuery.iterator();
     String key=null;
     ArrayList subQueries=new ArrayList();
-    UID newUID=null;
     ThreadService ts=(ThreadService) getServiceBroker().getService(this, ThreadService.class, null);
     while(iter.hasNext()) {
       queryrelay=(CmrRelay)iter.next();
@@ -617,7 +615,8 @@ public class MnRAggQueryReceiverPlugin extends MnRAggQueryBase  {
     localQuery.setResultSet(new AggregationResultSet());
     return localQuery;
   }
-  
+
+  /*
   private String getAgentName(String sensorId) {
     String agentName=null;
     if(sensorId==null){
@@ -633,9 +632,7 @@ public class MnRAggQueryReceiverPlugin extends MnRAggQueryBase  {
     return agentName;
   }
 
-
-  
-   
+  */
 
   private boolean containsPublishedAgent(String agentname,Vector publishedAgents){
     boolean published=false;

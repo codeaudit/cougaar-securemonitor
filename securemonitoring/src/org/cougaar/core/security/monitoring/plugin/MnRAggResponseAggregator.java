@@ -290,9 +290,8 @@ public class MnRAggResponseAggregator extends MnRAggQueryBase  {
   public void publishAggResultAsEvent (AggregationResultSet results,UID uid) {
     Iterator atoms = results.getAllAtoms();
     BlackboardService bbs = getBlackboardService();
-    DocumentBuilder parser;
     try {
-      parser = _parserFactory.newDocumentBuilder();
+      _parserFactory.newDocumentBuilder();
     } catch (ParserConfigurationException e) {
       loggingService.error("Can't parse any events. The parser factory isn't configured properly.");
       if( loggingService.isDebugEnabled()){
