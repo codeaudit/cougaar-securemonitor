@@ -605,8 +605,20 @@ public class MnrCompromisePlugin extends ComponentPlugin {
         // check for coordinator action
         String coordinatorOn = System.getProperty("org.cougaar.core.security.coordinatorOn");
         if (coordinatorOn != null && coordinatorOn.equalsIgnoreCase("true")) {
+          
+          
           // signal compromise to AgentCompromiseSensor
           // sendDiagnosis
+            String diagnosis = AgentCompromiseInfo.SEVERE;
+
+            // change
+            AgentCompromiseInfo info = new AgentCompromiseInfo(AgentCompromiseInfo.SENSOR,
+              timestamp, sourceAgent, sourceNode, sourceHost, diagnosis);
+
+            getBlackboardService().publishAdd(info);
+            if (logging.isDebugEnabled()) {
+              logging.debug("Agent compromised action initialized for agent: " + sourceAgent);
+            }
         }
         else {
           resolveCompromises(scope, timestamp, sourceHost, sourceNode, sourceAgent);
