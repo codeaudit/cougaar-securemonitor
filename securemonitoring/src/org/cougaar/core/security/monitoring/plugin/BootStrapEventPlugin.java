@@ -63,11 +63,6 @@ public class BootStrapEventPlugin extends SensorPlugin implements Observer {
     // register this observer with the security manager
     registerForEvents();
   }
-  /*
-  protected void execute() {
-    super.execute();
-  }
-  */
 
   public void setThreadService(ThreadService ts) {
     _threadService = ts;
