@@ -428,45 +428,42 @@
          </case>
           <case value="8">
           <!-- binary distribution, zip everything in staging -->
-          <if>
-            <equals arg1="installer" arg2="${current.module.name}"/>
-            <then>
-              <echo message="Installer has no binary distribution"/>
-            </then>
-            <else>
-              <for list="${module.build.list}" delimiter="," param="build.module.name">
-                <sequential>
-                  <!-- <input message="Enter the version of the @{build.module.name} module:" addproperty="module.version"/> -->
-                  <!-- <zip zipfile="${project.name}${module.version}.zip" basedir="staging"/> -->
+            <for list="${module.build.list}" delimiter="," param="build.module.name">
+              <sequential>
+               <if>
+                <equals arg1="installer" arg2="@{build.module.name}"/>
+                <then>
+                  <echo message="Installer has no binary distribution"/>
+                </then>
+                <else>
                   <antcall target="call-ant-submodule">
                     <param name="ant.target.name" value="create-binary-dist"/>
                     <param name="build.module.name" value="@{build.module.name}"/>
                   </antcall>
-                </sequential>
-              </for>
-            </else>
-          </if>
+               </else>
+               </if>
+              </sequential>
+            </for>
          </case>
          <case value="9">
          <!-- source distribution -->
          <!-- zip build, build.properties, build.xml, custom-build.xml, lib, src, test -->
-          <if>
-            <equals arg1="installer" arg2="${current.module.name}"/>
-            <then>
-              <echo message="Installer has no source distribution"/>
-            </then>
-            <else>
-               <for list="${module.build.list}" delimiter="," param="build.module.name">
-                 <sequential>
-                   <!-- <input message="Enter the version of the @{build.module.name} module:" addproperty="module.version"/> -->
+           <for list="${module.build.list}" delimiter="," param="build.module.name">
+             <sequential>
+               <if>
+                 <equals arg1="installer" arg2="@{build.module.name}"/>
+                 <then>
+                   <echo message="Installer has no source distribution"/>
+                 </then>
+                 <else>
                    <antcall target="call-ant-submodule">
-                    <param name="ant.target.name" value="create-src-dist"/>
-                    <param name="build.module.name" value="@{build.module.name}"/>
+                     <param name="ant.target.name" value="create-src-dist"/>
+                     <param name="build.module.name" value="@{build.module.name}"/>
                    </antcall>
-                 </sequential>
-               </for>
-             </else>
-           </if>
+                 </else>
+               </if>
+             </sequential>
+           </for>
          </case>
          <case value="10">
            <for list="${module.subordinates}" delimiter="," param="build.module.name">
