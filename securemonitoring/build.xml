@@ -209,7 +209,7 @@
             <format property="zipTime" pattern="MM/dd/yyyy hh:mm:ss"/>
         </tstamp>
     	<echo message="Built ${zipTime}"
-    	   file="${securityservices.staging}/Manifest/securityservices.txt"/>
+    	   file="${securityservices.staging}/Manifest/${project.name}.txt"/>
      	<echo message="#### Building Zip file"/>
 		<zip zipfile="${project.name}.zip" basedir="staging"
 		     filesonly="false"/>	
