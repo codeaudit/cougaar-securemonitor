@@ -90,6 +90,19 @@ public abstract class QueryBase extends ComponentPlugin {
   protected boolean isRootReady() {
     return _rootReady;
   } 
+
+  protected void setupSubscriptions() {
+    if (myAddress == null) {
+      myAddress = getAgentIdentifier();
+      if(loggingService == null) {
+        loggingService = (LoggingService)
+          getServiceBroker().getService(this, LoggingService.class, null); 
+      }
+      _csu = new CommunityServiceUtil(getServiceBroker());
+      _csu.amIRoot(new RootListener());
+    }
+  }
+
   
 
   protected class RootListener  implements Runnable, CommunityServiceUtilListener {

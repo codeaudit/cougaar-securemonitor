@@ -76,17 +76,6 @@ class CapabilitiesObjectPredicate implements UnaryPredicate{
 }
 
 public abstract class MnRQueryBase extends QueryBase {
-  protected void setupSubscriptions() {
-    if (myAddress == null) {
-      myAddress = getAgentIdentifier();
-      if(loggingService == null) {
-        loggingService = (LoggingService)
-          getServiceBroker().getService(this, LoggingService.class, null); 
-      }
-      _csu = new CommunityServiceUtil(getServiceBroker());
-      _csu.amIRoot(new RootListener());
-    }
-  }
 
   /**
    * @param query
@@ -1071,7 +1060,7 @@ public abstract class MnRQueryBase extends QueryBase {
     return relay;
   } 
 
- public interface FindAgentCallback {
+  public interface FindAgentCallback {
     void execute(Collection agents);
   }
 }

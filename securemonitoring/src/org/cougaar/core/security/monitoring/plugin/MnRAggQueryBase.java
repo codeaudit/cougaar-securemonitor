@@ -95,22 +95,6 @@ class EventsPredicate implements  UnaryPredicate{
 
 public abstract class MnRAggQueryBase extends QueryBase{
   
-  protected void setupSubscriptions() {
-    if (myAddress == null) {
-      myAddress = getAgentIdentifier();
-      if(loggingService == null) {
-        loggingService = (LoggingService)
-          getServiceBroker().getService(this, LoggingService.class, null); 
-      }
-      if (loggingService.isDebugEnabled()) {
-        loggingService.debug("setupSubscriptions of MnRAggResponseAggregator called :"
-                             + myAddress.toString());
-      }
-      _csu = new CommunityServiceUtil(getServiceBroker());
-      _csu.amIRoot(new RootListener());
-    }
-  }
-  
   public ConsolidatedEvent createConsolidatedEvent(RemoteConsolidatedEvent event) {
     ConsolidatedEvent newConsolidateEvent=null;
     CmrFactory factory=null;
