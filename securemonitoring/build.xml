@@ -320,6 +320,7 @@
        <echo message="Copying jar file to superior modules: ${module.superiors}"/>
        <for list="${module.superiors}" delimiter="," param="build.module.superior.name">
          <sequential>
+            <echo message="Copying jar file to @{build.module.superior.name}/lib/security module"/>
             <copy todir="${securityservices.base}/../@{build.module.superior.name}/lib/security">
                <fileset dir="${securityservices.base}/output/signed">
                  <patternset>
