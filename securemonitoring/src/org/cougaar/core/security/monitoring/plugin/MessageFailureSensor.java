@@ -70,7 +70,7 @@ public class MessageFailureSensor extends SensorPlugin {
   protected boolean agentIsTarget() {
     return true;
   }
-   protected boolean agentIsSource() {
+  protected boolean agentIsSource() {
     return false;
   }
 
@@ -89,51 +89,56 @@ public class MessageFailureSensor extends SensorPlugin {
     publishIDMEFEvent();
   }
 
+  protected void execute() {
+    super.execute();
+  }
+
+
   public static void publishEvent(FailureEvent event) {
     publishEvent(MessageFailureSensor.class, event);
   }
 
   private class MFSensorInfo implements SensorInfo {
     /**
-    * Get the name of the sensor/anaylzer.
-    *
-    * @return the name of the sensor
-    */
+     * Get the name of the sensor/anaylzer.
+     *
+     * @return the name of the sensor
+     */
     public String getName(){
       return "MessageFailureSensor";
     }
     /**
-    * Get the sensor manufacturer.
-    *
-    * @return the sensor manufacturer
-    */
+     * Get the sensor manufacturer.
+     *
+     * @return the sensor manufacturer
+     */
     public String getManufacturer(){
       return "CSI";
     }
 
     /**
-    * Get the sensor model.
-    *
-    * @return the sensor model
-    */
+     * Get the sensor model.
+     *
+     * @return the sensor model
+     */
     public String getModel(){
       return "Cougaar Message Failure Sensor";
     }
 
     /**
-    * Get the sensor version.
-    *
-    * @return the sensor version
-    */
+     * Get the sensor version.
+     *
+     * @return the sensor version
+     */
     public String getVersion(){
       return "1.0";
     }
 
     /**
-    * Get the class of analyzer software and/or hardware.
-    *
-    * @return the sensor class
-    */
+     * Get the class of analyzer software and/or hardware.
+     *
+     * @return the sensor class
+     */
     public String getAnalyzerClass(){
       return "Cougaar Security";
     }
