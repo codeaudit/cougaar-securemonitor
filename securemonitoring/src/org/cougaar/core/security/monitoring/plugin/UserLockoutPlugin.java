@@ -122,17 +122,17 @@ public class UserLockoutPlugin extends ResponderPlugin {
     new Action(Action.OTHER, IdmefAssessments.USER_LOCKOUT)
   };
   private final static Confidence USER_LOCKOUT_CONFIDENCE =
-    new Confidence(Confidence.MEDIUM, null);
+  new Confidence(Confidence.MEDIUM, null);
 
   private final static Assessment USER_LOCKOUT_ASSESSMENT =
-    new Assessment(new Impact(Impact.MEDIUM, Impact.SUCCEEDED,
-                              Impact.USER, IdmefAssessments.USER_LOCKOUT),
-                   USER_LOCKOUT_ACTION,
-                   USER_LOCKOUT_CONFIDENCE);
+  new Assessment(new Impact(Impact.MEDIUM, Impact.SUCCEEDED,
+                            Impact.USER, IdmefAssessments.USER_LOCKOUT),
+                 USER_LOCKOUT_ACTION,
+                 USER_LOCKOUT_CONFIDENCE);
 
   public static final Classification LOGIN_FAILURE =
-    new Classification(IdmefClassifications.LOGIN_FAILURE, "",
-                       Classification.VENDOR_SPECIFIC);
+  new Classification(IdmefClassifications.LOGIN_FAILURE, "",
+                     Classification.VENDOR_SPECIFIC);
    
   private static final String[] CLASSIFICATIONS = {
     IdmefClassifications.LOGIN_FAILURE
@@ -144,40 +144,40 @@ public class UserLockoutPlugin extends ResponderPlugin {
    * login failures
    */
   private static final UnaryPredicate LOGIN_FAILURES_PREDICATE =
-    new UnaryPredicate() {
-      public boolean execute(Object o) {
-        if (o instanceof Event) {
-          IDMEF_Message msg = ((Event) o).getEvent();
-          if (msg instanceof RegistrationAlert ||
-              msg instanceof ConsolidatedCapabilities) {
-            return false;
-          }
-          if (msg instanceof Alert) {
-            Alert alert = (Alert) msg;
-            if (alert.getAssessment() != null) {
-              return false; // never look at assessment alerts
-            } // end of if (alert.getAssessment() != null)
-            Classification cs[] = alert.getClassifications();
-            if (cs != null) {
-              for (int i = 0; i < cs.length; i++) {
-                if (IdmefClassifications.LOGIN_FAILURE.equals(cs[i].getName())) {
-                  AdditionalData ad[] = alert.getAdditionalData();
-                  if (ad != null) {
-                    for (int j = 0; j < ad.length; j++) {
-                      if (LoginFailureEvent.FAILURE_REASON.equals(ad[j].getMeaning())) {
-                        return (LoginFailureEvent.FAILURE_REASONS[UserService.LF_PASSWORD_MISMATCH].equals(ad[j].getAdditionalData()));
-                      }
+  new UnaryPredicate() {
+    public boolean execute(Object o) {
+      if (o instanceof Event) {
+        IDMEF_Message msg = ((Event) o).getEvent();
+        if (msg instanceof RegistrationAlert ||
+            msg instanceof ConsolidatedCapabilities) {
+          return false;
+        }
+        if (msg instanceof Alert) {
+          Alert alert = (Alert) msg;
+          if (alert.getAssessment() != null) {
+            return false; // never look at assessment alerts
+          } // end of if (alert.getAssessment() != null)
+          Classification cs[] = alert.getClassifications();
+          if (cs != null) {
+            for (int i = 0; i < cs.length; i++) {
+              if (IdmefClassifications.LOGIN_FAILURE.equals(cs[i].getName())) {
+                AdditionalData ad[] = alert.getAdditionalData();
+                if (ad != null) {
+                  for (int j = 0; j < ad.length; j++) {
+                    if (LoginFailureEvent.FAILURE_REASON.equals(ad[j].getMeaning())) {
+                      return (LoginFailureEvent.FAILURE_REASONS[UserService.LF_PASSWORD_MISMATCH].equals(ad[j].getAdditionalData()));
                     }
                   }
-                  return false;
                 }
+                return false;
               }
             }
           }
         }
-        return false;
       }
-    };
+      return false;
+    }
+  };
 
   /**
    * For OperatingModes value range
@@ -190,7 +190,7 @@ public class UserLockoutPlugin extends ResponderPlugin {
    * Lockout duration operating mode range
    */
   private static final OMCRangeList LOCKOUT_DURATION_RANGE =
-    new OMCRangeList(LD_VALUES);
+  new OMCRangeList(LD_VALUES);
 
   private static final String LOCKOUT_DURATION = AdaptiveMnROperatingModes.LOCKOUT_DURATION;
 
@@ -198,18 +198,18 @@ public class UserLockoutPlugin extends ResponderPlugin {
    * For the lockout duration OperatingMode
    */
   private static final UnaryPredicate LOCKOUT_DURATION_PREDICATE =
-    new UnaryPredicate() {
-      public boolean execute(Object o) {
-        if (o instanceof OperatingMode) {
-          OperatingMode om = (OperatingMode) o;
-          String omName = om.getName();
-          if (LOCKOUT_DURATION.equals(omName)) {
-            return true;
-          }
+  new UnaryPredicate() {
+    public boolean execute(Object o) {
+      if (o instanceof OperatingMode) {
+        OperatingMode om = (OperatingMode) o;
+        String omName = om.getName();
+        if (LOCKOUT_DURATION.equals(omName)) {
+          return true;
         }
-        return false;
       }
-    };
+      return false;
+    }
+  };
 
   private static class RegistrationPredicate implements UnaryPredicate {
     private String _agent;
@@ -269,17 +269,20 @@ public class UserLockoutPlugin extends ResponderPlugin {
     if(_userService==null) {
       Iterator iter = getServiceBroker().getCurrentServiceClasses();
       if(_log!=null){
-        _log.error("Current services that can be obtained at UserLockout plugin are:"); 
+        if (_log.isErrorEnabled())
+          _log.error("Current services that can be obtained at UserLockout plugin are:"); 
       }
       Object object=null;
       while(iter.hasNext()){
         object =iter.next();
         if(_log!=null){
-          _log.error("Service ----->"+ object.toString());
+          if (_log.isErrorEnabled())
+            _log.error("Service ----->"+ object.toString());
         }
       }
       if(_log!=null){
-        _log.warn(" USER SERVICE is NULL adding Service listener");
+        if (_log.isWarnEnabled())
+          _log.warn(" USER SERVICE is NULL adding Service listener");
       }
       if(!addedListener) {
         ServiceAvailableListener listener = new ServicesListener();
@@ -387,7 +390,8 @@ public class UserLockoutPlugin extends ResponderPlugin {
       _log.debug("locking out user (" + culprit + ")");
     } // end of if (_log.isDebugEnabled())
     if (_userService == null) {
-      _log.info("User service was not set. Trying to get it");
+      if (_log.isInfoEnabled())
+        _log.info("User service was not set. Trying to get it");
       setUserService();
     }
     else {
@@ -395,7 +399,8 @@ public class UserLockoutPlugin extends ResponderPlugin {
     }
     if (_userService == null) {
       String msg = "LDAP User service is not available. Cannot take action against " + culprit;
-      _log.error(msg);
+      if (_log.isErrorEnabled())
+        _log.error(msg);
       throw new RuntimeException(msg);
     }
     else {
@@ -409,7 +414,8 @@ public class UserLockoutPlugin extends ResponderPlugin {
                 _userService.disableUser(localculprit);
               }
               catch(UserServiceException use) {
-                _log.warn("cannot disable user ",use);
+                if (_log.isWarnEnabled())
+                  _log.warn("cannot disable user ",use);
               }
             }
           },"UserLockoutThread");
@@ -422,7 +428,8 @@ public class UserLockoutPlugin extends ResponderPlugin {
                 _userService.disableUser(localculprit,lockoutTime);
               }
               catch(UserServiceException use) {
-                _log.warn("cannot idable user ",use);
+                if (_log.isWarnEnabled())
+                  _log.warn("cannot idable user ",use);
               } 
             }
           },"UserLockoutThread-withLockTime");
@@ -464,7 +471,8 @@ public class UserLockoutPlugin extends ResponderPlugin {
    * method to process a login failure
    */
   protected void processFailure() {
-    _log.debug("Processing failure in UserLockout Plugin ");
+    if (_log.isDebugEnabled())
+      _log.debug("Processing failure in UserLockout Plugin ");
     Enumeration iter = _failureQuery.getAddedList();
     while (iter.hasMoreElements()) {
       Event e = (Event) iter.nextElement();
@@ -495,7 +503,8 @@ public class UserLockoutPlugin extends ResponderPlugin {
     CommunityService     cs           = (CommunityService)
       sb.getService(this, CommunityService.class,null);
     if (cs == null) {
-      _log.error("You must have CommunityPlugin in this agent for the UserLockoutPlugin to work");
+      if (_log.isErrorEnabled())
+        _log.error("You must have CommunityPlugin in this agent for the UserLockoutPlugin to work");
     } // end of if (cs == null)
 
     CommunityResponseListener crl = new CommunityResponseListener() {
@@ -505,7 +514,8 @@ public class UserLockoutPlugin extends ResponderPlugin {
             if (!(response instanceof Set)) {
               String errorString = "Unexpected community response class:"
                 + response.getClass().getName() + " - Should be a Set";
-              _log.error(errorString);
+              if (_log.isErrorEnabled())
+                _log.error(errorString);
               throw new RuntimeException(errorString);
             }
             configureCommunity((Set)response);
@@ -534,7 +544,8 @@ public class UserLockoutPlugin extends ResponderPlugin {
       break;
     }
     if (messageAddress == null) {
-      _log.info("This agent does not belong to any community. Login failures won't be reported.");
+      if (_log.isInfoEnabled())
+        _log.info("This agent does not belong to any community. Login failures won't be reported.");
       // may receive a add change message later
       return;
     }
@@ -565,11 +576,12 @@ public class UserLockoutPlugin extends ResponderPlugin {
     Collection c = bbs.query(new RegistrationPredicate(agentName));
     bbs.closeTransaction();
     if (!c.isEmpty()) {
-      _log.info("Rehydrating - no need to publish sensor capabilities");
+      if (_log.isInfoEnabled())
+        _log.info("Rehydrating - no need to publish sensor capabilities");
       return; // this is rehydrated and we've already registered
     } // end of if (!c.isEmpty())
-
-    _log.info("No rehydration - publishing sensor capabilities");
+    if (_log.isInfoEnabled())
+      _log.info("No rehydration - publishing sensor capabilities");
 
     List capabilities = new ArrayList();
     capabilities.add(EventClassification.LOGINFAILURE);
@@ -595,7 +607,8 @@ public class UserLockoutPlugin extends ResponderPlugin {
 
 
   private void updateLockoutDuration() {
-    _log.debug("Updating updateLockoutDuration");
+    if (_log.isDebugEnabled())
+      _log.debug("Updating updateLockoutDuration");
     Collection oms = _lockoutDurationSubscription.getChangedCollection();
     Iterator i = oms.iterator();
     OperatingMode om = null;
@@ -610,7 +623,8 @@ public class UserLockoutPlugin extends ResponderPlugin {
     public void serviceAvailable(ServiceAvailableEvent ae) {
       Class sc = ae.getService();
       if (sc == UserService.class ) {
-        _log.info(" Got user service in user lockout plugin");
+        if (_log.isInfoEnabled())
+          _log.info(" Got user service in user lockout plugin");
       }
       setUserService();
     }

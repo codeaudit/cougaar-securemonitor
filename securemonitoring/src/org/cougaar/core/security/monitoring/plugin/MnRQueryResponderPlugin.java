@@ -95,8 +95,10 @@ public class MnRQueryResponderPlugin extends MnRQueryBase {
   protected synchronized void setupSubscriptions() {
   
     super.setupSubscriptions();
-    loggingService.debug("setupSubscriptions of MnRQueryResponderPlugin " +
-                         "called : "+ myAddress);
+    if(loggingService.isDebugEnabled()){
+      loggingService.debug("setupSubscriptions of MnRQueryResponderPlugin " +
+                           "called : "+ myAddress);
+    }
     queryResponse = (IncrementalSubscription)getBlackboardService().
       subscribe(new QueryRespondRelayPredicate(myAddress));
     querymapping = (IncrementalSubscription)getBlackboardService().
@@ -177,9 +179,13 @@ public class MnRQueryResponderPlugin extends MnRQueryBase {
           if(list!=null) {
             for(int i=0;i<list.size();i++) {
               outstandingquery=(OutStandingQuery)list.get(i);
-              loggingService.debug("Ouststanding query uid "+outstandingquery.getUID() + "outstanding object is :"+ outstandingquery.toString());
+              if(loggingService.isDebugEnabled()){
+                loggingService.debug("Ouststanding query uid "+outstandingquery.getUID() + "outstanding object is :"+ outstandingquery.toString());
+              }
               if(outstandingquery.getUID().equals(relay.getUID())) {
-                loggingService.debug("Receive Response for Ouststanding query uid "+outstandingquery.getUID() + "Current relay id is :"+relay.getUID() );
+                if(loggingService.isDebugEnabled()){
+                  loggingService.debug("Receive Response for Ouststanding query uid "+outstandingquery.getUID() + "Current relay id is :"+relay.getUID() );
+                }
                 outstandingquery.setOutStandingQuery(false);
                 modified=true;
               }
@@ -206,9 +212,9 @@ public class MnRQueryResponderPlugin extends MnRQueryBase {
         /*
           This condition will only happen when MnRQueryResponderPlugin AND pubbisher of MnRLookUp query reside on the same agent. 
           It is not an error condition hence commenting out the log message 
-        else{
+          else{
           loggingService.error(myAddress+ " Cannot find mapping object. It is ok as it is original query  :" +relay.getUID() );
-        }
+          }
         */
       }
     }// end while
@@ -217,7 +223,9 @@ public class MnRQueryResponderPlugin extends MnRQueryBase {
   private void processLocalSensors(final CapabilitiesObject capObj,
                                    final CmrRelay relay) {
     if (relay == null) {
-      loggingService.error("Relay was null in processLocalSensors:");
+      if(loggingService.isErrorEnabled()){
+        loggingService.error("Relay was null in processLocalSensors:");
+      }
       return;
     }
     final MRAgentLookUp query = (MRAgentLookUp)relay.getContent();
@@ -266,7 +274,9 @@ public class MnRQueryResponderPlugin extends MnRQueryBase {
             loggingService.debug("Update response is being done for source :"+relay.getSource().toString() );
           }
           relay.updateResponse(relay.getSource(),new MRAgentLookUpReply(relay_uid_list));
-          loggingService.debug("Update response is being done for relay :"+relay.toString());
+          if(loggingService.isDebugEnabled()){
+            loggingService.debug("Update response is being done for relay :"+relay.toString());
+          }
           publishToBB(relay); 
         }
       };
@@ -313,7 +323,9 @@ public class MnRQueryResponderPlugin extends MnRQueryBase {
         relay.updateResponse(relay.getSource(),reply);
         getBlackboardService().publishChange(relay);
         getBlackboardService().publishChange(map);
-        loggingService.debug("Got the mapping list as null setting the relay response as empty:");
+        if(loggingService.isDebugEnabled()){
+          loggingService.debug("Got the mapping list as null setting the relay response as empty:");
+        }
         return;
       }
       OutStandingQuery outstandingquery;
@@ -331,13 +343,17 @@ public class MnRQueryResponderPlugin extends MnRQueryBase {
               agentList=mergeResponse(agentList, reply.getAgentList());
             }
             else {
-              loggingService.debug("list of agents in current relay is null"); 
+              if(loggingService.isDebugEnabled()){
+                loggingService.debug("list of agents in current relay is null"); 
+              }
             }
           }
           else {
-            loggingService.error("Lookup query marked as completed, but at least one response is null. "
-                                 + "Subquery:" + response_relay.toString()
-                                 + ". Original query:" + relay.toString());
+            if(loggingService.isErrorEnabled()){
+              loggingService.error("Lookup query marked as completed, but at least one response is null. "
+                                   + "Subquery:" + response_relay.toString()
+                                   + ". Original query:" + relay.toString());
+            }
           }
         }
         else {
@@ -353,14 +369,18 @@ public class MnRQueryResponderPlugin extends MnRQueryBase {
       if(rr != null) {
         List l = rr.getAgentList();
         if(l != null) {
-          loggingService.debug("Merging agents in the current relay with the subordinate's list of agents");
+          if(loggingService.isDebugEnabled()){
+            loggingService.debug("Merging agents in the current relay with the subordinate's list of agents");
+          }
           agentList = mergeResponse(agentList, l);        
         }
       }
       reply = new MRAgentLookUpReply(agentList);
       map.setResultPublished(true);
       relay.updateResponse(relay.getSource(),reply);
-      loggingService.debug("UPDATING RESPONSE AFTER MERGING  "+relay.toString() );
+      if(loggingService.isDebugEnabled()){
+        loggingService.debug("UPDATING RESPONSE AFTER MERGING  "+relay.toString() );
+      }
       getBlackboardService().publishChange(relay);
       getBlackboardService().publishChange(map);
     }
@@ -372,7 +392,9 @@ public class MnRQueryResponderPlugin extends MnRQueryBase {
   }
   public List  mergeResponse(List existingList, List newList) {
     if(existingList==null) {
-      loggingService.error("Response Agent list should have been created in updateResponse :");
+      if(loggingService.isErrorEnabled()){ 
+        loggingService.error("Response Agent list should have been created in updateResponse :");
+      }
     }
     if(newList==null) {
       return existingList;
@@ -407,7 +429,9 @@ public class MnRQueryResponderPlugin extends MnRQueryBase {
   public boolean isAgentInList(String agent ,List list) {
     boolean present=false;
     if(list==null) {
-      loggingService.error(" List should not be null It can be empty :");
+      if(loggingService.isErrorEnabled()){
+        loggingService.error(" List should not be null It can be empty :");
+      }
       return true;
     }
     if(agent==null) {

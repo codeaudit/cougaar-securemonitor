@@ -95,9 +95,11 @@ public abstract class QueryBase extends ComponentPlugin {
   } 
 
   protected void setupSubscriptions() {
-     enableMnR = System.getProperty("org.cougaar.core.security.enableMnR");
+    enableMnR = System.getProperty("org.cougaar.core.security.enableMnR");
     if (enableMnR != null) {
-      loggingService.warn("MnR community service request test " + enableMnR);
+      if(loggingService.isWarnEnabled()){
+        loggingService.warn("MnR community service request test " + enableMnR);
+      }
     }
     threadService = (ThreadService)getServiceBroker().getService(this, ThreadService.class, null);
     if (myAddress == null) {
@@ -124,14 +126,16 @@ public abstract class QueryBase extends ComponentPlugin {
 
       _isRoot = !(entities == null || entities.isEmpty());
       _rootReady = true;
-      loggingService.info("The agent " + myAddress + " is root? " + _isRoot);
+      if(loggingService.isInfoEnabled()){
+        loggingService.info("The agent " + myAddress + " is root? " + _isRoot);
+      }
       threadService.getThread(this, this).schedule(0);
     }
 
     public void run() {
       getBlackboardService().openTransaction();
       try {
-         execute();
+        execute();
       } finally {
         getBlackboardService().closeTransaction();
       }

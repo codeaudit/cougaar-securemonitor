@@ -93,7 +93,7 @@ public abstract class ResponderPlugin extends SensorPlugin {
   
   private DomainService _domainService = null;
   
-   /**
+  /**
    * For the max failure OperatingMode
    */
   protected UnaryPredicate _maxFailurePredicate = null;
@@ -103,7 +103,7 @@ public abstract class ResponderPlugin extends SensorPlugin {
    * Max message failure operating mode range
    */
   private static final OMCRangeList MAX_FAILURE_RANGE =
-      new OMCRangeList(new OMCThruRange(1.0, Double.MAX_VALUE ));
+  new OMCRangeList(new OMCThruRange(1.0, Double.MAX_VALUE ));
   
   /**
    * abstract method that takes an action against the culprit
@@ -172,8 +172,8 @@ public abstract class ResponderPlugin extends SensorPlugin {
       _maxFailureOMString = iter.next().toString();
     } catch (NoSuchElementException e) {
       throw new IllegalArgumentException("You must provide a " +
-                                        paramName +
-                                        " argument");
+                                         paramName +
+                                         " argument");
     } catch (NumberFormatException e) {
       throw new IllegalArgumentException("Expecting integer for " +
                                          paramName +
@@ -190,21 +190,23 @@ public abstract class ResponderPlugin extends SensorPlugin {
   protected void setupSubscriptions() {
     super.setupSubscriptions();
     _maxFailurePredicate =  new UnaryPredicate() {
-      public boolean execute(Object o) {
-        if (o instanceof OperatingMode) {
-          OperatingMode om = (OperatingMode) o;
-          _log.debug("getting name of operating mode!");
-          String omName = om.getName();
-          if (_maxFailureOMString.equals(omName)) {
-            return true;
+        public boolean execute(Object o) {
+          if (o instanceof OperatingMode) {
+            OperatingMode om = (OperatingMode) o;
+            if(_log.isDebugEnabled()){
+              _log.debug("getting name of operating mode!");
+            }
+            String omName = om.getName();
+            if (_maxFailureOMString.equals(omName)) {
+              return true;
+            }
           }
+          return false;
         }
-        return false;
-      }
-    };
+      };
     
     _log = (LoggingService)
-	    getServiceBroker().getService(this, LoggingService.class, null);
+      getServiceBroker().getService(this, LoggingService.class, null);
     
     BlackboardService blackboard = getBlackboardService();
     DomainService ds = getDomainService();
@@ -244,7 +246,9 @@ public abstract class ResponderPlugin extends SensorPlugin {
   }
 
   protected void addCulprit(String culprit) {
-    _log.debug(" adding culprit :"+ culprit);
+    if(_log.isDebugEnabled()){
+      _log.debug(" adding culprit :"+ culprit);
+    }
     synchronized (_failureCache) {
       _failureCache.add(culprit); 
     }
@@ -256,7 +260,9 @@ public abstract class ResponderPlugin extends SensorPlugin {
     OperatingMode om = null;
     if (oms.size() > 0) {
       om = (OperatingMode)i.next();
-      _log.debug("Max failures updated to " + om.getValue() + ".");
+      if(_log.isDebugEnabled()){
+        _log.debug("Max failures updated to " + om.getValue() + ".");
+      }
       _maxFailures = (int) Double.parseDouble(om.getValue().toString());
     }
   }
@@ -288,9 +294,13 @@ public abstract class ResponderPlugin extends SensorPlugin {
           action(culprit);
           publishAssessment(culprit);
         } catch (Exception e) {
-          _log.error("Error taking action against " + culprit + ": " + e.toString());
+          if(_log.isErrorEnabled()){
+            _log.error("Error taking action against " + culprit + ": " + e.toString());
+          }
           synchronized (_failureCache) {
-            _log.debug("putting culprit :"+culprit +"back to failure cache");
+            if(_log.isDebugEnabled()){
+              _log.debug("putting culprit :"+culprit +"back to failure cache");
+            }
             _failures.put(culprit, failure); // put it back in...
           }
         }

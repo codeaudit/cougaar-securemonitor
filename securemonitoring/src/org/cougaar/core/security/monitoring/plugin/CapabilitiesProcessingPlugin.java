@@ -190,8 +190,10 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
       CommunityServiceUtil not used any where in the code 
       _csu = new CommunityServiceUtil(getServiceBroker());
     */
-    loggingService.debug("setupSubscriptions of CapabilitiesProcessingPlugin called :"
-                         + myAddress.toString()); 
+    if(loggingService.isDebugEnabled()){
+      loggingService.debug("setupSubscriptions of CapabilitiesProcessingPlugin called :"
+                           + myAddress.toString()); 
+    }
 /*
   mySecurityCommunity = getMySecurityCommunity();
   if(mySecurityCommunity==null) {
@@ -209,7 +211,9 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
     Collection capabilitiescollection = getBlackboardService().query(new CompleteCapabilitiesPredicate());
     if(capabilitiescollection.isEmpty()){
       if(getBlackboardService().didRehydrate()) {
-      	loggingService.error(" BlackBoard Rehydrated but there is no capabilities Object:");
+        if(loggingService.isErrorEnabled()){
+          loggingService.error(" BlackBoard Rehydrated but there is no capabilities Object:");
+        }
       	return;
       }
       else {
@@ -234,8 +238,9 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
    * Top level plugin execute loop.  
    */
   protected void execute () {
-    loggingService.debug("Execute of Capabilities processing plugin called "+myAddress.toString());
-  
+    if(loggingService.isDebugEnabled()){
+      loggingService.debug("Execute of Capabilities processing plugin called "+myAddress.toString());
+    }
     updateRelayedCapabilities();
 
     Event event=null;
@@ -270,7 +275,9 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
     }
     Collection notifications=notification.getAddedCollection();
     if(notifications.size()>0) {
-      loggingService.debug("received notification to do publish change:");
+      if(loggingService.isDebugEnabled()){
+        loggingService.debug("received notification to do publish change:");
+      }
       getBlackboardService().publishChange(capabilitiesobject);
       /*
         Iterator notificationiterator =notifications.iterator();
@@ -284,7 +291,9 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
     //capabilitiesobject=(CapabilitiesObject)list.get(firstobject);
     Enumeration capabilities_enum = capabilities.getAddedList();
     Collection subcol= subordinatecapabilities.getAddedCollection();
-    loggingService.debug(" got collection size for sub is :"+subcol.size());
+    if(loggingService.isDebugEnabled()){
+      loggingService.debug(" got collection size for sub is :"+subcol.size());
+    }
     Iterator  subordinatecapabilities_enum=subcol.iterator();
     
     Analyzer analyzer=null;
@@ -309,7 +318,7 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
       event(registration); // give an event about this
 
       if(loggingService.isDebugEnabled()) {
-	      loggingService.debug(" Got analyzer id -->"+ analyzer_id );
+        loggingService.debug(" Got analyzer id -->"+ analyzer_id );
       }
       
       if(capabilitiesobject.containsKey(analyzer_id)) {
@@ -414,7 +423,9 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
   }
 
   public void printConsolidation(Classification[] classifications, String msg) {
-    loggingService.debug(msg);
+    if(loggingService.isDebugEnabled()){
+      loggingService.debug(msg);
+    }
     Classification classification=null;
     for(int i=0;i<classifications.length;i++){
       classification= classifications[i];
@@ -441,9 +452,11 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
 
     
   public void converttoString(Classification classification) {
-    loggingService.debug(" Classification origin :"+classification.getOrigin());
-    loggingService.debug(" Classification Name :"+classification.getName());
-    loggingService.debug(" Classification URL :"+classification.getUrl());
+    if(loggingService.isDebugEnabled()){
+      loggingService.debug(" Classification origin :"+classification.getOrigin());
+      loggingService.debug(" Classification Name :"+classification.getName());
+      loggingService.debug(" Classification URL :"+classification.getUrl());
+    }
   }
 
 
@@ -524,14 +537,18 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
           if(!existingclassification.equals(newclassification)){
             continue;
           }
-          loggingService.debug("Found classification to remove:!" + existingclassification.toString());
+          if(loggingService.isDebugEnabled()){
+            loggingService.debug("Found classification to remove:!" + existingclassification.toString());
+          }
           found=true;
           foundindex=j;
           break;
         }
 		 
         if((found)&&(foundindex!=-1)) {
-          loggingService.debug(" Found classification to remove at index  :"+foundindex);
+          if(loggingService.isDebugEnabled()){
+            loggingService.debug(" Found classification to remove at index  :"+foundindex);
+          }
           Classification modifiedClassifications[]=new Classification[existinglength-1];
           System.arraycopy(existingClassifications,0,modifiedClassifications,0,foundindex);
           /* doing an array copy till the index where classification is found and skiping 
@@ -560,14 +577,18 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
           if(!existingsource.equals(newsource)){
             continue;
           }
-          loggingService.debug("Found Source to remove:");
+          if(loggingService.isDebugEnabled()){
+            loggingService.debug("Found Source to remove:");
+          }
           found=true;
           foundindex=j;
           break;
         }
 		 
         if((found)&&(foundindex!=-1)) {
-          loggingService.debug(" Found Siurce to remove at :"+foundindex);
+          if(loggingService.isDebugEnabled()){
+            loggingService.debug(" Found Siurce to remove at :"+foundindex);
+          }
           Source modifiedSources[]=new Source[existinglength-1];
           System.arraycopy(existingSources,0,modifiedSources,0,foundindex);
           /* doing an array copy till the index where classification is found and skiping 
@@ -599,14 +620,18 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
           if(!existingtarget.equals(newtarget)){
             continue;
           }
-          loggingService.debug("Found Target to remove:");
+          if(loggingService.isDebugEnabled()){
+            loggingService.debug("Found Target to remove:");
+          }
           found=true;
           foundindex=j;
           break;
         }
 		 
         if((found)&&(foundindex!=-1)) {
-          loggingService.debug(" Found Target  to remove at :"+foundindex);
+          if(loggingService.isDebugEnabled()){
+            loggingService.debug(" Found Target  to remove at :"+foundindex);
+          }
           Target modifiedTargets[]=new Target[existinglength-1];
           System.arraycopy(existingTargets,0,modifiedTargets,0,foundindex);
           /* doing an array copy till the index where classification is found and skiping 
@@ -698,8 +723,10 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
   public RegistrationAlert getRegistrationAlert(ConsolidatedCapabilities cons) {
     DomainService service=getDomainService();
     if(service==null) {
-      loggingService.debug(" Got service as null in  getRegistrationAlert of Capabilities"+
-                           "ProcessingPlugin  :"+ myAddress.toString());
+      if(loggingService.isDebugEnabled()){
+        loggingService.debug(" Got service as null in  getRegistrationAlert of Capabilities"+
+                             "ProcessingPlugin  :"+ myAddress.toString());
+      }
       return null;
     }
     CmrFactory factory=(CmrFactory)getDomainService().getFactory("cmr");
@@ -708,7 +735,9 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
     RegistrationAlert ralert= null;
     
     if(cons == null) {
-      loggingService.info("ConsolidatedCapabilities is null!");
+      if(loggingService.isInfoEnabled()){
+        loggingService.info("ConsolidatedCapabilities is null!");
+      }
       return null;
     } 
     List sources = null;
@@ -753,19 +782,21 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
     while(subCapablities.hasNext())  {
       event=( Event)  subCapablities.next();
       if(event.getSource().equals(myAddress)) {
-      	loggingService.debug(" $$$$$ recived event from my source address :"+myAddress.toString()
-                             +" event is :"+event.toString());
+        if(loggingService.isDebugEnabled()){ 
+          loggingService.debug(" $$$$$ recived event from my source address :"+myAddress.toString()
+                               +" event is :"+event.toString());
+        }
       	continue;
       }
       cc = (ConsolidatedCapabilities)event.getEvent(); 
       if(loggingService.isDebugEnabled()) {
-	      loggingService.debug(" got consolidatedcapabilities in agent :>"+myAddress.toString() +
+        loggingService.debug(" got consolidatedcapabilities in agent :>"+myAddress.toString() +
                              "consolidated capabilities "+ cc.toString()+
                              "Analyzer id is "+ cc.getAnalyzer().getAnalyzerid());
       }
       
       /**
-	     * Consolidating capabilities from local sensors or subordinate managers
+       * Consolidating capabilities from local sensors or subordinate managers
        */
       analyzerId = cc.getAnalyzer().getAnalyzerid();
       if(capObject.containsKey(analyzerId)) {
@@ -781,7 +812,9 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
       }
       else {
       	capObject.put(analyzerId, getRegistrationAlert(cc));
-      	loggingService.debug(" Agent is not  registered :" + analyzerId);
+        if(loggingService.isDebugEnabled()){
+          loggingService.debug(" Agent is not  registered :" + analyzerId);
+        }
       	modified = true;
       }
     }

@@ -261,7 +261,9 @@ public class EventQueryPlugin extends ComponentPlugin {
         getServiceBroker().getService(this, LoggingService.class, null);
     }
     if (_log != null) {
-      _log.info("Setting security manager agent name to " + _societySecurityManager);
+       if(_log.isInfoEnabled()){
+         _log.info("Setting security manager agent name to " + _societySecurityManager);
+       }
     }
     _community = (String) arr[1];
     if (_community != null && _community.length() == 0) {
@@ -394,13 +396,17 @@ public class EventQueryPlugin extends ComponentPlugin {
       _persistData.classifications = _classifications;
       _persistData.unaryPredicateClass = _unaryPredicateClass;
       bbs.publishAdd(_persistData);
-      _log.info("No rehydration.");
+      if(_log.isInfoEnabled()){
+        _log.info("No rehydration.");
+      }
     } else {
       _persistData = (EventQueryData) c.iterator().next();
       _agents = _persistData.agents;
       _queryAdapters = _persistData.queryAdapters;
       bbs.publishChange(_persistData);
-      _log.info("Rehydrating.");
+      if(_log.isInfoEnabled()){
+        _log.info("Rehydrating.");
+      }
     }
   }
 
@@ -430,16 +436,22 @@ public class EventQueryPlugin extends ComponentPlugin {
       EQAggregationResultSet results = 
         (EQAggregationResultSet) queryResult.getResultSet();
       if (results.exceptionThrown()) {
+        if(_log.isErrorEnabled()){
         _log.error("Exception when executing query: " + results.getExceptionSummary());
-        _log.debug("XML: " + results.toXml());
+        }
+        if(_log.isDebugEnabled()){
+          _log.debug("XML: " + results.toXml());
+        }
       } else {
         Iterator atoms = results.getAddedAtoms();
         BlackboardService bbs = getBlackboardService();
         try {
           _parserFactory.newDocumentBuilder();
         } catch (ParserConfigurationException e) {
-          _log.error("Can't parse any events. The parser factory isn't configured properly.");
-          _log.debug("Configuration error.", e);
+           if(_log.isErrorEnabled())
+             _log.error("Can't parse any events. The parser factory isn't configured properly.");
+           if(_log.isDebugEnabled())
+             _log.debug("Configuration error.", e);
           return;
         }
         while (atoms.hasNext()) {
