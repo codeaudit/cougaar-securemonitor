@@ -31,6 +31,8 @@ import org.cougaar.core.security.monitoring.blackboard.Event;
 import org.cougaar.core.servlet.SimpleServletSupport;
 import org.cougaar.util.ConfigFinder;
 import org.cougaar.util.UnaryPredicate;
+import org.cougaar.core.security.monitoring.idmef.Registration;
+import org.cougaar.core.security.monitoring.idmef.RegistrationAlert;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -74,10 +76,18 @@ public class EventViewerServlet  extends HttpServlet {
     /** @return true if the object "passes" the predicate */
     public boolean execute(Object o) {
       if (o instanceof Event)  {
-        return true;
+        Event e= (Event)o;
+        IDMEF_Message msg=e.getEvent();
+        if((!(msg instanceof AgentRegistration)) &&(!(msg instanceof Registration))){
+          return true;
+        }
+        else {
+          return false;
+        }
       }
-      return false;
-    }
+      else {
+        return false;
+      }  
   }
 
   public void setSimpleServletSupport(SimpleServletSupport support) {
