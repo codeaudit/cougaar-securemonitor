@@ -288,27 +288,32 @@
     	     * securityservices
     	     * securityutils
     	-->
-    	<antCall target="update-dependency">
-    		<param name="dependency.module.name" value="securityutils"/>
-    		<param name="dependency.module.jar" value="secure_utils.jar"/>
-    	</antCall>
-    	<antCall target="update-dependency">
+    	<antcall target="update-dependency">
     		<param name="dependency.module.name" value="securityservices"/>
     		<param name="dependency.module.jar" value="securityservices.jar"/>
-    	</antCall>
+    	</antcall>
+    	<antcall target="update-dependency">
+    		<param name="dependency.module.name" value="securityutils"/>
+    		<param name="dependency.module.jar" value="secure_util.jar"/>
+    	</antcall>
     </target>
-	<target name="update-dependency">
-       <property name="cvs.command.module" value="checkout"/>
-       <available property="cvs.command.module" value="update -d"
-        	file="${securityservices.base}../${dependency.module.name}" type="dir"/>
-	   <cvs cvsRoot="${env.CVSROOT}" command="${cvs.command.module}"
-	           dest="${securityservices.base}../${dependency.module.name}"/>
+    <target name="update-dependency">
+       <property name="cvs.command" value="checkout"/>
+       <available file="${securityservices.base}/../${dependency.module.name}" type="dir"
+                  property="cvs.command" value="update -d">
+       </available>
+       <echo message="Updating or checking out: ${securityservices.base}/../${dependency.module.name}"/>
+	   <cvs cvsRoot="${env.CVSROOT}" cvsRsh="${env.CVS_RSH}"
+                command="${cvs.command}" package="${dependency.module.name}"
+                dest="${securityservices.base}/../"
+                quiet="true"
+                failonerror="true"/>
 	   <ant antfile="build.xml"
-	   	    dir="${securityservices.base}../${dependency.module.name}"
+	   	    dir="${securityservices.base}/../${dependency.module.name}"
 	   	    inheritAll="false"
 	   	    target="with-depend-update">
 	   </ant>
-	   <copy file="${securityservices.base}../${dependency.module.name}/classes/signed/${dependency.module.jar}"
+	   <copy file="${securityservices.base}/../${dependency.module.name}/classes/signed/${dependency.module.jar}"
 		    toDir="${securityservices.base}/lib/security">
 	   </copy>
     </target>
