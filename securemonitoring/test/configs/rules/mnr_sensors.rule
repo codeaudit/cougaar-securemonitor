@@ -1,0 +1,137 @@
+#!/usr/bin/ruby
+####################################################
+# Rule to insert MessageFailureSensor to all node agents
+# Rule to insert LoginFailureSensor to all node agents
+# Rule to insert LoginFailureSensor to all node agents
+
+require 'security/lib/common_security_rules'
+
+msgFailSensor = "org.cougaar.core.security.monitoring.plugin.MessageFailureSensor"
+loginSensor = "org.cougaar.core.security.monitoring.plugin.LoginFailureSensor"
+idmefPublisher = "org.cougaar.core.security.monitoring.plugin.IdmefEventPublisherPlugin"
+
+society.each_node_agent() do |node_agent|
+  if defined?(msgFailSensor)
+    node_agent.add_component do |c|
+      c.classname = msgFailSensor
+    end
+  end
+  if defined?(loginSensor)
+   node_agent.add_component do |c|
+      c.classname = loginSensor
+    end
+  end
+  if defined?(idmefPublisher)
+   node_agent.add_component do |c|
+      c.classname = idmefPublisher
+    end
+  end
+end
+
+# Rule to insert MnRDataProtectionSensor
+dataProcSensor = "org.cougaar.core.security.monitoring.plugin.DataProtectionSensor"
+# Rule to insert MnRBootStrapEventPlugin
+bootstrapPlugin = "org.cougaar.core.security.monitoring.plugin.BootStrapEventPlugin"
+
+society.each_node do |node|
+  if defined?(dataProcSensor)
+    node.add_component do |c|
+      c.classname = dataProcSensor
+    end
+  end
+  if defined?(bootstrapPlugin)
+    node.add_component do |c|
+        c.classname = bootstrapPlugin
+    end
+  end
+
+  # Adds plugin in the PolicyDomainManagers to notify 
+  # agents in a particular security community of the
+  # threat con level 
+  node.each_facet(:role) do |facet|
+    if facet[:role] == $facetManagement
+      facetval = node.host.get_facet(:enclave)
+      enclave = facetval[0..0] + facetval[1..facetval.length].downcase 
+      policyDomainMgr = enclave + "PolicyDomainManager"
+      securityComm = facetval + "-SECURITY-COMM"
+
+      node.each_agent do |agent|
+        if agent.name == policyDomainMgr
+          # for threat con level reporter
+          agent.add_component do |c|
+            c.classname = "org.cougaar.core.security.monitoring.plugin.ThreatConLevelReporter"
+            c.add_argument(securityComm);
+          end
+        end
+      end
+    end
+  end
+end
+
+# Rule to insert BlackboardCompromise Sensor
+# Rule to insert IDMEF Archival Plugin 
+blackboardSensor = "org.cougaar.core.security.monitoring.plugin.BlackboardCompromiseSensorPlugin"
+idmefArchiver = "org.cougaar.core.security.monitoring.plugin.IdmefArchivalPlugin"
+# Rule to insert the threatcon monitor servlet to every M&R manager
+threatConServlet = "org.cougaar.core.security.monitoring.servlet.ThreatConMonitorServlet"
+servletComponent = "org.cougaar.core.servlet.SimpleServletComponent"
+# Rule to insert MnRUserLockoutPlugin to SocietyMnRManagerAgent
+userLockout = "org.cougaar.core.security.monitoring.plugin.UserLockoutPlugin"
+# Rule to insert MnRCertificateRevokerPlugin
+revokerPlugin = "org.cougaar.core.security.monitoring.plugin.CertificateRevokerPlugin"
+# Rule to view IDMEF events
+eventViewerServlet = "org.cougaar.core.security.monitoring.servlet.EventViewerServlet"
+
+society.each_agent(true) do |agent|
+  if defined?(blackboardSensor)
+    agent.add_component do |c|
+      c.classname = blackboardSensor
+    end
+  end
+  if defined?(idmefArchiver)
+    agent.add_component do |c|     
+      c.classname = idmefArchiver
+    end   
+  end
+
+  if defined?(threatConServlet)
+    if agent.name =~ /EnclaveMnRManager/
+      agent.add_component do |c|
+        c.classname = servletComponent
+        c.add_argument(threatConServlet)
+        c.add_argument("/threatConMonitor")
+      end
+    end
+  end
+
+  if defined?(userLockout)
+    if agent.name =~ /EnclaveMnRManager/
+      agent.add_component do |c|
+        c.classname = userLockout
+        c.add_argument("600")
+        c.add_argument("86400")
+        c.add_argument("org.cougaar.core.security.monitoring.MAX_LOGIN_FAILURES")
+      end
+    end
+  end
+
+  if defined?(revokerPlugin)
+    if agent.name =~ /EnclaveMnRManager/
+      agent.add_component do |c|
+        c.classname = revokerPlugin
+        c.add_argument("600")
+        c.add_argument("86400")
+        c.add_argument("org.cougaar.core.security.crypto.MAX_MESSAGE_FAILURE")
+      end
+    end
+  end
+
+  if defined?(eventViewerServlet)
+    agent.add_component do |c|
+      c.classname = servletComponent
+      c.add_argument(eventViewerServlet)
+      c.add_argument("/IdmefEventViewerServlet")
+    end
+  end
+end
+

@@ -1,0 +1,89 @@
+#!/usr/bin/ruby
+####################################################
+# society_security_mnr_mgr.rule
+# Adds SocietyMnRManager complete agent recipe
+
+if ! defined? CIP
+  CIP = ENV['COUGAAR_INSTALL_PATH']
+end
+$:.unshift File.join(CIP, 'csmart', 'assessment', 'lib')
+
+require 'security/lib/common_security_rules'
+
+society.each_node do |node|
+  node.each_facet(:role) do |facet|
+    if facet[:role] == $facetRootManagement
+      agentname = "SocietyMnRManager"
+
+      node.add_agent(agentname) do |agent|
+
+=begin
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.RateCalculatorPlugin"
+          c.add_argument("20")
+          c.add_argument("1200")
+          c.add_argument("org.cougaar.core.security.monitoring.LOGIN_FAILURE")
+          c.add_argument("org.cougaar.core.security.monitoring.LOGIN_FAILURE_RATE")
+        end
+
+	agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.EventQueryPlugin"
+          c.add_argument("SocietyMnRManager")
+          c.add_argument("")
+          c.add_argument("org.cougaar.core.security.monitoring.plugin.AllLoginFailures")
+        end
+=end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.CapabilitiesProcessingPlugin"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.CapabilitiesConsolidationPlugin"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.MnRQueryReceiverPlugin"
+          c.add_argument("root")
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.MnRAggQueryReceiverPlugin"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.MnRAggResponseAggregator"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.MnRAggSendRemoteResponse"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.MnRQueryResponderPlugin"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.MnRAggSendCompleteEventPlugin"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.adaptivity.AdaptivityEngine"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.adaptivity.ConditionServiceProvider"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.adaptivity.OperatingModeServiceProvider"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.adaptivity.PlaybookManager"
+          c.add_argument("AMnRPlaysSocietyManager.txt")
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.servlet.MnRRegistrationViewerComponent"
+          c.add_argument("/monitoringRegistrationViewer")
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.servlet.MnRResponseViewerComponent"
+          c.add_argument("/monitoringQueryViewer")
+        end
+        agent.add_component do |c|
+          c.classname ="org.cougaar.core.security.monitoring.servlet.MnRQueryServletComponent"
+          c.add_argument("/mnrQuery")
+        end
+      end
+    end
+  end
+end

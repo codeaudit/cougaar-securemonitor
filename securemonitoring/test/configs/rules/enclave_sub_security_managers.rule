@@ -1,0 +1,97 @@
+#!/usr/bin/ruby
+# enclave_sub_security_managers.rule
+
+if ! defined? CIP
+  CIP = ENV['COUGAAR_INSTALL_PATH']
+end
+$:.unshift File.join(CIP, 'csmart', 'assessment', 'lib')
+
+require 'security/lib/common_security_rules'
+
+society.each_node do |node|
+  agentname = ""
+  enclave = ""
+  enclaveName = ""
+
+  node.each_facet(:role) do |facet|
+    if facet[:role] == $facetSubManagement
+      enclaveName = node.host.get_facet(:enclave)
+      enclave = enclaveName.capitalize
+      break
+    end
+  end
+
+  if enclave != ""
+    sub = 1..2  # enclave 2 has sub1 and sub2, but enclave 3 has only sub1
+    sub.each do |this_sub|
+      if enclave == "Conus" and this_sub == 2
+        break
+      end
+      agentname = enclave + "EnclaveSub" + this_sub.to_s + "Manager"
+      node.add_agent(agentname) do |agent|
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.CapabilitiesProcessingPlugin"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.CapabilitiesConsolidationPlugin"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.MnRQueryReceiverPlugin"
+        end
+
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.MnRAggQueryReceiverPlugin"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.MnRAggResponseAggregator"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.MnRAggSendRemoteResponse"
+        end
+
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.MnRQueryResponderPlugin"
+        end
+	
+	agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.MnRAggSendCompleteEventPlugin"
+        end
+
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.RateCalculatorPlugin"
+          c.add_argument("20")
+          c.add_argument("1200")
+          c.add_argument("org.cougaar.core.security.monitoring.MESSAGE_FAILURE")
+          c.add_argument("org.cougaar.core.security.monitoring.MESSAGE_FAILURE_RATE")
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.adaptivity.AdaptivityEngine"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.adaptivity.ConditionServiceProvider"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.adaptivity.OperatingModeServiceProvider"
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.adaptivity.PlaybookManager"
+          c.add_argument("AMnRPlaysEnclave.txt")
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.EventQueryPlugin"
+          c.add_argument(agent.name)
+          c.add_argument("org.cougaar.core.security.monitoring.plugin.AllMessageFailures")
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.servlet.MnRRegistrationViewerComponent"
+          c.add_argument("/monitoringRegistrationViewer")
+        end
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.servlet.MnRResponseViewerComponent"
+          c.add_argument("/monitoringQueryViewer")
+        end
+      end
+    end
+  end
+end
+

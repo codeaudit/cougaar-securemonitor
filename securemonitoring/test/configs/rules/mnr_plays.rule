@@ -1,0 +1,140 @@
+#!/usr/bin/ruby
+####################################################
+# create the AMnRPlaysSocietyManager.txt
+# it requires enclave info to accomplish its task
+
+if ! defined? CIP
+  CIP = ENV['COUGAAR_INSTALL_PATH']
+end
+$:.unshift File.join(CIP, 'csmart', 'assessment', 'lib')
+
+require 'cougaar/communities'
+require 'ultralog/enclaves'
+require 'security/lib/jar_util'
+require 'security/lib/common_security_rules'
+
+if !(@mnrPlaysCompleted)
+  robustness = false
+
+  society.each_agent { |agent|
+    agent.each_component { |comp|
+      if comp.classname == "org.cougaar.robustness.dos.manager.AttackAssessmentPlugin"
+        robustness = true
+        break
+      end
+    }
+  }
+  if (robustness || !(@mnrPlaysWrittenOnce))
+    if robustness
+      @mnrPlaysCompleted = true
+    end
+    @mnrPlaysWrittenOnce = true
+    playclause = "
+org.cougaar.core.security.monitoring.LOGIN_FAILURE_RATE <= 36000 :
+    PERCEIVED_THREAT_LEVEL = LOW;
+
+org.cougaar.core.security.monitoring.LOGIN_FAILURE_RATE > 36000  :
+   PERCEIVED_THREAT_LEVEL = HIGH;
+"
+    if (robustness)
+      playclause = "
+(org.cougaar.core.security.monitoring.LOGIN_FAILURE_RATE <= 36000) & (org.cougaar.core.robustness.DOS_ATTACK_LEVEL == LOW) :
+     PERCEIVED_THREAT_LEVEL = LOW;
+
+(org.cougaar.core.security.monitoring.LOGIN_FAILURE_RATE <= 36000) & (org.cougaar.core.robustness.DOS_ATTACK_LEVEL != LOW) :
+     PERCEIVED_THREAT_LEVEL = HIGH;
+
+org.cougaar.core.security.monitoring.LOGIN_FAILURE_RATE > 36000 :
+     PERCEIVED_THREAT_LEVEL = HIGH;
+"
+    end
+
+    society.each_enclave { |enclave|
+      playsFile = "#{CIP}/configs/security/AMnRPlaysEnclave#{enclave.capitalize}.txt"
+      file = File.open(playsFile ,"w") { |file|
+        file.write <<END
+//
+// Society level play book
+//
+
+/* This playbook is used to evaluate the perceived threat level of a society and take actions
+ * when the threat level changes. The perceived threat level depends on how many login failures
+ * occur in a period of time.
+ *
+ * Every T1 seconds, the loging failure analyzer evaluates the number of login failures over the
+ * past T2 seconds. The analyzer aggregates all the login failures from all users.
+ * The current login failure analyzer recipe is setup with T1=20 seconds and T2=20 minutes.
+ *
+ * When the rate of login failures crosses a threshold, the perceived threat level changes and
+ * the preventive measure policy may change. The login failure analyzer always returns the login
+ * failure rate in number of failures per day, regardless of the settings of T1 and T2.
+ * Currently, this playbook file defines three perceived threat levels (1, 2 and 3).
+ *
+ * In every threat level, each user is allowed R login attempts before that user is locked out
+ * for L seconds. For example, in threat level 1, user mbarger is allowed 10 login failures before
+ * the mbarger account is locked out for 60 seconds. After 60 seconds, the mbarger user can try
+ * to login again.
+ * If the lockout duration is set to -1 (as in threat level 3), then the user is locked out
+ * until an administrator unlocks the account.
+ *
+ * In threat level 1 and 2, the preventive measure policy is set to LOW. This mode allows users
+ * to login using either a password or a certificate.
+ * In threat level 3, the preventive measure policy is set to HIGH. Users must provide a certificate
+ * to login.
+ *
+ * 36000 login failures/day == 500 failures/20 minutes
+ * 72000 login failures/day == 1000 failures/20 minutes
+ */
+
+#{playclause}
+
+PERCEIVED_THREAT_LEVEL == LOW
+    : org.cougaar.core.security.monitoring.MAX_LOGIN_FAILURES = 10
+    : org.cougaar.core.security.monitoring.LOCKOUT_DURATION = 60
+    : org.cougaar.core.security.monitoring.PERCEIVED_THREAT_LEVEL = "LOW"
+    : [agent.#{enclave.capitalize}PolicyDomainManager]org.cougaar.core.security.policy.PREVENTIVE_MEASURE_POLICY = LOW;
+//    : com.telcordia.mode.AdaptiveFilterOperatingModeScope = LOGIN_FAILURES
+
+PERCEIVED_THREAT_LEVEL == HIGH
+    : org.cougaar.core.security.monitoring.MAX_LOGIN_FAILURES = 3
+    : org.cougaar.core.security.monitoring.LOCKOUT_DURATION = 600
+    : org.cougaar.core.security.monitoring.PERCEIVED_THREAT_LEVEL = "HIGH"
+//    : com.telcordia.mode.AdaptiveFilterOperatingModeScope = LOGIN_JAR_SECURITYMGR_CRYPTO_FAILURES
+    : [agent.#{enclave.capitalize}PolicyDomainManager]org.cougaar.core.security.policy.PREVENTIVE_MEASURE_POLICY = HIGH;
+
+//org.cougaar.core.security.crypto.CRYPTO_EVENT_RATE <= 100
+//    : com.telcordia.mode.AdaptiveFilterOperatingModeReportingRate = RAPID;
+//org.cougaar.core.security.crypto.CRYPTO_EVENT_RATE > 100
+//    : com.telcordia.mode.AdaptiveFilterOperatingModeReportingRate = MODERATE;
+
+END
+      }
+      scheduleConfigChange(playsFile)
+
+    }
+    playsFile = "#{CIP}/configs/security/AMnRPlaysSocietyManager.txt"
+    File.open(playsFile, "w") { |file|
+      file.write <<END
+/*
+ * Society Manager does not control the operating modes now. 
+ * This is all done in the enclave playbooks.
+ */
+org.cougaar.core.security.monitoring.LOGIN_FAILURE_RATE <= 360000 : PERCEIVED_THREAT_LEVEL = 1;
+org.cougaar.core.security.monitoring.LOGIN_FAILURE_RATE > 360000 : PERCEIVED_THREAT_LEVEL = 2;
+PERCEIVED_THREAT_LEVEL == 1
+    : org.cougaar.core.security.monitoring.MAX_LOGIN_FAILURES = 10
+    : org.cougaar.core.security.monitoring.LOCKOUT_DURATION = 60
+    : org.cougaar.core.security.monitoring.PERCEIVED_THREAT_LEVEL = LOW;
+//    : com.telcordia.mode.AdaptiveFilterOperatingModeScope = LOGIN_FAILURES;
+
+PERCEIVED_THREAT_LEVEL == 2
+    : org.cougaar.core.security.monitoring.MAX_LOGIN_FAILURES = 3
+    : org.cougaar.core.security.monitoring.LOCKOUT_DURATION = 600
+    : org.cougaar.core.security.monitoring.PERCEIVED_THREAT_LEVEL = HIGH;
+//    : com.telcordia.mode.AdaptiveFilterOperatingModeScope = LOGIN_JAR_SECURITYMGR_CRYPTO_FAILURES;
+
+END
+    }
+    scheduleConfigChange(playsFile)
+  end
+end 

@@ -1,0 +1,12 @@
+#This rule's purpose is to add the compromise blackboard plugin to monitor
+# for compromised blackboads to every agent
+plugin="org.cougaar.core.security.blackboard.BlackboardCompromisePlugin"
+
+
+society.each_node_agent() do |agent|
+       agent.add_component do |c|
+                c.classname=plugin
+       end
+end
+
+
