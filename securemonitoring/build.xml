@@ -316,7 +316,6 @@
     <target name="build-module">
        <echo message="******************** Building: ${securityservices.base}/../${build.module.name}"/>
        <antcall target="call-ant-submodule">
-          <param name="build.module.name" value="@{build.module.name}"/>
        </antcall>
        <echo message="Copying jar file to superior modules: ${module.superiors}"/>
        <for list="${module.superiors}" delimiter="," param="build.module.superior.name">
