@@ -89,11 +89,6 @@ public class MessageFailureSensor extends SensorPlugin {
     publishIDMEFEvent();
   }
 
-  protected void execute() {
-    super.execute();
-  }
-
-
   public static void publishEvent(FailureEvent event) {
     publishEvent(MessageFailureSensor.class, event);
   }

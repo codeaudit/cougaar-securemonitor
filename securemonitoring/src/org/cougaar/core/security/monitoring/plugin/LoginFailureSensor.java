@@ -121,17 +121,6 @@ public class LoginFailureSensor extends SensorPlugin {
     publishIDMEFEvent();
   }
 
-
-
-
-  /**
-   * Calling the super method to Un register sensor  .
-   */
- /* protected void execute () {
-    super.execute();
-  }
- */
-
   private static class LFSensor implements SensorInfo {
 
     public String getName() {
