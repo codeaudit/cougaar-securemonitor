@@ -93,52 +93,8 @@ class EventsPredicate implements  UnaryPredicate{
   }
 }
 
-public abstract class MnRAggQueryBase extends ComponentPlugin {
+public abstract class MnRAggQueryBase extends QueryBase{
   
-  protected LoggingService loggingService;
-  protected CommunityService communityService;
-  protected DomainService domainService;
-  protected MessageAddress myAddress;
-  protected CommunityServiceUtil _csu;
-  private boolean _isRoot;
-  private boolean _rootReady;
-  /**
-   * Used by the binding utility through reflection to set my DomainService
-   */
-  public void setDomainService(DomainService ds) {
-    domainService = ds;
-  }
-
-  /**
-   * Used by the binding utility through reflection to get my DomainService
-   */
-  public DomainService getDomainService() {
-    return domainService;
-  }
-  
-  /**
-   * Used by the binding utility through reflection to set my CommunityService
-   */
-  public void setCommunityService(CommunityService cs) {
-    communityService = cs;
-  }
-
-  /**
-   * Used by the binding utility through reflection to get my CommunityService
-   */
-  public CommunityService getCommunityService() {
-    return communityService;
-  }
-  
-  public void setLoggingService(LoggingService ls) {
-    loggingService = ls; 
-  }
-  
-  public LoggingService getLoggingService() {
-    return loggingService; 
-  }
-
-
   protected void setupSubscriptions() {
     if (myAddress == null) {
       myAddress = getAgentIdentifier();
@@ -154,14 +110,6 @@ public abstract class MnRAggQueryBase extends ComponentPlugin {
       _csu.amIRoot(new RootListener());
     }
   }
-  
-  protected boolean isRootReady() {
-    return _rootReady;
-  }
-
-  protected boolean amIRoot() {
-    return _isRoot;
-  } 
   
   public ConsolidatedEvent createConsolidatedEvent(RemoteConsolidatedEvent event) {
     ConsolidatedEvent newConsolidateEvent=null;
@@ -234,26 +182,4 @@ public abstract class MnRAggQueryBase extends ComponentPlugin {
     return queryObject;
     
   } 
-   
-  private class RootListener 
-    implements Runnable, CommunityServiceUtilListener {
-    public void getResponse(Set entities) {
-      _isRoot = !(entities == null || entities.isEmpty());
-      _rootReady = true;
-      loggingService.info("The agent " + myAddress + " is root? " + _isRoot);
-      ThreadService ts = (ThreadService)
-        getServiceBroker().getService(this, ThreadService.class, null);
-      ts.getThread(this, this).schedule(0);
-      getServiceBroker().releaseService(this, ThreadService.class, ts);
-    }
-
-    public void run() {
-      getBlackboardService().openTransaction();
-      try {
-        execute();
-      } finally {
-        getBlackboardService().closeTransaction();
-      }
-    }
-  }
 }

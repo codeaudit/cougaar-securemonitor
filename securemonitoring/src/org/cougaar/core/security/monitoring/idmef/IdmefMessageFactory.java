@@ -569,7 +569,49 @@ final public class IdmefMessageFactory {
     }
     return new RegistrationAlert();
   }
+
+  public Source[] createSource(List sourceList){
+    Source [] sources=null;
+    if(sourceList!=null)
+      sources = ( Source [] )sourceList.toArray( ( new Source[ 0 ] ) );
+    return sources;
+  }
+
+  public   Classification[]  createClassification(List classificationList){
+    Classification [] classification=null;
+    if( classificationList != null )
+      classification = ( Classification [] )classificationList.toArray( ( new Classification[ 0 ] ) );
+    return classification;
+   
+  }
+
+  public Target[] createTarget(List targetList){
+   Target [] targets=null;
+   if(targetList!=null) 
+     targets = ( Target [] )targetList.toArray( ( new Target[ 0 ] ) );
+   return targets;
+  }
   
+  public AdditionalData[] createAdditionalData(List additionaldataList, String type){
+    AdditionalData [] additionaldata=null; 
+    if(additionaldataList!=null) {
+      AdditionalData [] tempdata=( AdditionalData [] )additionaldataList.toArray( ( new AdditionalData[ 0 ] ) );
+      additionaldata = new AdditionalData[tempdata.length+1];
+      additionaldata[0]= createAdditionalData( AdditionalData.STRING, 
+                                               "cougaar-alert-type", 
+                                               type ) ;
+      System.arraycopy(tempdata,0,additionaldata,1,tempdata.length);
+      
+    }
+    else {
+      additionaldata=new AdditionalData[1];
+      additionaldata[0]= createAdditionalData( AdditionalData.STRING, 
+					       "cougaar-alert-type", 
+					       type ) ;
+    }
+    return additionaldata;
+  }
+
   public RegistrationAlert createRegistrationAlert( Analyzer analyzer,
 						    List sourceList,
 						    List targetList,
@@ -580,32 +622,12 @@ final public class IdmefMessageFactory {
     Source [] sources=null;
     Target [] targets=null;
     AdditionalData [] additionaldata=null;
-    if(sourceList!=null)
-      sources = ( Source [] )sourceList.toArray( ( new Source[ 0 ] ) );
-
-    if(targetList!=null) 
-       targets = ( Target [] )targetList.toArray( ( new Target[ 0 ] ) );
-    
-    if( classificationList != null )
-      classification = ( Classification [] )classificationList.toArray( ( new Classification[ 0 ] ) );
-    
-    if(additionaldataList!=null) {
-      
-       AdditionalData [] tempdata=( AdditionalData [] )additionaldataList.toArray( ( new AdditionalData[ 0 ] ) );
-       additionaldata = new AdditionalData[tempdata.length+1];
-       additionaldata[0]= createAdditionalData( AdditionalData.STRING, 
-						"cougaar-alert-type", 
-						type ) ;
-       System.arraycopy(tempdata,0,additionaldata,1,tempdata.length);
-      
-    }
-    else {
-      additionaldata=new AdditionalData[1];
-      additionaldata[0]= createAdditionalData( AdditionalData.STRING, 
-					       "cougaar-alert-type", 
-					       type ) ;
-    }
-    return  new RegistrationAlert(analyzer,sources,targets,classification,additionaldata,createUniqueId(),operationtype,type,agentName);
+    sources = createSource(sourceList);
+    targets= createTarget(targetList);
+    classification = createClassification(classificationList);
+    additionaldata= createAdditionalData(additionaldataList,type);
+    return  new RegistrationAlert(analyzer,sources,targets,classification,additionaldata,
+                                  createUniqueId(),operationtype,type,agentName);
   }
   
   public RegistrationAlert createRegistrationAlert( Object sensor ,
@@ -619,31 +641,12 @@ final public class IdmefMessageFactory {
     Target [] targets=null;
     AdditionalData [] additionaldata=null;
     if( sensor instanceof SensorInfo ){ 
-      if(sourceList!=null)
-	sources = ( Source [] )sourceList.toArray( ( new Source[ 0 ] ) );
-      
-      if(targetList!=null) 
-	targets = ( Target [] )targetList.toArray( ( new Target[ 0 ] ) );
-      
-      if( classificationList != null )
-	classification = ( Classification [] )classificationList.toArray( ( new Classification[ 0 ] ) );
-      
-      if(additionaldataList!=null) {
-	AdditionalData [] tempdata=( AdditionalData [] )additionaldataList.toArray( ( new AdditionalData[ 0 ] ) );
-	additionaldata = new AdditionalData[tempdata.length+1];
-	additionaldata[0]= createAdditionalData( AdditionalData.STRING, 
-						 "cougaar-alert-type", 
-						 type ) ;
-	System.arraycopy(tempdata,0,additionaldata,1,tempdata.length);
-	
-      }
-      else {
-	additionaldata=new AdditionalData[1];
-	additionaldata[0]= createAdditionalData( AdditionalData.STRING, 
-						 "cougaar-alert-type", 
-						 type ) ;
-      }
-      return  new RegistrationAlert( createAnalyzer( sensor ),sources,targets,classification,additionaldata,createUniqueId(),operationtype,type,agentName);
+      sources = createSource(sourceList);
+      targets= createTarget(targetList);
+      classification = createClassification(classificationList);
+      additionaldata= createAdditionalData(additionaldataList,type); 
+      return  new RegistrationAlert( createAnalyzer( sensor ),sources,targets,classification,
+                                     additionaldata,createUniqueId(),operationtype,type,agentName);
     }
     return new RegistrationAlert(); 
   }

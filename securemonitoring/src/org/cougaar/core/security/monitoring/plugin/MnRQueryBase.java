@@ -75,51 +75,17 @@ class CapabilitiesObjectPredicate implements UnaryPredicate{
   }
 }
 
-public abstract class MnRQueryBase extends ComponentPlugin {
+public abstract class MnRQueryBase extends QueryBase {
   protected DomainService domainService;
   protected CommunityService communityService;
   protected LoggingService loggingService;
   protected CommunityServiceUtil _csu;
   protected MessageAddress myAddress;
  
-  private boolean _isRoot;
+  private  boolean _isRoot;
   private boolean _rootReady;
  
-  /**
-   * Used by the binding utility through reflection to set my DomainService
-   */
-  public void setDomainService(DomainService ds) {
-    domainService = ds;
-  }
 
-  /**
-   * Used by the binding utility through reflection to get my DomainService
-   */
-  public DomainService getDomainService() {
-    return domainService;
-  }
-  
-  /**
-   * Used by the binding utility through reflection to set my CommunityService
-   */
-  public void setCommunityService(CommunityService cs) {
-    communityService = cs;
-  }
-
-  /**
-   * Used by the binding utility through reflection to get my CommunityService
-   */
-  public CommunityService getCommunityService() {
-    return communityService;
-  }
-  
-  public void setLoggingService(LoggingService ls) {
-    loggingService = ls; 
-  }
-  
-  public LoggingService getLoggingService() {
-    return loggingService; 
-  }
   
   protected void setupSubscriptions() {
     if (myAddress == null) {
@@ -134,24 +100,6 @@ public abstract class MnRQueryBase extends ComponentPlugin {
     }
   }
 
-  protected boolean amIRoot() {
-    return _isRoot;
-  } 
-
-  protected boolean isRootReady() {
-    return _rootReady;
-  } 
-  
-/*
-  protected Community getMySecurityCommunity() {   
-  Community mySecurityCommunity= _csu.getSecurityCommunity(myAddress.toString());
-  if(mySecurityCommunity==null) {
-  loggingService.warn(" Canot get my role as Manager in any Security Community :"+myAddress.toString() );
-  }
-  return mySecurityCommunity;
-  }
-*/
-  
   /**
    * @param query
    * @param caps
@@ -1135,29 +1083,7 @@ public abstract class MnRQueryBase extends ComponentPlugin {
     return relay;
   } 
 
-  private class RootListener 
-    implements Runnable, CommunityServiceUtilListener {
-    public void getResponse(Set entities) {
-      _isRoot = !(entities == null || entities.isEmpty());
-      _rootReady = true;
-      loggingService.info("The agent " + myAddress + " is root? " + _isRoot);
-      ThreadService ts = (ThreadService)
-        getServiceBroker().getService(this, ThreadService.class, null);
-      ts.getThread(this, this).schedule(0);
-      getServiceBroker().releaseService(this, ThreadService.class, ts);
-    }
-
-    public void run() {
-      getBlackboardService().openTransaction();
-      try {
-        execute();
-      } finally {
-        getBlackboardService().closeTransaction();
-      }
-    }
-  }
-
-  public interface FindAgentCallback {
+ public interface FindAgentCallback {
     void execute(Collection agents);
   }
 }

@@ -433,9 +433,6 @@ public class MnRAggQueryReceiverPlugin extends MnRAggQueryBase  {
       }
     }
     Iterator iter=newAggQuery.iterator();
-    String key=null;
-    ArrayList subQueries= null;
-    ThreadService ts=(ThreadService) getServiceBroker().getService(this, ThreadService.class, null);
     while(iter.hasNext()) {
       queryrelay=(CmrRelay)iter.next();
       query=(DrillDownQuery)queryrelay.getContent();
