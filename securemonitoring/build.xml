@@ -327,10 +327,18 @@
     <!-- Check out (or update if module has already been checked out) a security services module
          The name of the module should be provided in the "build.module.name" property. -->
     <target name="update-module">
-       <property name="cvs.command" value="-Q checkout"/>
-       <available file="${securityservices.base}/../${build.module.name}" type="dir"
-                  property="cvs.command" value="-q update -d">
-       </available>
+       <if>
+          <available file="${securityservices.base}/../${build.module.name}" type="dir"/>
+          <then>
+            <!-- Module has been checked out. Update module.
+                 TODO: handle tags. -->
+            <property name="cvs.command" value="-q update -d"/>
+          </then>
+          <else>
+            <!-- Module has not been checked out. Check out module -->
+            <property name="cvs.command" value="-Q checkout"/>
+          </else>
+       </if>
        <echo message="Updating or checking out: ${securityservices.base}/../${build.module.name}"/>
        <cvs cvsRoot="${env.CVSROOT}" cvsRsh="${env.CVS_RSH}"
             command="${cvs.command}" package="${build.module.name}"
@@ -389,13 +397,19 @@
            </for>
          </case>
          <case value="8">
+           <input message="Enter commit message:" addproperty="commit.message"/>
+           <cvs cvsRoot="${env.CVSROOT}" cvsRsh="${env.CVS_RSH}"
+                command="-q commit -m '${commit.message}' build.xml"
+                dest="${securityservices.base}"
+                failonerror="true">
+           </cvs>
            <for list="${module.subordinates}" delimiter="," param="build.module.name">
              <sequential>
                 <echo message="Copying build.xml file to ${securityservices.base}/../@{build.module.name}"/>
                 <copy toDir="${securityservices.base}/../@{build.module.name}"
                       file="build.xml"/>
                 <cvs cvsRoot="${env.CVSROOT}" cvsRsh="${env.CVS_RSH}"
-                      command="-q commit -m 'Updated build.xml file' build.xml"
+                      command="-q commit -m '${commit.message}' build.xml"
                       dest="${securityservices.base}/../@{build.module.name}"
                       failonerror="true"/>
              </sequential>
