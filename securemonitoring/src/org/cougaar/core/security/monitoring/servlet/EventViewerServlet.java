@@ -28,6 +28,7 @@ package org.cougaar.core.security.monitoring.servlet;
 
 // Imported java classes
 import org.cougaar.core.security.monitoring.blackboard.Event;
+import org.cougaar.core.security.monitoring.idmef.AgentRegistration;
 import org.cougaar.core.servlet.SimpleServletSupport;
 import org.cougaar.util.ConfigFinder;
 import org.cougaar.util.UnaryPredicate;
@@ -78,7 +79,7 @@ public class EventViewerServlet  extends HttpServlet {
       if (o instanceof Event)  {
         Event e= (Event)o;
         IDMEF_Message msg=e.getEvent();
-        if((!(msg instanceof AgentRegistration)) &&(!(msg instanceof Registration))){
+        if ((!(msg instanceof AgentRegistration)) &&(!(msg instanceof Registration))) {
           return true;
         }
         else {
@@ -87,7 +88,8 @@ public class EventViewerServlet  extends HttpServlet {
       }
       else {
         return false;
-      }  
+      }
+    }
   }
 
   public void setSimpleServletSupport(SimpleServletSupport support) {
