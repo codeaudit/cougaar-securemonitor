@@ -53,6 +53,7 @@ import org.cougaar.core.security.policy.TrustedCaPolicy;
 import org.cougaar.core.security.services.crypto.KeyRingService;
 import org.cougaar.core.security.services.util.ConfigParserService;
 import org.cougaar.core.security.services.util.PersistenceMgrPolicyService;
+import org.cougaar.core.security.coordinator.AgentCompromiseInfo;
 import org.cougaar.core.security.util.SharedDataRelay;
 import org.cougaar.core.service.DomainService;
 import org.cougaar.core.service.LoggingService;
@@ -129,6 +130,19 @@ public class MnrCompromisePlugin extends ComponentPlugin {
         return false;
       }
     };
+
+  /** Communication between this component and AgentCompromise coordinator */
+  private IncrementalSubscription coordinatorSubs = null;
+  /** Predicate for coordinator */
+  private UnaryPredicate coordinatorPredicate = new UnaryPredicate() {
+    public boolean execute(Object o) {
+      if (o instanceof AgentCompromiseInfo) {
+        AgentCompromiseInfo info = (AgentCompromiseInfo)o;
+        return info.getType().equals(AgentCompromiseInfo.ACTION);
+      }
+      return false;
+    }
+  };
   
 /** UIDService */
   private UIDService uidService = null;
@@ -193,6 +207,22 @@ public class MnrCompromisePlugin extends ComponentPlugin {
       }
     };
 
+/*
+  private static final UnaryPredicate BLACKBOARD_COMPROMISE_PREDICATE =
+    new UnaryPredicate() {
+      public boolean execute(Object o) {
+        if (o instanceof OperatingMode) {
+          OperatingMode om = (OperatingMode) o;
+          String omName = om.getName();
+          if (BLACKBOARD_FAILURE_COUNT.equals(omName)) {
+            return true;
+          }
+        }
+        return false;
+      }
+    };
+*/
+
   /** PersistenceMgrPolicyService */
   PersistenceMgrPolicyService pmPolicyService = null;
 
@@ -251,6 +281,9 @@ public class MnrCompromisePlugin extends ComponentPlugin {
       .subscribe(this.finshedPredicate);
     this.unpackSubs = (IncrementalSubscription) getBlackboardService()
       .subscribe(this.unpackPredicate);
+
+    this.coordinatorSubs = (IncrementalSubscription) getBlackboardService()
+      .subscribe(this.coordinatorPredicate);
   }
 
 
@@ -263,6 +296,7 @@ public class MnrCompromisePlugin extends ComponentPlugin {
     }
 
     checkForCompromises();
+    checkForCoordinatorAction();
     //check for pm && ca related tasks
     checkForNewTasks();
     checkForCompletedTasks();
@@ -273,6 +307,19 @@ public class MnrCompromisePlugin extends ComponentPlugin {
     //checkForCompletedProcesses();
   }
 
+  /**
+   * Check for coordinator action
+   */
+  private void checkForCoordinatorAction() {
+    Enumeration enumeration = coordinatorSubs.getAddedList();
+    while (enumeration.hasMoreElements()) {
+      AgentCompromiseInfo info = (AgentCompromiseInfo)enumeration.nextElement();
+      resolveCompromises(CompromiseBlackboard.AGENT_COMPROMISE_TYPE,
+        info.getTimestamp(), info.getSourceHost(), 
+        info.getSourceNode(), info.getSourceAgent());
+      getBlackboardService().publishRemove(info);
+    }
+  }
 
   /**
    * Check for fully completed tasks and move to next one in workflow
@@ -318,6 +365,24 @@ public class MnrCompromisePlugin extends ComponentPlugin {
           logging.debug("CA finished " + task);
         }
       }
+
+      // check for coordinator action
+    if (task.getVerb().toString().equals(REVOKE_SESSION_KEYS_VERB)) {
+      String coordinatorOn = System.getProperty("org.cougaar.core.security.coordinatorOn");
+      if (coordinatorOn != null && coordinatorOn.equalsIgnoreCase("true")) {
+          // signal compromise to AgentCompromiseSensor
+          // sendDiagnosis
+        if (logging.isDebugEnabled()) {
+          logging.debug("Informing coordinator that agent restart completed.");
+        }
+
+        PrepositionalPhrase pp = task.getPrepositionalPhrase(BlackboardCompromise.FOR_AGENT_PREP);
+        String agent = (String) pp.getIndirectObject();
+        AgentCompromiseInfo info = new AgentCompromiseInfo(
+        AgentCompromiseInfo.COMPLETION_CODE, agent, AgentCompromiseInfo.COMPLETED);
+        getBlackboardService().publishAdd(info);
+      }
+    }
 
       PlanningFactory ldm = (PlanningFactory) domainService.getFactory(
         "planning");
@@ -522,7 +587,6 @@ public class MnrCompromisePlugin extends ComponentPlugin {
         }
       }
 
-
       if (logging.isDebugEnabled()) {
         logging.debug("Got compromise of scope :" + scope
                       + " and time :" + new Date(timestamp) + " from "
@@ -535,6 +599,31 @@ public class MnrCompromisePlugin extends ComponentPlugin {
             "Received a compromise idmef event without a defined scope!");
         }
       } else {
+
+        // playbook action
+
+        // check for coordinator action
+        String coordinatorOn = System.getProperty("org.cougaar.core.security.coordinatorOn");
+        if (coordinatorOn != null && coordinatorOn.equalsIgnoreCase("true")) {
+          // signal compromise to AgentCompromiseSensor
+          // sendDiagnosis
+        }
+        else {
+          resolveCompromises(scope, timestamp, sourceHost, sourceNode, sourceAgent);
+        }
+      }
+    }
+  }
+
+  private void resolveCompromises(
+    String scope, long timestamp, String sourceHost, 
+    String sourceNode, String sourceAgent) {
+      if (logging.isDebugEnabled()) {
+        logging.debug("Resolve compromise of scope :" + scope
+                      + " and time :" + new Date(timestamp) + " from "
+                      + sourceHost + ":" + sourceNode + ":" + sourceAgent);
+      }
+
         ArrayList agentsToBeRevoked = new ArrayList();
         PlanningFactory ldm = (PlanningFactory) domainService
           .getFactory("planning");
@@ -557,6 +646,7 @@ public class MnrCompromisePlugin extends ComponentPlugin {
               logging.debug("removing " + sourceAgent + " on " + sourceNode);
             }
             removeAgent(sourceAgent, sourceNode);
+
           }
         } else if (scope.equals(
                      CompromiseBlackboard.NODE_COMPROMISE_TYPE)) {
@@ -630,8 +720,6 @@ public class MnrCompromisePlugin extends ComponentPlugin {
                                             rootTask, nwf, estResult);
         getBlackboardService().publishAdd(exp);
         getBlackboardService().publishAdd(rootTask);
-      }
-    }
   }
 
 
@@ -730,4 +818,5 @@ public class MnrCompromisePlugin extends ComponentPlugin {
       null, destNodeAddr, ticket);
     addAgentControl(ac);
   }
+
 }
