@@ -96,7 +96,6 @@ import edu.jhuapl.idmef.XMLSerializable;
  */
 public class CertificateRevokerPlugin extends ResponderPlugin {
   private static final String REVOKE_CERT_SERVLET_URI = "/RevokeCertificateServlet";
-  private static final String _managerRole = "Manager";
   private String _agentName;
   private KeyRingService _keyRing;
   private ServiceBroker _serviceBroker;

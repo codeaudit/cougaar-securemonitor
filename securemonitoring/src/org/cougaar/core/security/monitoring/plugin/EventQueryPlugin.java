@@ -92,11 +92,7 @@ import edu.jhuapl.idmef.IDMEF_Message;
 public class EventQueryPlugin extends ComponentPlugin {
   private LoggingService  _log;
 
-  /** the current agent's name */
-  private String _agentName;
-
   private String _community;
-
 
   /** format script for the aggregation query */
   private static final ScriptSpec FORMAT_SPEC =
@@ -346,8 +342,6 @@ public class EventQueryPlugin extends ComponentPlugin {
     CmrFactory           cmrFactory   = (CmrFactory) ds.getFactory("cmr");
     IdmefMessageFactory  imessage     = cmrFactory.getIdmefMessageFactory();
     BlackboardService    bbs          = getBlackboardService();
-    _agentName = ((AgentIdentificationService)
-                  sb.getService(this, AgentIdentificationService.class, null)).getName();
 
     rehydrate();
 
@@ -443,9 +437,8 @@ public class EventQueryPlugin extends ComponentPlugin {
       } else {
         Iterator atoms = results.getAddedAtoms();
         BlackboardService bbs = getBlackboardService();
-        DocumentBuilder parser;
         try {
-          parser = _parserFactory.newDocumentBuilder();
+          _parserFactory.newDocumentBuilder();
         } catch (ParserConfigurationException e) {
           _log.error("Can't parse any events. The parser factory isn't configured properly.");
           _log.debug("Configuration error.", e);

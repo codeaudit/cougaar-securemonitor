@@ -198,7 +198,6 @@ final public class IdmefMessageFactory {
   public static final String SensorType="Sensor";
   public static final String SecurityMgrType="SecurityManager";
   public static final String UnknownType="Unknown";
-  private ServiceBroker serviceBroker;
 
   /**
    * Constructor to create an IdmefMessageFactory instance
@@ -1562,15 +1561,10 @@ final public class IdmefMessageFactory {
   private static String PROCESS_NAME = "org.cougaar.core.node.Node";
     
   private Agent m_agent;
-  private IdmefMessageFactory m_idmefMessageFactory;
-  // agent information 
-  // there is only one IdmefMessageFactory per Cougaar Agent
-  private AdditionalData m_agentData;
   private MessageAddress m_agentId;
   private UIDServer m_uidServer;
   private IDMEF_Process m_process;
   private IDMEF_Node m_node;
-  private LDMServesPlugin m_ldm;
   private User m_user;
     
 }

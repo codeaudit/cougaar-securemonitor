@@ -130,14 +130,7 @@ public class BlackboardCompromiseSensorPlugin extends SensorPlugin {
      * @param event DOCUMENT ME!
      */
     public static void publishEvent(BlackboardFailureEvent event) {
-        String data = event.getData();
-        java.util.logging.Logger utilLogger = java.util.logging.Logger.getLogger("BlackboardCompromiseSensorPlugin");
-//        utilLogger.log(java.util.logging.Level.SEVERE,"PublishAgentCompromiseEvent");
-	   
-        //data = data + ",manager=" + myManagerAddress.getAddress();
-        //BlackboardFailureEvent bEvent = new BlackboardFailreEvent(event.getSource(), event.getTarget(), event.getReason(), event.getReasonIdentifier(), data,event.getDataIdentifier());
-        publishEvent(BlackboardCompromiseSensorPlugin.class, event);
-
+      publishEvent(BlackboardCompromiseSensorPlugin.class, event);
     }
 
 

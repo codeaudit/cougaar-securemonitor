@@ -129,7 +129,6 @@ public class BootStrapEventPlugin extends SensorPlugin implements Observer {
     //System.out.println(" In register method:");
     SecurityManager sm = System.getSecurityManager();
     //System.out.println(" Class is :"+sm.getClass().getName());
-    Class [] classes = new Class[0];
     Method method = null;
     try {
       method = sm.getClass().getMethod("getMREventQueue",null);
@@ -143,12 +142,11 @@ public class BootStrapEventPlugin extends SensorPlugin implements Observer {
       ob = method.invoke(sm,args);
       Class [] param = {Observer.class};
       method = ob.getClass().getMethod("register",param);
-      Object oobj = null;
       if(_log.isDebugEnabled()) {
         _log.debug(" observer being passed is : " + this.toString());
       }
       Object[] argss = {this};
-      oobj = method.invoke(ob,argss);
+      method.invoke(ob,argss);
     }
     catch(Exception iexp) {
       iexp.printStackTrace();

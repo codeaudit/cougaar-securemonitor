@@ -46,7 +46,6 @@ import org.cougaar.core.security.util.CommunityServiceUtilListener;
 import org.cougaar.core.service.DomainService;
 import org.cougaar.core.service.LoggingService;
 import org.cougaar.core.service.ThreadService;
-import org.cougaar.core.service.community.CommunityService;
 import org.cougaar.core.service.community.Entity;
 import org.cougaar.util.UnaryPredicate;
 
@@ -93,14 +92,8 @@ class ConsolidatedCapabilitiesRelayPredicate implements UnaryPredicate{
         ret = (event.getEvent() instanceof AgentRegistration);
       }
       else {
-        if (log.isDebugEnabled()) {
-          // log.debug(" ConsolidatedCapabilitiesRelayPredicate:" + ret);
-        }
         return ret;
       }
-    }
-    if (log.isDebugEnabled()) {
-      //log.debug(" ConsolidatedCapabilitiesRelayPredicate:" + ret);
     }
     return ret;
   }
@@ -134,24 +127,20 @@ public class CapabilitiesConsolidationPlugin extends ComponentPlugin {
 
   // The domainService acts as a provider of domain factory services
   private DomainService domainService = null;
-  private CommunityService communityService=null;
   private IncrementalSubscription modifiedcapabilities;
   private IncrementalSubscription capabilitiesRelays;
   private IncrementalSubscription agentRegistrations;
-  private IncrementalSubscription notification;
 
-//  private Community mySecurityCommunity=null;
-  
   private MessageAddress myAddress;
   private MessageAddress _managerAddress;
   
   /** Holds value of property loggingService. */
   private LoggingService loggingService;
   private boolean readcollection=false;
-  private long _pollInterval=10 * 1000;
-  Object mylock=new Object();
+  private Object mylock=new Object();
   
   private CommunityServiceUtil _csu;
+  
   /**
    * Used by the binding utility through reflection to set my DomainService
    */
@@ -165,10 +154,6 @@ public class CapabilitiesConsolidationPlugin extends ComponentPlugin {
    */
   public DomainService getDomainService() {
     return domainService;
-  }
-  
-  public void setCommunityService(CommunityService cs) {
-    this.communityService=cs;
   }
    
   /**
@@ -248,8 +233,6 @@ public class CapabilitiesConsolidationPlugin extends ComponentPlugin {
       return;
     }
     CmrFactory factory=(CmrFactory)getDomainService().getFactory("cmr");
-    //Event event=null;
-    IdmefMessageFactory idmeffactory=factory.getIdmefMessageFactory();
     Collection  modifiedcapabilities_col=modifiedcapabilities.getChangedCollection();
     if(!readcollection) {
       if(( modifiedcapabilities_col==null)||( modifiedcapabilities_col.size()==0)){
@@ -474,8 +457,6 @@ public class CapabilitiesConsolidationPlugin extends ComponentPlugin {
                 if(newagentrefindex!=-1) {
                   org.cougaar.core.security.monitoring.idmef.Agent newagentinfo=getAgent(regAddData[newagentrefindex]);
                   AdditionalData [] tempdata=new AdditionalData[1];
-                  AdditionalData tmpdata=null;
-                  tmpdata=regAddData[newagentrefindex];
                   String [] newref=new String[1];
                   newref[0]=regSources[i].getIdent();
                   newagentinfo.setRefIdents(newref);
@@ -671,8 +652,6 @@ public class CapabilitiesConsolidationPlugin extends ComponentPlugin {
                 if(newagentrefindex!=-1) {
                   org.cougaar.core.security.monitoring.idmef.Agent newagentinfo=getAgent(regAddData[newagentrefindex]);
                   AdditionalData [] tempdata=new AdditionalData[1];
-                  AdditionalData tmpdata=null;
-                  tmpdata=regAddData[newagentrefindex];
                   String [] newref=new String[1];
                   newref[0]=regTargets[i].getIdent();
                   newagentinfo.setRefIdents(newref);
@@ -807,7 +786,7 @@ public class CapabilitiesConsolidationPlugin extends ComponentPlugin {
   private boolean areAgentInfoEqual(org.cougaar.core.security.monitoring.idmef.Agent newagent,
                                     org.cougaar.core.security.monitoring.idmef.Agent existingagent) {
     boolean equal=false;
-    boolean nameequal=false;;
+    boolean nameequal=false;
     boolean addressequal=true;
     if((newagent==null)||(existingagent==null)) {
       return false;
@@ -1081,9 +1060,6 @@ public class CapabilitiesConsolidationPlugin extends ComponentPlugin {
       }
     }
     if (relay == null) {
-      if (loggingService.isDebugEnabled()) {
-        //loggingService.debug(" No relay was present creating one for Event "+ event.toString());
-      }
       relay = factory.newCmrRelay(event, _managerAddress);
       if (loggingService.isDebugEnabled()) {
         loggingService.debug(" No relay was present creating one  "+ relay.toString());

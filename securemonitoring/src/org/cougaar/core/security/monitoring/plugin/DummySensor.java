@@ -96,7 +96,6 @@ public class DummySensor
       return;
     }    
     IdmefMessageFactory imessage=factory.getIdmefMessageFactory();
-    DummySensor sensor=new DummySensor();
 	
     // create list of capabilities
     List capabilities = new ArrayList();

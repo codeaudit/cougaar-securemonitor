@@ -189,7 +189,6 @@ public class IdmefArchivalPlugin extends ComponentPlugin {
 
   private File createArchiveFile() {
     Calendar cal= Calendar.getInstance();
-    Date date=cal.getTime();
     String filename= topDir + File.separatorChar + agentName;
     File f= new File(filename); 
     return f;

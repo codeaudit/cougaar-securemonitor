@@ -32,7 +32,6 @@ import org.cougaar.core.security.monitoring.idmef.IdmefMessageFactory;
 import org.cougaar.core.service.UIDServer;
 import org.cougaar.core.util.UID;
 import org.cougaar.planning.ldm.LDMServesPlugin;
-import org.cougaar.planning.ldm.PlanningFactory;
 import org.cougaar.planning.ldm.asset.Asset;
 
 import edu.jhuapl.idmef.IDMEF_Message;

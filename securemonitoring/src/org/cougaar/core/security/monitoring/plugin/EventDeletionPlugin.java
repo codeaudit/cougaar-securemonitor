@@ -198,7 +198,6 @@ public class EventDeletionPlugin extends ComponentPlugin {
       
       LOG.debug("Execute over "+deletableEvents.size()+" alerts. subChanged = "+
             deletableEvents.hasChanged()+" alarmExpired: "+alarm.hasExpired());
-      return;
       /* This dumps the contents of the subscription
       Iterator events = deletableEvents.iterator();
       int i = 0;

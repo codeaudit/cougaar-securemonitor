@@ -32,7 +32,6 @@ import java.util.Collection;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Vector;
 
 import org.cougaar.core.blackboard.IncrementalSubscription;
 import org.cougaar.core.mts.MessageAddress;
@@ -50,7 +49,6 @@ import org.cougaar.core.security.monitoring.idmef.RegistrationAlert;
 import org.cougaar.core.service.DomainService;
 import org.cougaar.core.service.EventService;
 import org.cougaar.core.service.LoggingService;
-import org.cougaar.core.service.community.CommunityService;
 import org.cougaar.util.UnaryPredicate;
 
 import edu.jhuapl.idmef.AdditionalData;
@@ -145,28 +143,18 @@ class NotificationPredicate implements UnaryPredicate {
  **/
 
 public class CapabilitiesProcessingPlugin extends ComponentPlugin {
-  private static String MGR_ROLE = "Manager";
-
   // The domainService acts as a provider of domain factory services
   private DomainService domainService = null;
-  private CommunityService communityService=null;
   private IncrementalSubscription capabilities;
   private IncrementalSubscription completecapabilities;
   private IncrementalSubscription subordinatecapabilities;
   private IncrementalSubscription capabilitiesRelays;
   private IncrementalSubscription notification;
-  private int firstobject=0;
   private LoggingService loggingService;
   private EventService   eventService;
   private MessageAddress myAddress=null;
   private Object param;
   
-  private MessageAddress mgrAddress;
-//  private Community mySecurityCommunity=null;
-  /*
-    not used any where in code 
-    private CommunityServiceUtil _csu;
-  */
   /**
    * Used by the binding utility through reflection to set my DomainService
    */
@@ -188,11 +176,6 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
   public java.util.Collection getParameters() {
     return (Collection)param;
   }
-  
-  public void setCommunityService(CommunityService cs) {
-    this.communityService=cs;
-  }
-
         
   /**
    * 
@@ -451,9 +434,9 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
         loggingService.debug(" length is not zero cannot remove entry ");
       }
     } 
-    Source[] existingSources=existingregObject.getSources();
-    Target[]existingTargets=existingregObject.getTargets();
-    AdditionalData[] existingData=existingregObject.getAdditionalData();
+    existingregObject.getSources();
+    existingregObject.getTargets();
+    existingregObject.getAdditionalData();
     return remove ;
   }
 
@@ -522,7 +505,7 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
     Classification [] existingClassifications=existingregObject.getClassifications();
     Source[] existingSources=existingregObject.getSources();
     Target[]existingTargets=existingregObject.getTargets();
-    AdditionalData[] existingData=existingregObject.getAdditionalData();
+    existingregObject.getAdditionalData();
     Classification[] classifications=newregobject.getClassifications();
     Source[] sources=newregobject.getSources();
     Target[] targets=newregobject.getTargets();
@@ -534,7 +517,6 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
     if(classifications!=null){
       Classification newclassification=null;
       Classification existingclassification=null;
-      Vector modifiedclassification=new Vector();
       for(int i=0;i<newlength;i++) {
         newclassification=classifications[i];
         found=false;
@@ -641,10 +623,7 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
       }
       existingregObject.setTargets(existingTargets);
     }
-    
-    if(data!=null) {
-    }
-	
+    	
     return existingregObject;
 
   }
@@ -655,8 +634,9 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
   */
   private void updateRelayedCapabilities() {
     if (capabilitiesRelays.hasChanged()) {
-      if (loggingService.isDebugEnabled())
+      if (loggingService.isDebugEnabled()) {
         loggingService.debug("CapabilitiesRelays has changed in Capabilities Processing Plugin at address  "+ myAddress.toString());
+      }
       CmrRelay relay;
       // New relays
       Iterator iter = capabilitiesRelays.getAddedCollection().iterator();
@@ -770,7 +750,6 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
     boolean modified = false;
     Event event = null;
     ConsolidatedCapabilities cc = null;
-    Analyzer analyzer = null;
     String analyzerId = null;
     
     while(subCapablities.hasNext())  {
