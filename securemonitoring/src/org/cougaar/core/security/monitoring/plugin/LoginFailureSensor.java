@@ -78,7 +78,7 @@ public class LoginFailureSensor extends SensorPlugin {
 
 
 
-   protected SensorInfo getSensorInfo() {
+  protected SensorInfo getSensorInfo() {
     if(sensor == null) {
       sensor = new LFSensor();
     }
@@ -125,10 +125,12 @@ public class LoginFailureSensor extends SensorPlugin {
 
 
   /**
-   * Dummy function doesn't do anything. No subscriptions are made.
+   * Calling the super method to Un register sensor  .
    */
-  protected void execute () {
+ /* protected void execute () {
+    super.execute();
   }
+ */
 
   private static class LFSensor implements SensorInfo {
 

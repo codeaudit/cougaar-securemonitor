@@ -91,6 +91,7 @@ public class DataProtectionSensor extends  SensorPlugin
     publishIDMEFEvent();
   }
 
+
   public static void publishEvent(FailureEvent event) {
     publishEvent(DataProtectionSensor.class, event);
   }

@@ -132,7 +132,7 @@ class ConsolidatedCapabilitiesPredicate implements UnaryPredicate{
 class NotificationPredicate implements UnaryPredicate {
   public boolean execute(Object o) {
     boolean ret = false; 
-   if (o instanceof NotificationObject ) {
+    if (o instanceof NotificationObject ) {
       return true;
     }
     return ret;
@@ -165,7 +165,7 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
 //  private Community mySecurityCommunity=null;
   /*
     not used any where in code 
-  private CommunityServiceUtil _csu;
+    private CommunityServiceUtil _csu;
   */
   /**
    * Used by the binding utility through reflection to set my DomainService
@@ -205,22 +205,22 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
     myAddress = getAgentIdentifier();
     /*
       CommunityServiceUtil not used any where in the code 
-    _csu = new CommunityServiceUtil(getServiceBroker());
+      _csu = new CommunityServiceUtil(getServiceBroker());
     */
     loggingService.debug("setupSubscriptions of CapabilitiesProcessingPlugin called :"
-        + myAddress.toString()); 
+                         + myAddress.toString()); 
 /*
-    mySecurityCommunity = getMySecurityCommunity();
-    if(mySecurityCommunity==null) {
-      loggingService.error("No Info about My  SecurityCommunity in " +
-			   "CapabilitiesProcessingPlugin"+
-			   " : Cannot send messaged!"+myAddress.toString());  
-      // return;
-    }
-    else {
-      loggingService.debug(" My security community :"+mySecurityCommunity.getName()
-			   +" agent name :"+myAddress.toString());
-    }
+  mySecurityCommunity = getMySecurityCommunity();
+  if(mySecurityCommunity==null) {
+  loggingService.error("No Info about My  SecurityCommunity in " +
+  "CapabilitiesProcessingPlugin"+
+  " : Cannot send messaged!"+myAddress.toString());  
+  // return;
+  }
+  else {
+  loggingService.debug(" My security community :"+mySecurityCommunity.getName()
+  +" agent name :"+myAddress.toString());
+  }
 */
    
     Collection capabilitiescollection = getBlackboardService().query(new CompleteCapabilitiesPredicate());
@@ -266,7 +266,7 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
     if(( capabilities_col==null)||( capabilities_col.size()==0)){
       if(loggingService.isDebugEnabled()) {
         loggingService.debug("No capabilities object present in capabilities processing plugin:"+
-            "RETURNING !"+ myAddress.toString());
+                             "RETURNING !"+ myAddress.toString());
       }
       return;
     }
@@ -274,8 +274,8 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
     if( capabilities_col.size()>1) {
       if(loggingService.isDebugEnabled()) {
         loggingService.debug(" Error Multiple capabilities  object on blackboard"+
-            "CapabilitiesprocessingPlugin in agent::"
-            + myAddress.toString());
+                             "CapabilitiesprocessingPlugin in agent::"
+                             + myAddress.toString());
         loggingService.debug("CONFUSION ......  CONFUSION!!!!!!!!!!!!! Exiting !!!!!!!!:");
       }
       return;
@@ -307,6 +307,7 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
     
     Analyzer analyzer=null;
     String analyzer_id=null;
+    boolean removeentry =false;
     /*
       Process capabilities received from within the agent
     */
@@ -314,8 +315,8 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
       event=( Event)  capabilities_enum.nextElement();
       if(loggingService.isDebugEnabled()) {
         /*
-      	loggingService.debug("Event received is  :"+ event.toString() 
-            + "\n in agent "+myAddress.toString());
+          loggingService.debug("Event received is  :"+ event.toString() 
+          + "\n in agent "+myAddress.toString());
         */
         loggingService.debug("Event received in agent "+myAddress.toString());
       }
@@ -332,8 +333,8 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
       if(capabilitiesobject.containsKey(analyzer_id)) {
       	if(loggingService.isDebugEnabled()) {
       	  loggingService.debug("Analyzer is registered. Registering Analyzer again in agent :"
-              +myAddress.toString() 
-              +" analyzer id" + analyzer_id );
+                               +myAddress.toString() 
+                               +" analyzer id" + analyzer_id );
         }
 	  
         RegistrationAlert existingregistartion=(RegistrationAlert)capabilitiesobject.get(analyzer_id);
@@ -356,16 +357,22 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
           // printConsolidation(existingregistartion.getClassifications(),"!!!!!before removing  remove reg object"); 
           //printConsolidation(registration.getClassifications(),"!!!!!New remove  reg object"); 
           existingregistartion= removefromRegistartion(existingregistartion,registration); 
+          removeentry = removeEntry(existingregistartion);
           // printConsolidation(existingregistartion.getClassifications(),"After removing remove reg object");
           // existingregistartion= removefromRegistartion(existingregistartion,registration); 
         }
         modified=true;
-        capabilitiesobject.put(analyzer_id,existingregistartion);
+        if(!removeentry){
+          capabilitiesobject.put(analyzer_id,existingregistartion);
+        }
+        else {
+          capabilitiesobject.remove(analyzer_id);
+        }
       }
       else {
       	if(loggingService.isDebugEnabled()) {
       	  loggingService.debug("Analyzer is not yet registered. Registering Analyzer  in agent :"+myAddress.toString() 
-              +" analyzer id" + analyzer_id );
+                               +" analyzer id" + analyzer_id );
         }
       	modified=true;
       	//printConsolidation(registration.getClassifications(),"!!!!!Classification before reg first time @@@@"); 
@@ -431,6 +438,23 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
       classification= classifications[i];
       converttoString( classification);
     }
+  }
+
+  public boolean removeEntry(RegistrationAlert existingregObject){
+    boolean remove =false;
+    Classification [] existingClassifications=existingregObject.getClassifications();
+    if(existingClassifications.length ==0){
+      remove =true;
+    }
+    else{
+      if(loggingService.isDebugEnabled()){
+        loggingService.debug(" length is not zero cannot remove entry ");
+      }
+    } 
+    Source[] existingSources=existingregObject.getSources();
+    Target[]existingTargets=existingregObject.getTargets();
+    AdditionalData[] existingData=existingregObject.getAdditionalData();
+    return remove ;
   }
 
     
@@ -684,11 +708,11 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
    
 /*
   private Community getMySecurityCommunity() {
-    Community mySecurityCommunity= _csu.getSecurityCommunity(myAddress.toString());
-    if(mySecurityCommunity==null) {
-      loggingService.warn(" Canot get my role as Manager in any Security Community  :"+myAddress.toString() );
-    }
-    return mySecurityCommunity; 
+  Community mySecurityCommunity= _csu.getSecurityCommunity(myAddress.toString());
+  if(mySecurityCommunity==null) {
+  loggingService.warn(" Canot get my role as Manager in any Security Community  :"+myAddress.toString() );
+  }
+  return mySecurityCommunity; 
     
   }
 */
@@ -697,7 +721,7 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
     DomainService service=getDomainService();
     if(service==null) {
       loggingService.debug(" Got service as null in  getRegistrationAlert of Capabilities"+
-          "ProcessingPlugin  :"+ myAddress.toString());
+                           "ProcessingPlugin  :"+ myAddress.toString());
       return null;
     }
     CmrFactory factory=(CmrFactory)getDomainService().getFactory("cmr");
@@ -728,13 +752,13 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
 
     
     ralert=imessage.createRegistrationAlert(cons.getAnalyzer(),
-          sources,
-          targets,
-          classifications,
-          data,
-          IdmefMessageFactory.newregistration,
-          IdmefMessageFactory.SecurityMgrType,
-          cons.getAgentName());
+                                            sources,
+                                            targets,
+                                            classifications,
+                                            data,
+                                            IdmefMessageFactory.newregistration,
+                                            IdmefMessageFactory.SecurityMgrType,
+                                            cons.getAgentName());
     
     return ralert;
   }
@@ -753,14 +777,14 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
       event=( Event)  subCapablities.next();
       if(event.getSource().equals(myAddress)) {
       	loggingService.debug(" $$$$$ recived event from my source address :"+myAddress.toString()
-            +" event is :"+event.toString());
+                             +" event is :"+event.toString());
       	continue;
       }
       cc = (ConsolidatedCapabilities)event.getEvent(); 
       if(loggingService.isDebugEnabled()) {
 	      loggingService.debug(" got consolidatedcapabilities in agent :>"+myAddress.toString() +
-            "consolidated capabilities "+ cc.toString()+
-            "Analyzer id is "+ cc.getAnalyzer().getAnalyzerid());
+                             "consolidated capabilities "+ cc.toString()+
+                             "Analyzer id is "+ cc.getAnalyzer().getAnalyzerid());
       }
       
       /**

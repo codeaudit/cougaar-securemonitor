@@ -43,6 +43,7 @@ import org.cougaar.core.security.monitoring.publisher.EventPublisher;
 import org.cougaar.core.security.services.auth.SecurityContextService;
 import org.cougaar.core.security.util.CommunityServiceUtil;
 import org.cougaar.core.security.util.CommunityServiceUtilListener;
+import org.cougaar.core.security.handoff.blackboard.HandOffUnRegistration;
 import org.cougaar.core.service.BlackboardService;
 import org.cougaar.core.service.DomainService;
 import org.cougaar.core.service.LoggingService;
@@ -80,14 +81,46 @@ import edu.jhuapl.idmef.Target;
  */
 
 class ManagerAgentPredicate implements UnaryPredicate{
-   public boolean execute(Object o) {
+  public boolean execute(Object o) {
     boolean ret = false;
     if (o instanceof MnRManager ) {
       return true;
     }
     return ret;
-   }
+  }
 }
+class UnRegisterPredicate implements UnaryPredicate{
+  public boolean execute(Object o) {
+    boolean ret = false;
+    HandOffUnRegistration unregister= null;
+    if (o instanceof HandOffUnRegistration ) {
+      unregister =(HandOffUnRegistration)o;
+      int command = unregister.getCommand();
+      if((command == HandOffUnRegistration.UNREGISTER_SENSOR)){
+        return true;
+      }
+    }
+    return ret;
+  }
+}
+
+class RegisterPredicate implements UnaryPredicate{
+  public boolean execute(Object o) {
+    boolean ret = false;
+    HandOffUnRegistration unregister= null;
+    if (o instanceof HandOffUnRegistration ) {
+      unregister =(HandOffUnRegistration)o;
+      int command = unregister.getCommand();
+      if((command == HandOffUnRegistration.REREGISTER_SENSOR)){
+        return true;
+      }
+    }
+    return ret;
+  }
+}
+
+
+
 public abstract class SensorPlugin extends ComponentPlugin {
 
   private MessageAddress myAddress;
@@ -114,6 +147,10 @@ public abstract class SensorPlugin extends ComponentPlugin {
   protected abstract boolean agentIsSource();
 
   private  IncrementalSubscription managerSubscription;
+
+  private IncrementalSubscription unregister;
+  
+  private IncrementalSubscription reregister;
 
   public void setDomainService(DomainService aDomainService) {
     _domainService = aDomainService;
@@ -175,48 +212,52 @@ public abstract class SensorPlugin extends ComponentPlugin {
       getSecurityManager();
     }
     managerSubscription=(IncrementalSubscription)getBlackboardService().subscribe(new ManagerAgentPredicate());
-    
-
-    /*
-    Thread td=Thread.currentThread();
-    _log.error("Current thread is :"+td.toString());
-    ThreadService ts = (ThreadService)sb.getService(this,
-                                                    ThreadService.class, null);
-    ts.getThread(this, new Runnable() {
-        public void run() {
-          getSecurityManager();
-        }
-      }).start();
-    sb.releaseService(this, ThreadService.class, ts);
-    */
+    unregister=(IncrementalSubscription)getBlackboardService().subscribe(new UnRegisterPredicate());
+    reregister=(IncrementalSubscription)getBlackboardService().subscribe(new RegisterPredicate());
+   
   }
   
    
  
 
   /**
-   * doesn't do anything
+   * responsible for handling unregister and reregister of Sensor during handoff 
    */
   protected void execute(){
+    Collection unregCol=unregister.getAddedCollection();
+    if((unregCol!=null ) && (unregCol.size()>0)){
+      if(_log.isDebugEnabled()){
+        _log.debug("Unregistering Sensor Capabilities for agent "+ myAddress.toString());
+      }
+      registerCapabilities(myManagerAddress, false);
+      this.myManagerAddress = null; 
+    }
+    Collection reregcol =  reregister.getAddedCollection();
+    if((reregcol!=null ) && (reregcol.size()>0)){
+      if(_log.isDebugEnabled()){
+        _log.debug("Registering Sensor Capabilities for agent "+ myAddress.toString());
+      }
+      getSecurityManager();
+    }
     if(!managerSubscription.hasChanged()){
       return;
     }
-     Collection  mgrAgentCol=managerSubscription.getAddedCollection();
-     if(!mgrAgentCol.isEmpty()) {
-       Iterator iter=mgrAgentCol.iterator();
-       MnRManagerObject mgrObject=null;
-       while(iter.hasNext()){
-         mgrObject=(MnRManagerObject)iter.next();
-         if(myAddress.equals(mgrObject.getMgrAddress())){
-           myManagerAddress=mgrObject.getMgrAddress();
-           if(_log.isDebugEnabled()){
-             _log.debug("Setting Mgr Address from execute of Sensor plugin:");
-           }
-            _log.info("Setting Mgr Address from execute of Sensor plugin:"+ "myAddress "+ myAddress +" mgrAddress " +myManagerAddress );
-         }
-         registerCapabilities(myManagerAddress); 
-       }
-     }
+    Collection  mgrAgentCol=managerSubscription.getAddedCollection();
+    if(!mgrAgentCol.isEmpty()) {
+      Iterator iter=mgrAgentCol.iterator();
+      MnRManagerObject mgrObject=null;
+      while(iter.hasNext()){
+        mgrObject=(MnRManagerObject)iter.next();
+        if(myAddress.equals(mgrObject.getMgrAddress())){
+          myManagerAddress=mgrObject.getMgrAddress();
+          if(_log.isDebugEnabled()){
+            _log.debug("Setting Mgr Address from execute of Sensor plugin:");
+          }
+          _log.info("Setting Mgr Address from execute of Sensor plugin:"+ "myAddress "+ myAddress +" mgrAddress " +myManagerAddress );
+        }
+        registerCapabilities(myManagerAddress,true); 
+      }
+    }
   }
 
   private void getSecurityManager() {
@@ -224,22 +265,22 @@ public abstract class SensorPlugin extends ComponentPlugin {
       _log.debug("getSecurityManager called in Sensor Plugin:"); 
     }
     CommunityServiceUtilListener listener = new CommunityServiceUtilListener() {
-	public void getResponse(Set entities) {
+        public void getResponse(Set entities) {
           if(_log.isDebugEnabled()) {
             _log.debug(" Call Back called for agent :"+  myAddress);
           }
-	  Iterator it = entities.iterator();
-	  if (entities.size() == 0) {
-	    _log.warn("Could not find a security manager");
-	  }
-	  else if (entities.size() > 1) {
-	    _log.warn("Found more than one security manager");
-	  }
-	  else {
-	    Entity entity = (Entity) it.next();
-	    MessageAddress addr = MessageAddress.
-	      getMessageAddress(entity.getName());
-	    // Now register capabilities
+          Iterator it = entities.iterator();
+          if (entities.size() == 0) {
+            _log.warn("Could not find a security manager");
+          }
+          else if (entities.size() > 1) {
+            _log.warn("Found more than one security manager");
+          }
+          else {
+            Entity entity = (Entity) it.next();
+            MessageAddress addr = MessageAddress.
+              getMessageAddress(entity.getName());
+            // Now register capabilities
             if(myManagerAddress==null) {
               myManagerAddress=addr;
               if(_log.isDebugEnabled()){
@@ -247,10 +288,10 @@ public abstract class SensorPlugin extends ComponentPlugin {
                 _log.debug("Setting Manager for Sensor Plugin -- Manager  : "+ myManagerAddress +" For Agent : " +myAddress);
               }
               _log.info("Setting Manager for Sensor Plugin -- Manager 2: "+ myManagerAddress +" For Agent : " +myAddress);
-              registerCapabilities(addr);
+              registerCapabilities(addr,true);
             }
-	  }
-	}
+          }
+        }
       };
     if(_log.isDebugEnabled()) {
       _log.debug("findSecurityManager from Communityservice util called in Sensor Plugins getSecurityManager:"
@@ -262,13 +303,20 @@ public abstract class SensorPlugin extends ComponentPlugin {
   /**
    * register the capabilities of the sensor
    */
-  private void registerCapabilities(final MessageAddress myManager){
+  private void registerCapabilities(final MessageAddress myManager, final boolean register ){
     final List capabilities = new ArrayList();
     final List targets = new ArrayList();
     final List  sources=new ArrayList();
     final List  data =new ArrayList() ;
     if (_log.isDebugEnabled()) {
       _log.debug("Current thread is :" + Thread.currentThread());
+      if(register){
+        _log.debug("Sensor  registration called for agent :"+ myAddress.toString());
+      }
+      else {
+        _log.debug("Remove Sensor registration called for agent :"+ myAddress.toString());
+      }
+      
     }
     if(myManager == null) {
       // manager may not have been initialize yet
@@ -293,9 +341,9 @@ public abstract class SensorPlugin extends ComponentPlugin {
     if(agentIsSource()) {
       List sRefList = new ArrayList(1);
       /*
-      if(data==null) {
+        if(data==null) {
         data = new ArrayList(1);
-      }
+        }
       */
       Address sAddr = _idmefFactory.createAddress(myAddress.toString(),
                                                   null, Address.URL_ADDR);
@@ -319,31 +367,48 @@ public abstract class SensorPlugin extends ComponentPlugin {
 
 
     Runnable task =new Runnable() {
-      public void run() {
-        RegistrationAlert reg =
-          _idmefFactory.createRegistrationAlert( getSensorInfo(),
-                                                 null,
-                                                 targets,
-                                                 capabilities,
-                                                 data,
-                                                 IdmefMessageFactory.newregistration,
-                                                 IdmefMessageFactory.SensorType,
-                                                 myAddress.toString());
-         NewEvent regEvent = _cmrFactory.newEvent(reg);
-        _blackboard.openTransaction();
-        if(myAddress.equals(myManager)) {
-          _log.info("Publishing registration to local blackboard:");
-          _blackboard.publishAdd(regEvent);
+        public void run() {
+          RegistrationAlert reg = null;
+          if(register){
+            reg= _idmefFactory.createRegistrationAlert( getSensorInfo(),
+                                                        null,
+                                                        targets,
+                                                        capabilities,
+                                                        data,
+                                                        IdmefMessageFactory.newregistration,
+                                                        IdmefMessageFactory.SensorType,
+                                                        myAddress.toString());
+          }
+          else {
+            reg= _idmefFactory.createRegistrationAlert( getSensorInfo(),
+                                                        null,
+                                                        targets,
+                                                        capabilities,
+                                                        data,
+                                                        IdmefMessageFactory.removefromregistration,
+                                                        IdmefMessageFactory.SensorType,
+                                                        myAddress.toString());
+          }
+          NewEvent regEvent = _cmrFactory.newEvent(reg);
+          _blackboard.openTransaction();
+          if(myAddress.equals(myManager)) {
+            _log.info("Publishing registration to local blackboard:");
+            _blackboard.publishAdd(regEvent);
+          }
+          else{
+            CmrRelay regRelay = _cmrFactory.newCmrRelay(regEvent, myManager);
+            _blackboard.publishAdd(regRelay);
+            if(register){
+              _log.info("Publishing registration as relay:");
+            }
+            else {
+              _log.debug("Publishing remove registration as relay:");
+            }
+          }
+          _blackboard.closeTransaction();
+          _log.debug("Registered sensor successfully!");
         }
-        else{
-          CmrRelay regRelay = _cmrFactory.newCmrRelay(regEvent, myManager);
-          _blackboard.publishAdd(regRelay);
-          _log.info("Publishing registration as relay:");
-        }
-        _blackboard.closeTransaction();
-        _log.debug("Registered sensor successfully!");
-      }
-    };
+      };
 
     ServiceBroker sb =getBindingSite().getServiceBroker();
     ThreadService ts = (ThreadService)
@@ -376,17 +441,17 @@ public abstract class SensorPlugin extends ComponentPlugin {
     while(c.hasNext()) {
       final String communityName = (String)c.next();
       CommunityResponseListener crl = new CommunityResponseListener() {
-	  public void getResponse(CommunityResponse resp) {
-	    Object response = resp.getContent();
-	    if (!(response instanceof Set)) {
-	      String errorString = "Unexpected community response class:"
-		+ response.getClass().getName() + " - Should be a Set";
+          public void getResponse(CommunityResponse resp) {
+            Object response = resp.getContent();
+            if (!(response instanceof Set)) {
+              String errorString = "Unexpected community response class:"
+                + response.getClass().getName() + " - Should be a Set";
               _log.error(errorString);
-	      throw new RuntimeException(errorString);
-	    }
+              throw new RuntimeException(errorString);
+            }
             printCommunities((Set) response, communityName);
-	  }
-	};
+          }
+        };
       Collection results =
         cs.searchCommunity(communityName,
                            "(Role=" + _managerRole + ")",
@@ -417,8 +482,8 @@ public abstract class SensorPlugin extends ComponentPlugin {
    * @deprecated
    */
   private boolean isSecurityManagerLocal(CommunityService cs,
-					 String community,
-					 String agentName) {
+                                         String community,
+                                         String agentName) {
 
     Collection agents = null;
     // TODO: This method is not used anymore, but it would have to
