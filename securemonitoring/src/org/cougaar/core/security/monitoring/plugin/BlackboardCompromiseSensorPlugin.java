@@ -27,13 +27,16 @@
 
 package org.cougaar.core.security.monitoring.plugin;
 
-
+import org.cougaar.core.blackboard.BlackboardAlert;
+import org.cougaar.core.blackboard.BlackboardAlertRelay;
+import org.cougaar.util.UnaryPredicate;
 import org.cougaar.core.blackboard.IncrementalSubscription;
 import org.cougaar.core.security.monitoring.blackboard.Event;
 import org.cougaar.core.security.monitoring.event.BlackboardFailureEvent;
 import org.cougaar.core.security.monitoring.publisher.EventPublisher;
 import org.cougaar.core.security.monitoring.publisher.IdmefEventPublisher;
 import org.cougaar.core.security.util.SharedDataRelay;
+import org.cougaar.core.security.util.NodeInfo;
 import org.cougaar.core.service.LoggingService;
 import org.cougaar.core.service.ThreadService;
 import org.cougaar.core.service.UIDService;
@@ -60,6 +63,16 @@ public class BlackboardCompromiseSensorPlugin extends SensorPlugin {
 
     //subscription to events
     private IncrementalSubscription compromiseSubs;
+    private IncrementalSubscription blackboardAlertSubs;
+
+    class BlackboardAlertPredicate implements UnaryPredicate {
+      public boolean execute(Object o) {
+        if (o instanceof BlackboardAlertRelay) {
+          return true;
+        }
+        return false;
+      }
+    }
 
     /**
      * DOCUMENT ME!
@@ -121,6 +134,10 @@ public class BlackboardCompromiseSensorPlugin extends SensorPlugin {
         this.compromiseSubs = (IncrementalSubscription) getBlackboardService()
                                                             .subscribe(new BlackboardFailure());
 
+
+        // subscribe to BlackboardAlert from logistics
+        blackboardAlertSubs = (IncrementalSubscription) 
+          getBlackboardService().subscribe(new BlackboardAlertPredicate());
     }
 
 
@@ -185,6 +202,37 @@ public class BlackboardCompromiseSensorPlugin extends SensorPlugin {
 
                 getBlackboardService().publishAdd(relay);
             }
+        }
+
+        enumeration = blackboardAlertSubs.getAddedList();
+        while (enumeration.hasMoreElements()) {
+          BlackboardAlertRelay alertRelay = (BlackboardAlertRelay)enumeration.nextElement();
+          BlackboardAlert alert = (BlackboardAlert)alertRelay.getContent();
+
+          // information from the relay
+          String agent = alert.getVictimAgent().getAddress();
+          String scope = CompromiseBlackboard.AGENT_COMPROMISE_TYPE;
+          long timestamp = alert.getTimeOfCompromise();
+          
+          String data="";
+          data=data + "scope=" + scope;
+          data=data+",compromise timestamp=" + timestamp;
+          data=data+",sourceAgent=" + agent;
+          String nodeName = NodeInfo.getNodeName();
+          data=data+",sourceNode="+nodeName;
+          String hostName = NodeInfo.getHostName();
+          data=data+",sourceHost=" + hostName;
+
+          BlackboardFailureEvent event =
+            new BlackboardFailureEvent(agent,agent,"reason",
+                "reasonId", data, "compromisedata");
+/*
+          SharedDataRelay relay = new SharedDataRelay(uidService.nextUID(),
+             this.getAgentIdentifier(), myManagerAddress, event, null);
+          getBlackboardService().publishAdd(relay);
+*/
+          publishEvent(event);
+
         }
     }
 
