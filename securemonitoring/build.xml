@@ -14,28 +14,8 @@
 -->
 
 <project basedir="." default="all" name="Cougaar security services">
-  
-    <!-- prefix for all environment variables -->
-    <property environment="env"/>
 
     <property name="securityservices.base" value="."/>
-    <property name="securityservices.sys" value="${securityservices.base}${file.separator}sys"/>
-    <property name="securityservices.lib" value="${securityservices.base}${file.separator}lib"/>
-    <property name="securityservices.configs" value="${securityservices.base}${file.separator}test${file.separator}configs"/> 
-    <property name="securityservices.staging" value="${securityservices.base}${file.separator}staging"/>
-    <!-- The directory for output compiled Java classes -->
-    <property name="securityservices.classes" value="${securityservices.base}${file.separator}classes"/>
-    <!-- The directory for ant-generated files (except .class files) -->
-    <property name="securityservices.output" value="${securityservices.base}${file.separator}output"/>
-    <property name="securityservices.docdir" value="${securityservices.output}${file.separator}doc"/>
-    <!-- The output directory for signed jar files -->
-    <property name="securityservices.signed" value="${securityservices.output}${file.separator}signed"/>
-    <!-- The base directories where the java source files are located -->
-    <property name="securityservices.src" value="${securityservices.base}${file.separator}src"/>
-    <!-- The base directories where the regression test files are located -->
-    <property name="securityservices.regress" value="${securityservices.base}${file.separator}regress"/>
-    <!-- The base directories where the regression test result files are located -->
-    <property name="securityservices.results" value="${securityservices.regress}${file.separator}results"/>
 
     <dirname property="imported.basedir" file="${ant.file.imported}"/>
     <property file="${imported.basedir}/build.properties"/>
@@ -46,7 +26,69 @@
     <!-- Import the custom build file -->
     <import file="${custom.build.file}" optional="true"/>
 
+    <target name="ant-contrib-setup" unless="ant.contrib.ext.loaded">
+        <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+          <classpath>
+             <pathelement location="${securityservices.base}/build/lib/ant-contrib-1.0b1.jar"/>
+          </classpath>
+        </taskdef>
+        <property name="ant.contrib.ext.loaded" value="true"/>
+    </target>
+
     <target name="init-prop" depends="ant-contrib-setup"> 
+      <!-- Anthill integration.
+             Inter-Project Dependency allows projects to use the most recent version of artifacts
+             of other projects as dependencies. A build property, artifacts.dir, is set on the
+             dependency project that corresponds to a directory to store artifacts. Builders of
+             that dependency will provide the directory to the mechanism you are using for your
+             build. For example, a Ant Builder will create a property for your Ant script with
+             the directory named artifacts.dir. All the dependency projects artifacts are
+             collected into a single directory for this project. This project is given the
+             build property dependency.artifacts.dir, which is the directory all the artifacts
+             reside in. Again, builders of your project will provide the directory to the
+             mechanism you are using for your build.
+      -->
+      <if>
+        <isset property="dependency.artifacts.dir"/>
+        <then>
+          <path id="dependency.artificats.dir.path">    
+            <fileset dir="${dependency.artifacts.dir}">
+              <include name="*/*.jar"/>
+            </fileset>
+          </path>
+        </then>
+        <else>
+          <path id="dependency.artificats.dir.path">    
+          </path>
+        </else>
+      </if>
+
+      <!-- Base class path -->
+      <path id="base.core.class.path">    
+          <pathelement location="${cougaar.install.path}/sys/log4j.jar"/>
+          <path refid="dependency.artificats.dir.path"/>
+      </path>
+
+      <!-- prefix for all environment variables -->
+      <property environment="env"/>
+      <property name="securityservices.sys" value="${securityservices.base}${file.separator}sys"/>
+      <property name="securityservices.lib" value="${securityservices.base}${file.separator}lib"/>
+      <property name="securityservices.configs" value="${securityservices.base}${file.separator}test${file.separator}configs"/> 
+      <property name="securityservices.staging" value="${securityservices.base}${file.separator}staging"/>
+      <!-- The directory for output compiled Java classes -->
+      <property name="securityservices.classes" value="${securityservices.base}${file.separator}classes"/>
+      <!-- The directory for ant-generated files (except .class files) -->
+      <property name="securityservices.output" value="${securityservices.base}${file.separator}output"/>
+      <property name="securityservices.docdir" value="${securityservices.output}${file.separator}doc"/>
+      <!-- The output directory for signed jar files -->
+      <property name="securityservices.signed" value="${securityservices.output}${file.separator}signed"/>
+      <!-- The base directories where the java source files are located -->
+      <property name="securityservices.src" value="${securityservices.base}${file.separator}src"/>
+      <!-- The base directories where the regression test files are located -->
+      <property name="securityservices.regress" value="${securityservices.base}${file.separator}regress"/>
+      <!-- The base directories where the regression test result files are located -->
+      <property name="securityservices.results" value="${securityservices.regress}${file.separator}results"/>
+
       <if>
         <isset property="anthill.cougaar.branch.name"/>
         <then>
@@ -92,15 +134,6 @@
         </condition>
         <fail message="JDK ${jdk.version.needed} required. Current version is ${java.vm.version}"
               if="vm.version.incorrect"/>
-    </target>
-
-    <target name="ant-contrib-setup" unless="ant.contrib.ext.loaded">
-        <taskdef resource="net/sf/antcontrib/antcontrib.properties">
-          <classpath>
-             <pathelement location="${securityservices.base}/build/lib/ant-contrib-1.0b1.jar"/>
-          </classpath>
-        </taskdef>
-        <property name="ant.contrib.ext.loaded" value="true"/>
     </target>
 
     <target name="init" depends="tstamp, ant-contrib-setup, init-prop">
@@ -235,6 +268,20 @@
             </patternset>
          </fileset>
         </copy>
+        <if>
+          <isset property="artifacts.dir"/>
+          <then>
+            <echo message="Copying jar files to anthill artifact repository..."/>
+             <copy todir="${artifacts.dir}">
+                <fileset dir="${securityservices.base}/output/signed">
+                  <patternset>
+                     <include name="*.jar"/>
+                     <exclude name="configs_*.jar"/>
+                  </patternset>
+               </fileset>
+             </copy>
+          </then>
+        </if>
         <echo message="+++++ Installed signed jar files"/>
     </target>
     
