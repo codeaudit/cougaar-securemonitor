@@ -1067,6 +1067,28 @@ public abstract class MnRQueryBase extends QueryBase {
     return relay;
   } 
 
+  // method should be used when an open transaction is unknown.  
+  public void publishToBB(Object data ){
+    final Object obj=data;
+    if(threadService == null) {
+      threadService = (ThreadService)
+        getServiceBroker().getService(this,ThreadService.class, null); 
+    }
+    threadService.getThread(this, new Runnable() {
+        public void run(){
+          getBlackboardService().openTransaction();
+          try {
+            getBlackboardService().publishAdd(obj);
+          } catch (Exception e) {
+            loggingService.error("Exception when publishing " + obj, e);
+          } finally {
+            getBlackboardService().closeTransactionDontReset();      
+          }
+        }
+      },"MnRQueryBBPublisherThread").start();
+  } 
+  
+  
   public interface FindAgentCallback {
     void execute(Collection agents);
   }

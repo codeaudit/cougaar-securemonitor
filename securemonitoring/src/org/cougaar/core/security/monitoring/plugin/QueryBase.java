@@ -44,7 +44,8 @@ public abstract class QueryBase extends ComponentPlugin {
   protected LoggingService loggingService;
   protected CommunityServiceUtil _csu;
   protected MessageAddress myAddress;
- 
+  protected ThreadService threadService;
+  
   protected  boolean _isRoot;
   protected boolean _rootReady;
   
@@ -98,7 +99,7 @@ public abstract class QueryBase extends ComponentPlugin {
     if (enableMnR != null) {
       loggingService.warn("MnR community service request test " + enableMnR);
     }
-
+    threadService = (ThreadService)getServiceBroker().getService(this, ThreadService.class, null);
     if (myAddress == null) {
       myAddress = getAgentIdentifier();
       if(loggingService == null) {
@@ -124,10 +125,7 @@ public abstract class QueryBase extends ComponentPlugin {
       _isRoot = !(entities == null || entities.isEmpty());
       _rootReady = true;
       loggingService.info("The agent " + myAddress + " is root? " + _isRoot);
-      ThreadService ts = (ThreadService)
-        getServiceBroker().getService(this, ThreadService.class, null);
-      ts.getThread(this, this).schedule(0);
-      getServiceBroker().releaseService(this, ThreadService.class, ts);
+      threadService.getThread(this, this).schedule(0);
     }
 
     public void run() {

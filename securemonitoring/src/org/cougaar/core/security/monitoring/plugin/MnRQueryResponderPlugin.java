@@ -245,7 +245,7 @@ public class MnRQueryResponderPlugin extends MnRQueryBase {
               loggingService.debug("No Local agents are present with the capabilities. Returning");
             }
             relay.updateResponse(relay.getSource(),new MRAgentLookUpReply(new ArrayList()));
-            getBlackboardService().publishChange(relay);
+            publishToBB(relay);
             return;
           }
           if (loggingService.isDebugEnabled()) {
@@ -267,7 +267,7 @@ public class MnRQueryResponderPlugin extends MnRQueryBase {
           }
           relay.updateResponse(relay.getSource(),new MRAgentLookUpReply(relay_uid_list));
           loggingService.debug("Update response is being done for relay :"+relay.toString());
-          getBlackboardService().publishChange(relay); 
+          publishToBB(relay); 
         }
       };
     if (loggingService.isDebugEnabled()) {

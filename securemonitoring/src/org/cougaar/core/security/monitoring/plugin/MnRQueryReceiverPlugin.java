@@ -45,7 +45,6 @@ import org.cougaar.core.security.monitoring.blackboard.MRAgentLookUp;
 import org.cougaar.core.security.monitoring.blackboard.OutStandingQuery;
 import org.cougaar.core.security.monitoring.blackboard.QueryMapping;
 import org.cougaar.core.security.monitoring.idmef.RegistrationAlert;
-import org.cougaar.core.service.ThreadService;
 import org.cougaar.core.thread.Schedulable;
 import org.cougaar.core.util.UID;
 import org.cougaar.util.UnaryPredicate;
@@ -167,7 +166,7 @@ public class MnRQueryReceiverPlugin extends MnRQueryBase {
   private IncrementalSubscription newLocalQueryRelays;
   private IncrementalSubscription remoteQueryRelays;
   private CapabilitiesObject      _capabilities;
-  private ThreadService threadService=null;
+  
   private final Map latestCallBack = Collections.synchronizedMap(new HashMap());
     
   public void setParameter(Object o){
@@ -522,28 +521,6 @@ public class MnRQueryReceiverPlugin extends MnRQueryBase {
     }
   }
                                                          
-  public void publishToBB(Object data ){
-    final Object obj=data;
-    if(threadService==null) {
-      threadService = (ThreadService)
-        getServiceBroker().getService(this,ThreadService.class, null); 
-    }
-    Schedulable subqueryThread = threadService.getThread(this, new Runnable( ) {
-        public void run(){
-          getBlackboardService().openTransaction();
-          try {
-            getBlackboardService().publishAdd(obj);
-          } catch (Exception e) {
-            loggingService.error("Exception when publishing " + obj, e);
-          } finally {
-            getBlackboardService().closeTransactionDontReset();      
-          }
-        }
-      },"QueryMappingPublisherThread");
-    subqueryThread.start();
-  } 
-  
-  
   private void removeRelays(Collection removedRelays,Collection queryMappingCollection  ) {
     CmrRelay relay;
     QueryMapping mapping;
