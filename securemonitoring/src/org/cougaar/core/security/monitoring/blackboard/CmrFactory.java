@@ -26,7 +26,6 @@
 
 package org.cougaar.core.security.monitoring.blackboard;
 
-import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.domain.Factory;
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.security.monitoring.idmef.IdmefMessageFactory;
@@ -45,8 +44,6 @@ implements Factory
   protected UIDServer myUIDServer;
   private  IdmefMessageFactory idmefmessagefactory;
 
-  private ServiceBroker serviceBroker;
-
   /**
    * Constructor for use by domain specific Factories
    * extending this class
@@ -55,7 +52,7 @@ implements Factory
   // change the input parameter to an agent id service and uid service or just service broker
   public CmrFactory(LDMServesPlugin ldm) {
     // Attach our factory to the M&R factory
-    PlanningFactory pf = ldm.getFactory();
+    ldm.getFactory(); // TODO: is this still necessary?
 	
     /*
       See org.cougaar.tools.csmart.runtime.ldm.CSMARTFactory for

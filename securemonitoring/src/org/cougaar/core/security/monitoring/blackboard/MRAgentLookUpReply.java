@@ -57,11 +57,7 @@ public class MRAgentLookUpReply implements XMLSerializable  {
   public List getAgentList() {
     return this.AgentList;
   }
-  
-  private void setAgentList(List agentlist) {
-    this.AgentList=agentlist;
-  }
-  
+    
   /**Creates an object from the XML Node containing the XML version of this object.
      This method will look for the appropriate tags to fill in the fields. If it cannot find
      a tag for a particular field, it will remain null.

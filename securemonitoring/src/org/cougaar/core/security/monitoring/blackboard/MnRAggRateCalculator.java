@@ -219,7 +219,7 @@ public class MnRAggRateCalculator
     boolean consolidated=true;
     adddata = imessage.createAdditionalData(AdditionalData.BOOLEAN,
                                             DrillDownQueryConstants.CONSOLIDATED_EVENTS,
-                                            new Boolean(consolidated).toString());
+                                            Boolean.toString(consolidated));
     data.add(adddata);
     adddata = imessage.createAdditionalData(AdditionalData.STRING,
                                             DrillDownQueryConstants.ORIGINATORS_UID, 
