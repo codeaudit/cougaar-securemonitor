@@ -36,7 +36,6 @@ society.each_enclave do |enclave|
     end
   end
   policyManagers[enclave] = policyManagerAgent
-  puts "found domain manager = #{policyManagerAgent} for #{enclave}"
   if ! policyManagerAgent  then
     policyManagersReady = false
     break # try later when the policy mmanager is defined...
