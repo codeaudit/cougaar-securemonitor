@@ -19,6 +19,13 @@
 
     <dirname property="imported.basedir" file="${ant.file.imported}"/>
     <property file="${imported.basedir}/build.properties"/>
+    <!-- Load additional properties which are used to upload
+         project artifacts to a web server and perform tests.
+         Properties stored in that file should be:
+         - webdav.url: The URL where to upload the overlay ZIP file.
+            For example, webdav.url=http://panther3.va.cougaarsoftware.com:8080/webdav/cougaar
+    -->
+    <property file="${user.home}/anthill.properties"/>
 
     <!-- <echo message="Loaded ${imported.basedir}/build.properties: ${module.superiors}"/> -->
     <!-- The name of a custom build file -->
@@ -30,6 +37,13 @@
         <taskdef resource="net/sf/antcontrib/antcontrib.properties">
           <classpath>
              <pathelement location="${securityservices.base}/build/lib/ant-contrib-1.0b1.jar"/>
+          </classpath>
+        </taskdef>
+        <taskdef resource="org/apache/webdav/ant/taskdefs.properties">
+          <classpath>
+             <fileset dir="${securityservices.base}/build/lib">
+                <include name="*.jar"/>
+             </fileset>
           </classpath>
         </taskdef>
         <property name="ant.contrib.ext.loaded" value="true"/>
@@ -94,10 +108,10 @@
         <then>
           <!-- For anthill integration -->
           <!-- The branch name of the Cougaar Standard Edition -->
-          <property name="branch.name" value="${anthill.cougaar.branch.name}"/>
+          <property name="cougaar.branch.name" value="${anthill.cougaar.branch.name}"/>
           <!-- The parent directory of org.cougaar.install.path -->
           <property name="org.cougaar.install.path.parent" value="${user.home}/nightly-cougaar"/>
-          <property name="cougaar.install.path" value="${org.cougaar.install.path.parent}/${branch.name}/cip"/>
+          <property name="cougaar.install.path" value="${org.cougaar.install.path.parent}/${cougaar.branch.name}/cip"/>
           <mkdir dir="${cougaar.install.path}"/>
           <property name="cougaar.workspace" value="${cougaar.install.path}/workspace"/>
         </then>
@@ -360,6 +374,8 @@
      	<echo message="#### Building Zip file"/>
 	<zip zipfile="${project.name}.zip" basedir="staging"/>	
         <echo message="#### Generated ZIP file"/>
+        <!-- Upload result to web server -->
+        <antcall target="upload-overlay"/>
     </target>
 
     <!-- The INSTALL target does everything but cvs-update and javadoc -->
@@ -779,6 +795,44 @@
         excludes="**/CVS"/>
     </target>
     
+    <target name="automated-tests" depends="all">
+      <!--
+         Perform automated tests of the security services.
+         The following steps are performed:
+         1) Download Cougaar locally.
+         2) Checkout and build the security service overlays.
+         3) Create a ZIP files containing:
+              - Cougaar
+              - The security services overlay
+         4) Create a COUGAAR_INSTALL_PATH directory on a testbed machine
+         5) SCP the ZIP files to the testbed machine
+         6) Unzip ZIP files in the newly created COUGAAR_INSTALL_PATH
+         7) SCP a modified loggingConfig.conf file to the testbed machine.
+         8) Run the PING society on the testbed machine for 20 minutes.
+         9) SCP the log4j files from the testbed machine.
+         10) Analyze the log4j files. Look for:
+               - Missing statements that should have been logged but were not.
+               - Extra statements that indicate failures (e.g. exceptions)
+      -->
+    </target>
+
+    <target name="upload-overlay">
+      <if>
+        <isset property="webdav.url"/>
+        <then>
+          <echo message="Uploading ${project.name}.zip to ${webdav.url}"/>
+          <davput url="${webdav.url}" verbose="true" overwrite="true">
+            <fileset dir="${securityservices.base}">
+               <include name="${project.name}.zip"/>
+            </fileset>
+          </davput>
+          <!-- Rename resource. The resource is name as:
+               ${project.name}-${project.branch}-${cougaar.branch} -->
+          <davmove url="${webdav.url}/${project.name}.zip" overwrite="true"
+                   destination="${webdav.url}/${project.name}-${anthill.branch.name}-${cougaar.branch.name}.zip"/>
+        </then>
+      </if>
+    </target>
 </project>
 
 <!-- End Cougaar securityservices ant build script -->
