@@ -107,7 +107,7 @@
             <fileset dir="${securityservices.src}" includes="edu/jhuapl/idmef/*.dtd"/>
             <manifest>
               <attribute name="Built-By" value="${user.name}"/>
-              <attribute name="Sealed" value="true"/>
+              <!-- <attribute name="Sealed" value="true"/> -->
               <attribute name="Class-Path" value="/"/>
             </manifest>
         </jar>
@@ -154,6 +154,9 @@
             storepass="keystore" verbose="false"/>
         <signjar jar="${securityservices.classes}/${project.name}.jar" alias="privileged" 
             signedjar="${securityservices.signed}/${project.name}.jar"
+            keystore="${securityservices.configs}/sign-jars/signingCA_keystore" 
+            storepass="keystore" verbose="false"/>
+        <signjar jar="${securityservices.signed}/${project.name}.jar" alias="securitymodule" 
             keystore="${securityservices.configs}/sign-jars/signingCA_keystore" 
             storepass="keystore" verbose="false"/>
     	
