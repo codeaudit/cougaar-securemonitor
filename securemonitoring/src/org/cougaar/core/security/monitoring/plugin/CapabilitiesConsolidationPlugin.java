@@ -138,6 +138,7 @@ public class CapabilitiesConsolidationPlugin extends ComponentPlugin {
   private LoggingService loggingService;
   private boolean readcollection=false;
   private CommunityServiceUtil _csu;
+  private boolean enableMnR;
   
   /**
    * Used by the binding utility through reflection to set my DomainService
@@ -180,6 +181,7 @@ public class CapabilitiesConsolidationPlugin extends ComponentPlugin {
     modifiedcapabilities= (IncrementalSubscription)getBlackboardService().subscribe(new ModifiedCapabilitiesPredicate(loggingService));
     capabilitiesRelays= (IncrementalSubscription)getBlackboardService().subscribe(new ConsolidatedCapabilitiesRelayPredicate(loggingService));
     agentRegistrations= (IncrementalSubscription)getBlackboardService().subscribe(new AgentRegistrationPredicate(loggingService));
+     enableMnR = Boolean.valueOf(System.getProperty("org.cougaar.core.security.enableMnR","true")).booleanValue();
   }
   
 
@@ -212,7 +214,9 @@ public class CapabilitiesConsolidationPlugin extends ComponentPlugin {
    * Top level plugin execute loop.  
    */
   protected void execute () {
-    
+    if(!enableMnR){
+      return;
+    }
     updateRelayedCapabilities();
     // Unwrap subordinate capabilities from new/changed/deleted relays
     loggingService.debug("Update of relay called from :"+myAddress.toAddress());

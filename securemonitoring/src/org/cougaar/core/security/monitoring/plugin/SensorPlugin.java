@@ -152,6 +152,8 @@ public abstract class SensorPlugin extends ComponentPlugin {
   
   private IncrementalSubscription reregister;
 
+  private boolean enableMnR;
+
   public void setDomainService(DomainService aDomainService) {
     _domainService = aDomainService;
     _log = (LoggingService) getServiceBroker().
@@ -214,7 +216,7 @@ public abstract class SensorPlugin extends ComponentPlugin {
     managerSubscription=(IncrementalSubscription)getBlackboardService().subscribe(new ManagerAgentPredicate());
     unregister=(IncrementalSubscription)getBlackboardService().subscribe(new UnRegisterPredicate());
     reregister=(IncrementalSubscription)getBlackboardService().subscribe(new RegisterPredicate());
-   
+    enableMnR = Boolean.valueOf(System.getProperty("org.cougaar.core.security.enableMnR","true")).booleanValue();
   }
   
    
@@ -224,6 +226,9 @@ public abstract class SensorPlugin extends ComponentPlugin {
    * responsible for handling unregister and reregister of Sensor during handoff 
    */
   protected void execute(){
+    if(!enableMnR){
+      return;
+    }
     Collection unregCol=unregister.getAddedCollection();
     if((unregCol!=null ) && (unregCol.size()>0)){
       if(_log.isDebugEnabled()){

@@ -132,6 +132,9 @@ public class MnRAggResponseAggregator extends MnRAggQueryBase  {
   }
 
   protected synchronized void execute () {
+    if(!enableMnR){
+      return;
+    }
     if(localResponse.hasChanged()) {
       Collection col=localResponse.getChangedCollection();
       if(!col.isEmpty()){

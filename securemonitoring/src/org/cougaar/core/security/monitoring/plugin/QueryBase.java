@@ -47,6 +47,8 @@ public abstract class QueryBase extends ComponentPlugin {
  
   protected  boolean _isRoot;
   protected boolean _rootReady;
+  
+  protected boolean enableMnR;
  
   /**
    * Used by the binding utility through reflection to set my DomainService
@@ -101,6 +103,7 @@ public abstract class QueryBase extends ComponentPlugin {
       _csu = new CommunityServiceUtil(getServiceBroker());
       _csu.amIRoot(new RootListener());
     }
+     enableMnR = Boolean.valueOf(System.getProperty("org.cougaar.core.security.enableMnR","true")).booleanValue();
   }
 
   

@@ -143,6 +143,9 @@ public class MnRAggSendRemoteResponse extends MnRAggQueryBase {
   }
   
   protected synchronized void execute() {
+    if(!enableMnR){
+      return;
+    }
     Collection responsecol=null;
     if(consolidatedResponse.hasChanged()) {
       responsecol=consolidatedResponse.getAddedCollection();
