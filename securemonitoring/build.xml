@@ -299,16 +299,22 @@
     	     dest="${cougaar.install.path}"/>	
     </target>
 
-    <!-- Build another security services module.
-         The name of the module should be provided in the "build.module.name" property.
-         Usually the value of "ant.target.name" should be "all" -->
-    <target name="build-module">
-       <echo message="************************** Building: ${securityservices.base}/../${build.module.name}"/>
+    <target name="call-ant-submodule">
        <ant antfile="build.xml"
             dir="${securityservices.base}/../${build.module.name}"
             inheritAll="false"
             target="${ant.target.name}">
+          <!-- Avoid warning stating we are trying to redefine ant-contrib tasks -->
+          <property name="ant.contrib.ext.loaded" value="true"/>
        </ant>
+    </target>
+
+    <!-- Build another security services module.
+         The name of the module should be provided in the "build.module.name" property.
+         Usually the value of "ant.target.name" should be "all" -->
+    <target name="build-module">
+       <echo message="******************** Building: ${securityservices.base}/../${build.module.name}"/>
+       <antcall target="call-ant-submodule"/>
        <echo message="Copying jar file to superior modules: ${module.superiors}"/>
        <for list="${module.superiors}" delimiter="," param="build.module.superior.name">
          <sequential>
@@ -388,11 +394,9 @@
          <case value="7">
            <for list="${module.build.list}" delimiter="," param="build.module.name">
              <sequential>
-               <ant antfile="build.xml"
-                    dir="${securityservices.base}/../@{build.module.name}"
-                    inheritAll="false"
-                    target="clean">
-               </ant>
+               <antcall target="call-ant-submodule">
+                  <param name="ant.target.name" value="clean"/>
+               </antcall>
              </sequential>
            </for>
          </case>
