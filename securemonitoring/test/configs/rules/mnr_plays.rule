@@ -13,7 +13,37 @@ require 'ultralog/enclaves'
 require 'security/lib/jar_util'
 require 'security/lib/common_security_rules'
 
-if !(@mnrPlaysCompleted)
+#
+# It would be better if this code did something reasonable if no policy 
+# managers exist.  That suggests that this should be an action and not a rule 
+# to do this properly...
+#
+
+policyManagers = Hash.new
+policyManagersReady = true
+
+society.each_enclave do |enclave|
+  policyManagerAgent = nil
+  society.each_enclave_agent(enclave,true) do |agent|
+    agent.each_facet do |facet|
+      if facet[:role] == $facetPolicyManagerAgent then
+        policyManagerAgent = agent
+        break
+      end
+    end
+    if policyManagerAgent then
+      break
+    end
+  end
+  policyManagers[enclave] = policyManagerAgent
+  puts "found domain manager = #{policyManagerAgent} for #{enclave}"
+  if ! policyManagerAgent  then
+    policyManagersReady = false
+    break # try later when the policy mmanager is defined...
+  end
+end
+
+if policyManagersReady && !(@mnrPlaysCompleted)
   robustness = false
 
   society.each_agent { |agent|
@@ -50,13 +80,15 @@ org.cougaar.core.security.monitoring.LOGIN_FAILURE_RATE > 36000 :
     end
 
     society.each_enclave { |enclave|
+
+
       playsFile = "#{CIP}/configs/security/AMnRPlaysEnclave#{enclave.capitalize}.txt"
       file = File.open(playsFile ,"w") { |file|
         file.write <<END
 //
 // Society level play book
 //
-
+p
 /* This playbook is used to evaluate the perceived threat level of a society and take actions
  * when the threat level changes. The perceived threat level depends on how many login failures
  * occur in a period of time.
@@ -92,7 +124,7 @@ PERCEIVED_THREAT_LEVEL == LOW
     : org.cougaar.core.security.monitoring.MAX_LOGIN_FAILURES = 10
     : org.cougaar.core.security.monitoring.LOCKOUT_DURATION = 60
     : org.cougaar.core.security.monitoring.PERCEIVED_THREAT_LEVEL = "LOW"
-    : [agent.#{enclave.capitalize}PolicyDomainManager]org.cougaar.core.security.policy.PREVENTIVE_MEASURE_POLICY = LOW;
+    : [agent.#{policyManagers[enclave].name}]org.cougaar.core.security.policy.PREVENTIVE_MEASURE_POLICY = LOW;
 //    : com.telcordia.mode.AdaptiveFilterOperatingModeScope = LOGIN_FAILURES
 
 PERCEIVED_THREAT_LEVEL == HIGH
@@ -100,7 +132,7 @@ PERCEIVED_THREAT_LEVEL == HIGH
     : org.cougaar.core.security.monitoring.LOCKOUT_DURATION = 600
     : org.cougaar.core.security.monitoring.PERCEIVED_THREAT_LEVEL = "HIGH"
 //    : com.telcordia.mode.AdaptiveFilterOperatingModeScope = LOGIN_JAR_SECURITYMGR_CRYPTO_FAILURES
-    : [agent.#{enclave.capitalize}PolicyDomainManager]org.cougaar.core.security.policy.PREVENTIVE_MEASURE_POLICY = HIGH;
+    : [agent.#{policyManagers[enclave].name}]org.cougaar.core.security.policy.PREVENTIVE_MEASURE_POLICY = HIGH;
 
 //org.cougaar.core.security.crypto.CRYPTO_EVENT_RATE <= 100
 //    : com.telcordia.mode.AdaptiveFilterOperatingModeReportingRate = RAPID;
