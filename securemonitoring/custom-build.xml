@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project basedir="." name="Cougaar secure monitoring custom build">
+
+    <!-- ********************************************************************************
+         * Custom build below
+         ******************************************************************************** -->
+    <path id="core.class.path">
+        <!-- Cougaar packages -->
+        <pathelement location="${cougaar.install.path}/lib/bootstrap.jar"/>
+        <pathelement location="${cougaar.install.path}/sys/log4j.jar"/>
+        <pathelement location="${cougaar.install.path}/lib/core.jar"/>
+        <pathelement location="${cougaar.install.path}/lib/planning.jar"/>
+        <pathelement location="${cougaar.install.path}/lib/util.jar"/>
+        <pathelement location="${cougaar.install.path}/lib/aggagent.jar"/>
+        <pathelement location="${cougaar.install.path}/sys/servlet.jar"/>
+
+        <pathelement location="${securityservices.base}/lib/security/secure_util.jar"/>
+        <pathelement location="${securityservices.base}/lib/security/securityservices.jar"/>
+    </path>
+
+    <!-- jar IDMEF library -->
+    <target name="custom-jar" id="custom.jar">
+        <jar jarfile="${securityservices.output}/${project.name}.jar"
+            basedir="${securityservices.classes}"
+            includes="org/cougaar/**/*.class"/>
+        <jar jarfile="${securityservices.output}/idmef.jar">
+            <fileset dir="${securityservices.classes}"
+                includes="edu/jhuapl/idmef/*.class"/>
+            <fileset dir="${securityservices.src}" includes="edu/jhuapl/idmef/*.dtd"/>
+            <manifest>
+              <attribute name="Built-By" value="${user.name}"/>
+              <!-- <attribute name="Sealed" value="true"/> -->
+              <attribute name="Class-Path" value="/"/>
+            </manifest>
+        </jar>
+        <signjar jar="${securityservices.output}/idmef.jar" alias="privileged" 
+            signedjar="${securityservices.signed}/idmef.jar"
+            keystore="${securityservices.configs}/sign-jars/signingCA_keystore" 
+            storepass="keystore" verbose="false"/>
+    </target>
+
+</project>

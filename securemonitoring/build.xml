@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
  
 <!-- 
-    Ant build script for UltraLog security monitoring services. 
+    Generic ant build script for Cougaar security services. 
      
     Usage: ant [-v] <target>
      
@@ -9,16 +9,12 @@
     securityservices, jar and sign the jars.  Include  "-v" with ant for verbose mode.
      
     target:
-        all         - build, jar and sign securityservices (default).
+        all         - build, security services and create a ZIP file (default).
+        install     - call "all" target and unzip ZIP file in $CIP.
+        clean       - delete $CIP/workspace directory and ant-generated files.
         cvs-update  - execute "cvs update -d" in the current directory
         with-update - execute the cvs-update and all targets
-        install     - execute the all target, and install securityservices 
-                      signed jars and configuration files
         javadocs    - create javadocs for securityservices
-        tar-docs    - tar and zip the javadocs
-        run-tests   - run Junit tests 
-        clean-log   - Delete log files
-        clean       - Delete .class and .jar files
         help        - print out usage message     
  
    To run junit tests, the following files must be included in the ANT lib directory:
@@ -26,7 +22,7 @@
      2) jakarta-ant-1.4.1-optional.jar
 -->
 
-<project basedir="." default="all" name="UltraLog security monitoring services">
+<project basedir="." default="all" name="Cougaar security services">
   
     <!-- prefix for all environment variables -->
     <property environment="env"/>
@@ -35,13 +31,15 @@
     <property name="securityservices.base" value="."/>
     <property name="securityservices.sys" value="${securityservices.base}${file.separator}sys"/>
     <property name="securityservices.lib" value="${securityservices.base}${file.separator}lib"/>
-    <property name="securityservices.docdir" value="${securityservices.base}${file.separator}doc"/>
-    <property name="securityservices.staging" value="${securityservices.base}${file.separator}staging"/>
     <property name="securityservices.configs" value="${securityservices.base}${file.separator}test${file.separator}configs"/> 
-    <!-- The classes directory for output classes and jar files -->
-    <property name="securityservices.classes" value="classes"/>
+    <property name="securityservices.staging" value="${securityservices.base}${file.separator}staging"/>
+    <!-- The directory for output compiled Java classes -->
+    <property name="securityservices.classes" value="${securityservices.base}${file.separator}classes"/>
+    <!-- The directory for ant-generated files (except .class files) -->
+    <property name="securityservices.output" value="${securityservices.base}${file.separator}output"/>
+    <property name="securityservices.docdir" value="${securityservices.output}${file.separator}doc"/>
     <!-- The output directory for signed jar files -->
-    <property name="securityservices.signed" value="${securityservices.classes}${file.separator}signed"/>
+    <property name="securityservices.signed" value="${securityservices.output}${file.separator}signed"/>
     <!-- The base directories where the java source files are located -->
     <property name="securityservices.src" value="${securityservices.base}${file.separator}src"/>
     <!-- The base directories where the regression test files are located -->
@@ -49,131 +47,148 @@
     <!-- The base directories where the regression test result files are located -->
     <property name="securityservices.results" value="${securityservices.regress}${file.separator}results"/>
 
-	<property name="project.description"
-		value="UltraLog secure monitoring"/>
-	<property name="project.name"
-		value="secure_monitoring"/>
+    <property file="build.properties"/>
+    <!-- The name of a custom build file -->
+    <property name="custom.build.file" value="custom-build.xml"/>
+    <!-- Import the custom build file -->
+    <import file="${custom.build.file}" optional="true"/>
 
-    <path id="core.class.path">    
-        <!-- Cougaar packages -->
-        <pathelement location="${cougaar.install.path}/lib/bootstrap.jar"/>
-        <pathelement location="${cougaar.install.path}/sys/log4j.jar"/>
-        <pathelement location="${cougaar.install.path}/lib/core.jar"/>
-        <pathelement location="${cougaar.install.path}/lib/planning.jar"/>
-    	<pathelement location="${cougaar.install.path}/lib/util.jar"/>
-    	<pathelement location="${cougaar.install.path}/lib/aggagent.jar"/>
-       	<pathelement location="${cougaar.install.path}/sys/servlet.jar"/>
-
-	    <pathelement location="${securityservices.base}/lib/security/secure_util.jar"/>
-	    <pathelement location="${securityservices.base}/lib/security/securityservices.jar"/>
-    </path>
-
-    <target name="tstamp">
+    <target name="tstamp" depends="checkversion">
         <tstamp>
             <format property="currentTime" pattern="MM/dd/yyyy hh:mm:ss"/>
         </tstamp>
-        <echo message="Build started at ${currentTime}"/>
+        <echo message="Build started at ${currentTime} - CIP=${cougaar.install.path}"/>
     </target>
 
-    <target name="init" depends="tstamp">
+    <target name="checkversion">
+       <!--
+        <condition property="ant.version.incorrect" value="true">
+          <not>
+            <contains string="${ant.version}" substring="1.5"/>
+          </not>
+        </condition>
+        <fail message="ant version 1.5 or above is required. Current version is ${ant.version}"
+              if="ant.version.incorrect"/>
+         -->
+        <condition property="vm.version.incorrect" value="true">
+          <not>
+            <contains string="${java.vm.version}" substring="1.4.2"/>
+          </not>
+        </condition>
+        <fail message="JDK 1.4.1_02 required. Current version is ${java.vm.version}"
+              if="vm.version.incorrect"/>
+    </target>
+
+    <target name="ant-contrib-setup" unless="ant.contrib.ext.loaded">
+        <taskdef resource="net/sf/antcontrib/antcontrib.properties">
+          <classpath>
+             <pathelement location="${securityservices.base}/build/lib/ant-contrib-1.0b1.jar"/>
+          </classpath>
+        </taskdef>
+        <property name="ant.contrib.ext.loaded" value="true"/>
+    </target>
+
+    <target name="init" depends="tstamp, ant-contrib-setup">
+    	<echo message="Initializing ${project.description} build..."/>
         <mkdir dir="${securityservices.classes}"/>
         <mkdir dir="${securityservices.signed}"/>
         <mkdir dir="${securityservices.docdir}"/>
 
+        <!-- make regress directory -->
+        <mkdir dir="${securityservices.results}" />
+        <mkdir dir="${securityservices.results}/html" />
+
         <!-- Fix End Of Line characters in source files -->
+        <!--
         <fixcrlf srcdir="${securityservices.src}"
           includes="**/*.java"
            eol="lf" 
            eof="remove"
         />
+        -->
+        <!-- <ant antfile="${custom.build.file}" target="init"> -->
     </target>
+   
+    <!-- Build the source code package using default method, unless the custom
+         property file indicates there is a custom build method. -->
+    <target name="default-compile" unless="use.custom.compile">
+       <javac classpathref="core.class.path" debug="true" 
+           deprecation="true" destdir="${securityservices.classes}"
+           source="1.4">
+         <src path="${securityservices.src}"/>
+         <include name="**"/>
+      </javac>
+    </target>
+    <target name="my-custom-compile" if="use.custom.compile">
+       <!-- Use the custom build method if the custom property file says so -->
+       <antcall target="custom-compile"/>
+    </target>
+    <target name="compile" depends="init">
+       <echo message="+++++ Building ${project.description}"/>
+       <condition property="use.custom.compile">
+         <!-- Does the custom-build.xml import file define "custom.compile"? -->
+         <isreference refid="custom.compile"/>
+       </condition>
+       <!-- <echo message="${use.custom.compile}"/> -->
+       <antcall target="default-compile"/>
+       <echo message="+++++ Built ${project.description}"/>
+       <antcall target="my-custom-compile"/>
+    </target> 
 
-    <!-- Build the JavaIDMEF library -->
-    <target name="build-idmef" depends="init">
-        <echo message="+++++ Building ${project.description}"/>
-        <javac classpathref="core.class.path" debug="true" 
-            deprecation="true" destdir="${securityservices.classes}">
-          <src path="${securityservices.src}"/>
-    	  <include name="edu/jhuapl/idmef/**"/>
-        </javac>
-        <echo message="+++++ Built ${project.description}"/>
-    </target>
-
-	<!-- jar JavaIDMEF -->
-    <target name="jar-idmef" depends="build-idmef">
-        <jar jarfile="${securityservices.classes}/idmef.jar">
-            <fileset dir="${securityservices.classes}"
-                includes="edu/jhuapl/idmef/*.class"/>
-            <fileset dir="${securityservices.src}" includes="edu/jhuapl/idmef/*.dtd"/>
-            <manifest>
-              <attribute name="Built-By" value="${user.name}"/>
-              <!-- <attribute name="Sealed" value="true"/> -->
-              <attribute name="Class-Path" value="/"/>
-            </manifest>
-        </jar>
-    </target>
-
-    <!-- Build the org.cougaar.core.security.securebootstrap package -->
-    <target name="build-securityservices" depends="init, build-idmef">
-        <echo message="+++++ Building ${project.description}"/>
-        <javac classpathref="core.class.path" debug="true" 
-            deprecation="true" destdir="${securityservices.classes}"
-            source="1.4">
-          <src path="${securityservices.src}"/>
-          <src path="${securityservices.base}/test/src"/>
-          <include name="org/cougaar/core/security/**"/>
-        </javac>
-        <echo message="+++++ Built ${project.description}"/>
-    </target>
-    
     <!-- jar security services -->
-    <target name="jar-securityservices" depends="build-securityservices">
-        <echo message="+++++ Building jar files"/>
-        <jar jarfile="${securityservices.classes}/${project.name}.jar" 
+    <target name="default-jar" unless="use.custom.jar">
+        <jar jarfile="${securityservices.output}/${project.name}.jar"
             basedir="${securityservices.classes}"
-            includes="org/cougaar/core/security/**"/>
-        <echo message="+++++ Built jar files"/>
+            includes="org/cougaar/**/*.class"/>
     </target>
+    <target name="my-custom-jar" if="use.custom.jar">
+       <antcall target="custom-jar"/>
+    </target>
+    <target name="jar" depends="compile">
+       <echo message="+++++ Building jar files"/>
+       <condition property="use.custom.jar">
+         <!-- Does the custom-build.xml import file define "custom.jar"? -->
+         <isreference refid="custom.jar"/>
+       </condition>
+       <antcall target="default-jar"/>
+       <!-- Use the custom build method if the custom property file says so -->
+       <antcall target="my-custom-jar"/>
+       <echo message="+++++ Built jar files"/>
+    </target> 
  
     <target name="jar-configs">
         <echo message="+++++ Building configuration jar files"/>
-        <jar jarfile="${securityservices.classes}/configs_${project.name}.jar" 
+        <jar jarfile="${securityservices.output}/configs_${project.name}.jar" 
             basedir="${securityservices.configs}"
-            includes="security/*.xml,
-          	   security/*.dtd,
-        	   security/*.conf"/>
+            includes="security/*"/>
         <echo message="+++++ Built configuration jar files"/>
     </target>
     
     <!-- sign security services -->
-    <target name="sign-jars" depends="jar-idmef, jar-securityservices, jar-configs">
-        <echo message="+++++ Signing jar files"/>
-        <signjar jar="${securityservices.classes}/idmef.jar" alias="privileged" 
-            signedjar="${securityservices.signed}/idmef.jar"
-            keystore="${securityservices.configs}/sign-jars/signingCA_keystore" 
-            storepass="keystore" verbose="false"/>
-        <signjar jar="${securityservices.classes}/${project.name}.jar" alias="privileged" 
+    <target name="sign-jars" depends="jar, jar-configs">
+        <echo message="+++++ Signing jar files using ${jar.signer.key} alias"/>
+        <!-- "jar.signer.key" should be one of "securitymodule" or "bootstrapper" -->
+        <signjar jar="${securityservices.output}/${project.name}.jar" alias="${jar.signer.key}" 
             signedjar="${securityservices.signed}/${project.name}.jar"
             keystore="${securityservices.configs}/sign-jars/signingCA_keystore" 
             storepass="keystore" verbose="false"/>
-        <signjar jar="${securityservices.signed}/${project.name}.jar" alias="securitymodule" 
+        <signjar jar="${securityservices.signed}/${project.name}.jar" alias="privileged" 
             keystore="${securityservices.configs}/sign-jars/signingCA_keystore" 
             storepass="keystore" verbose="false"/>
-    	
-        <signjar jar="${securityservices.classes}/configs_${project.name}.jar" alias="privileged" 
+        <signjar jar="${securityservices.output}/configs_${project.name}.jar" alias="privileged" 
             signedjar="${securityservices.signed}/configs_${project.name}.jar"
             keystore="${securityservices.configs}/sign-jars/signingCA_keystore" 
             storepass="keystore" verbose="false"/>
         <echo message="+++++ Signed jar files"/>
     </target>
-    
+
     <!-- install security services -->
     <target name="install-signed-jars" depends="sign-jars">
         <echo message="+++++ Installing signed jar files"/>
         <delete dir="${securityservices.staging}" includeEmptyDirs="true" quiet="true"/>
         <mkdir dir="${securityservices.staging}"/>
         <copy todir="${securityservices.staging}/lib">
-    	  <fileset dir="${securityservices.signed}">
+          <fileset dir="${securityservices.signed}">
             <patternset>
                <include name="*.jar"/>
                <exclude name="configs_*.jar"/>
@@ -182,148 +197,290 @@
         </copy>
         <echo message="+++++ Installed signed jar files"/>
     </target>
-            
-    <!-- install files -->
-    <target name="install-conf" depends="install-signed-jars">
-        <echo message="+++++ Generating ZIP files"/>
-  	    <mkdir dir="${securityservices.staging}/Manifest"/>
-     	<mkdir dir="${securityservices.staging}/configs/security"/>
-  	    <mkdir dir="${securityservices.staging}/csmart/config/rules/security"/>
-        <!-- The bootstrap_keystore itself should be outside a Jar file
-            so that we can verify jar files.
-            The Java policy file must also be outside a jar file. -->
-        <copy todir="${securityservices.staging}/configs/security">
-          <fileset dir="${securityservices.configs}/security">
-             <patternset>
-                <include name="bootstrap_keystore"/>
-                <include name="Cougaar_Java.policy"/>
-             </patternset>
-          </fileset>
+    
+    <!-- install 3rd party jars files -->
+    <target name="install-3rdparty-jars">
+        <echo message="+++++ Installing jar files"/>
+        <!-- Not all modules may have a sys subdirectory, so do not fail if that directory
+             does not exist. -->
+        <copy todir="${securityservices.staging}/sys" overwrite="true"
+              failonerror="false">
+            <fileset dir="${securityservices.sys}">
+                <include name="*.jar"/>
+            </fileset>
         </copy>
+        <!-- Not all modules may have a lib subdirectory, so do not fail if that directory
+             does not exist. -->
+        <copy todir="${securityservices.staging}/lib" overwrite="true"
+              failonerror="false">
+            <fileset dir="${securityservices.lib}">
+            	<include name="*.jar"/>
+            </fileset>
+        </copy>
+        <echo message="+++++ Installed jar files"/>        
+    </target>
+    
+    <target name="my-custom-install-conf" if="use.custom.install">
+       <antcall target="custom-install-conf"/>
+    </target>
+    <!-- install config files -->
+    <target name="install-conf" depends="install-signed-jars, install-3rdparty-jars">
+       <echo message="+++++ Installing configuration files"/>
+       <condition property="use.custom.install">
+         <!-- Does the custom-build.xml import file define "custom.install"? -->
+         <isreference refid="custom.install"/>
+       </condition>
+       <antcall target="default-install-conf"/>
+       <!-- Use the custom build method if the custom property file says so -->
+       <antcall target="my-custom-install-conf"/>
+       <echo message="+++++ Installed configuration files"/>
+    </target>
+
+    <target name="default-install-conf">
+       <mkdir dir="${securityservices.staging}/Manifest"/>
+       <mkdir dir="${securityservices.staging}/configs/security"/>
+       <mkdir dir="${securityservices.staging}/configs/security/reference"/>
+
         <copy file="${securityservices.signed}/configs_${project.name}.jar" 
-          todir="${securityservices.staging}/configs/security"/>
-        <copy todir="${securityservices.staging}/csmart/config/rules/security/">
+            todir="${securityservices.staging}/configs/security"/>
+        <!-- Also copy configs_${project.name}.jar in another location where
+             we know it won't be modified, to keep a reference file.
+             The configs_${project.name}.jar file may be modified every time the
+             society is ran. -->
+        <copy file="${securityservices.signed}/configs_${project.name}.jar" 
+            todir="${securityservices.staging}/configs/security/reference"/>
+
+        <copy todir="${securityservices.staging}/csmart/config/rules/security">
             <fileset dir="${securityservices.configs}/rules">
                 <patternset>
-                    <include name="*.rule"/>
+                    <include name="**/*.rule"/>
                 </patternset>
             </fileset>
         </copy>
+    </target>
+    
+    <!-- The ALL target only compiles, jar, and sign jars -->
+    <target name="all" depends="install-conf">
         <tstamp>
             <format property="zipTime" pattern="MM/dd/yyyy hh:mm:ss"/>
         </tstamp>
     	<echo message="Built ${zipTime}"
     	   file="${securityservices.staging}/Manifest/${project.name}.txt"/>
      	<echo message="#### Building Zip file"/>
-		<zip zipfile="${project.name}.zip" basedir="staging"
-		     filesonly="false"/>	
+	<zip zipfile="${project.name}.zip" basedir="staging"/>	
         <echo message="+++++ Generated ZIP file"/>
+        <echo message="Cougaar security services Build Complete"/>
     </target>
-    
-    <!-- The ALL target only compiles, jar, and sign jars -->
-    <target name="all" depends="tstamp, init, install-conf">
-        <echo message="UltraLog ${project.description} Complete"/>
-    </target>
-    
+
     <!-- The INSTALL target does everything but cvs-update and javadoc -->
     <target name="install" depends="all">
+        <echo message="Cougaar security services Install"/>
 		<unzip src="${securityservices.base}/${project.name}.zip"
     	     dest="${cougaar.install.path}"/>	
-        <echo message="UltraLog ${project.description} Install Complete"/>
     </target>
 
     <!-- Updating repository before building -->
     <target name="cvs-update">
       <cvs cvsRoot="${env.CVSROOT}" command="update -d"/>
     </target>
-    <target name="cvs-update-junit">
-      <cvs  command="update -d -A"/>
+
+    <!-- Build another security services module.
+         The name of the module should be provided in the "build.module.name" property.
+         Usually the value of "ant.target.name" should be "all" -->
+    <target name="build-module">
+       <echo message="************************** Building: ${securityservices.base}/../${build.module.name}"/>
+       <ant antfile="build.xml"
+            dir="${securityservices.base}/../${build.module.name}"
+            inheritAll="false"
+            target="${ant.target.name}">
+       </ant>
+       <echo message="Copying jar file to superior modules: ${module.superiors}"/>
+       <for list="${module.superiors}" delimiter="," param="build.module.superior.name">
+         <sequential>
+            <copy todir="${securityservices.base}/../@{build.module.superior.name}/lib/security">
+               <fileset dir="${securityservices.base}/output/signed">
+                 <patternset>
+                    <include name="*.jar"/>
+                    <exclude name="configs_*.jar"/>
+                 </patternset>
+              </fileset>
+            </copy>
+         </sequential>
+       </for>
     </target>
-    
+
+    <!-- Check out (or update if module has already been checked out) a security services module
+         The name of the module should be provided in the "build.module.name" property. -->
+    <target name="update-module">
+       <property name="cvs.command" value="-Q checkout"/>
+       <available file="${securityservices.base}/../${build.module.name}" type="dir"
+                  property="cvs.command" value="-q update -d">
+       </available>
+       <echo message="Updating or checking out: ${securityservices.base}/../${build.module.name}"/>
+       <cvs cvsRoot="${env.CVSROOT}" cvsRsh="${env.CVS_RSH}"
+            command="${cvs.command}" package="${build.module.name}"
+            dest="${securityservices.base}/../"
+            failonerror="true"/>
+    </target>
+
+    <!-- Checkout or update a list of modules provided in the "module.build.list" property -->
+    <target name="process-interactive-command">
+       <switch value="${build.choice}">
+         <case value="1">
+           <!-- Update modules -->
+           <foreach list="${module.build.list}" delimiter="," target="update-module" param="build.module.name">
+           </foreach>
+         </case>
+         <case value="2">
+           <!-- Build modules. The modules should have been previously checked out. -->
+           <foreach list="${module.build.list}" delimiter="," target="build-module" param="build.module.name">
+             <param name="ant.target.name" value="all"/>
+           </foreach>
+         </case>
+         <case value="3">
+           <!-- Build and install modules. The modules should have been previously checked out. -->
+           <foreach list="${module.build.list}" delimiter="," target="build-module" param="build.module.name">
+             <param name="ant.target.name" value="install"/>
+           </foreach>
+         </case>
+         <case value="4">
+           <!-- Update and build modules. -->
+           <foreach list="${module.build.list}" delimiter="," target="update-module" param="build.module.name">
+           </foreach>
+           <foreach list="${module.build.list}" delimiter="," target="build-module" param="build.module.name">
+             <param name="ant.target.name" value="all"/>
+           </foreach>
+         </case>
+         <case value="5">
+           <!-- Update, build and install modules. -->
+           <foreach list="${module.build.list}" delimiter="," target="update-module" param="build.module.name">
+           </foreach>
+           <foreach list="${module.build.list}" delimiter="," target="build-module" param="build.module.name">
+             <param name="ant.target.name" value="install"/>
+           </foreach>
+         </case>
+         <case value="6">
+           <antcall target="install"/>
+         </case>
+         <default>
+            <fail message="The value of property build.choice is invalid"/>
+         </default>
+       </switch>
+    </target>
+
+    <target name="interactive" depends="ant-contrib-setup">
+       <dirname property="current.directory.name" file="${securityservices.base}/build.xml"/>
+       <echo level="info" message="${current.directory.name}"/>
+       <basename property="current.module.name" file="${current.directory.name}"/>
+       <!-- Set the property that contains the modules to build. -->
+       <property name="module.build.list" value="${module.subordinates},${current.module.name}"/>
+
+       <echo level="info" message="***** Cougaar security services interactive build *****"/>
+       <echo level="info" message="*******************************************************"/>
+       <echo level="info" message="Current module:"/>
+       <echo level="info" message="       =>    ${current.module.name}"/>
+       <echo level="info" message="This module depends on the following modules:"/>
+       <for list="${module.subordinates}" delimiter="," param="build.module.name">
+         <sequential>
+            <echo message="       =>    @{build.module.name}"/>
+         </sequential>
+       </for>
+       <echo level="info" message=""/>
+       <echo level="info" message="1: Checkout (or update if modules are already checked out) the modules listed above."/>
+       <echo level="info" message="     The modules will be checked out or updated in the parent directory of this module."/>
+       <echo level="info" message="2: Build the modules listed above."/>
+       <echo level="info" message="     The modules listed above must have been checked out previously."/>
+       <echo level="info" message="3: Build and install the modules listed above."/>
+       <echo level="info" message="     The modules listed above must have been checked out previously."/>
+       <echo level="info" message="4: Update and build the modules listed above."/>
+       <echo level="info" message="5: Update, build and install the modules listed above."/>
+       <echo level="info" message="6: Build and install current module (${current.module.name}) only."/>
+       <input message="Enter your choice:" validargs="1,2,3,4,5,6" addproperty="build.choice"/>
+       <antcall target="process-interactive-command"/>
+    </target>
+		
     <!-- use 'ant with-update' to update repository executing the ALL target -->
     <target name="with-update" depends="cvs-update, all"/>
     
-    <!-- create javadocs for security services and JavaIDMEF -->
-    <target name="javadocs" depends="init" description="Generating security services and idmef javadocs">
-        <echo message="Creating JavaDocs for security services and JavaIDMEF"/>
+    <!-- create javadocs -->
+    <target name="javadocs" depends="init" description="Generating javadoc">
+        <echo message="Creating JavaDocs"/>
         <delete file="${securityservices.docdir}/javadoc.tar.gz" verbose="true"/>
         <javadoc classpathref="core.class.path" destdir="${securityservices.docdir}"
-            windowtitle="${project.description} API" sourcepath="${securityservices.src}" 
-            packagenames="org.cougaar.core.security.*" 
+            windowtitle="Cougaar security services API" sourcepath="${securityservices.src}" 
+            packagenames="edu.*, org.cougaar.core.security.*" 
+            excludepackagenames="org.cougaar.core.security.test.*"
             author="true" version="true"/>
-        <echo message="Generated JavaDocs for ${project.description}"/>
+	<zip zipfile="${securityservices.staging}/${project.name}-docs.zip" basedir="${securityservices.docdir}"/>	
+        <echo message="Generated JavaDocs"/>
     </target>
 	
-	  <!-- tar up javadoc and delete all files -->
-	  <target name="tar-docs" depends="javadocs">
-        <tar tarfile="${securityservices.docdir}/javadoc.tar" basedir="${securityservices.docdir}"
-            includes="*.html, *.css, org/*" 
-            includesfile="${securityservices.docdir}/package-list"/>
-        <gzip zipfile="${securityservices.docdir}/javadoc.tar.gz" 
-            src="${securityservices.docdir}/javadoc.tar"/>
-        <delete file="${securityservices.docdir}/javadoc.tar" verbose="true"/>
-        <delete includeEmptyDirs="true">
-            <fileset dir="${securityservices.docdir}">
-                <patternset>
-                    <include name="**/**"/>
-                    <exclude name="**/*.gz"/>
-                </patternset>
-            </fileset>
-        </delete>
-    </target>
-
-    <target name="create_cougaar_overlay" depends="all">
-	</target>
-
-    <!-- Delete the org class directories, and jar files -->
+    <!-- Delete the ant-generated and $CIP/workspace directory -->
     <target name="clean">
-        <echo message="+++++ Cleaning build environment"/>
-        <delete dir="${securityservices.classes}/org" includeEmptyDirs="true" quiet="true"/>
-        <delete dir="${securityservices.signed}" includeEmptyDirs="true" quiet="true"/>
-        <delete dir="${securityservices.staging}" includeEmptyDirs="true" quiet="true"/>
+        <echo message="+++++ Cleaning environment"/>
+        <delete dir="${securityservices.classes}" includeEmptyDirs="true" quiet="true"/>
+        <delete dir="${securityservices.output}" includeEmptyDirs="true" quiet="true"/>
+        <delete dir="${cougaar.workspace}" includeEmptyDirs="true" quiet="true"/>
+        <echo message="+++++ Cleaned environment"/>
+    </target>
+
+    <target name="help">
+        <echo message="Ant build script for Ultra*Log securityservices."/>
+        <echo message=""/>
+        <echo message="Usage: ant [-v] &lt;target&gt;"/>
+        <echo message=""/>
+        <echo message="Run ant in the current directory.  If no target is specified,"/>
+        <echo message="ant will build securityservices, jar and sign the jars.  Include"/>
+        <echo message="'-v' with ant for verbose mode."/>
+        <echo message=""/>
+        <echo message="target:"/>
+        <echo message="    all - build, jar and sign securityservices (default)."/>
+        <echo message="    cvs-update  - execute 'cvs update -d' in the current directory"/>
+        <echo message="    with-update - execute the cvs-update and all targets"/>
+        <echo message="    install     - execute the all target, and install securityservices"/>
+        <echo message="                  signed jars and configuration files"/>
+        <echo message="    javadocs    - create javadocs for securityservices"/>
+        <echo message="    tar-docs    - tar and zip the javadocs"/>
+        <echo message="    clean       - Delete .class and .jar files"/>
+        <echo message="    help        - print out the usage message"/>
+    </target>
+        
+    <target name="confjar">
+        
         <delete quiet="true">
-           <fileset dir="${securityservices.classes}" includes="*.jar"/>
+          <fileset  dir="${cougaar.install.path}/configs/common" includes="*.jar"/>
         </delete>
-        <echo message="+++++ Cleaned build environment"/>
-    </target>
+        <delete quiet="true">
+          <fileset  dir="${cougaar.install.path}/configs/glmtrans" includes="*.jar"/>
+        </delete>
+        <delete quiet="true">
+          <fileset  dir="${cougaar.install.path}/planning/data/common" includes="*.jar"/>
+        </delete>
 
-    <target name="update-dependencies">
-    	<!-- Dependencies are:
-    	     * securityservices
-    	     * securityutils
-    	-->
-    	<antcall target="update-dependency">
-    		<param name="dependency.module.name" value="securityservices"/>
-    		<param name="dependency.module.jar" value="securityservices.jar"/>
-    	</antcall>
-    	<antcall target="update-dependency">
-    		<param name="dependency.module.name" value="securityutils"/>
-    		<param name="dependency.module.jar" value="secure_util.jar"/>
-    	</antcall>
-    </target>
-    <target name="update-dependency">
-       <property name="cvs.command" value="checkout"/>
-       <available file="${securityservices.base}/../${dependency.module.name}" type="dir"
-                  property="cvs.command" value="update -d">
-       </available>
-       <echo message="Updating or checking out: ${securityservices.base}/../${dependency.module.name}"/>
-	   <cvs cvsRoot="${env.CVSROOT}" cvsRsh="${env.CVS_RSH}"
-                command="${cvs.command}" package="${dependency.module.name}"
-                dest="${securityservices.base}/../"
-                quiet="true"
-                failonerror="true"/>
-	   <ant antfile="build.xml"
-	   	    dir="${securityservices.base}/../${dependency.module.name}"
-	   	    inheritAll="false"
-	   	    target="with-depend-update">
-	   </ant>
-	   <copy file="${securityservices.base}/../${dependency.module.name}/classes/signed/${dependency.module.jar}"
-		    toDir="${securityservices.base}/lib/security">
-	   </copy>
-    </target>
-    <!-- use 'ant with-update' to update repository executing the ALL target -->
-    <target name="with-depend-update" depends="update-dependencies, all"/>
+        <jar jarfile="${securityservices.output}/config_common.jar" 
+            basedir="${cougaar.install.path}/configs/common/"
+            excludes="*.jar"/>
+        <jar jarfile="${securityservices.output}/config_glmtrans.jar"
+            basedir="${cougaar.install.path}/configs/glmtrans/"
+            excludes="*.jar"/>
+        <jar jarfile="${securityservices.output}/config_planning.jar"
+            basedir="${cougaar.install.path}/planning/data/common/"
+            excludes="*.jar"/>
+ 
+        <signjar jar="${securityservices.output}/config_common.jar" alias="privileged" 
+            signedjar="${cougaar.install.path}/configs/common/config_common.jar"
+            keystore="${securityservices.configs}/sign-jars/signingCA_keystore" 
+            storepass="keystore" verbose="false"/>
+        <signjar jar="${securityservices.output}/config_glmtrans.jar" alias="privileged"
+            signedjar="${cougaar.install.path}/configs/glmtrans/config_glmtrans.jar"
+            keystore="${securityservices.configs}/sign-jars/signingCA_keystore"
+            storepass="keystore" verbose="false"/>
+        <signjar jar="${securityservices.output}/config_planning.jar" alias="privileged"
+            signedjar="${cougaar.install.path}/planning/data/common/config_planning.jar"
+            keystore="${securityservices.configs}/sign-jars/signingCA_keystore"
+            storepass="keystore" verbose="false"/>
 
- </project>
+    </target>
+</project>
 
-<!-- End UltraLog/securityservices ant build script -->
+<!-- End Cougaar securityservices ant build script -->
