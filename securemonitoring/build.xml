@@ -65,6 +65,7 @@
       <if>
         <isset property="dependency.artifacts.dir"/>
         <then>
+          <echo message="Anthill build - Using JAR files from ${dependency.artifacts.dir}"/>
           <path id="dependency.artificats.dir.path">    
             <fileset dir="${dependency.artifacts.dir}">
               <include name="*/*.jar"/>
@@ -795,27 +796,6 @@
         excludes="**/CVS"/>
     </target>
     
-    <target name="automated-tests" depends="all">
-      <!--
-         Perform automated tests of the security services.
-         The following steps are performed:
-         1) Download Cougaar locally.
-         2) Checkout and build the security service overlays.
-         3) Create a ZIP files containing:
-              - Cougaar
-              - The security services overlay
-         4) Create a COUGAAR_INSTALL_PATH directory on a testbed machine
-         5) SCP the ZIP files to the testbed machine
-         6) Unzip ZIP files in the newly created COUGAAR_INSTALL_PATH
-         7) SCP a modified loggingConfig.conf file to the testbed machine.
-         8) Run the PING society on the testbed machine for 20 minutes.
-         9) SCP the log4j files from the testbed machine.
-         10) Analyze the log4j files. Look for:
-               - Missing statements that should have been logged but were not.
-               - Extra statements that indicate failures (e.g. exceptions)
-      -->
-    </target>
-
     <target name="upload-overlay">
       <if>
         <isset property="webdav.url"/>
