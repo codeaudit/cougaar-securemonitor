@@ -284,7 +284,7 @@ public abstract class SensorPlugin extends ComponentPlugin {
             if(myManagerAddress==null) {
               myManagerAddress=addr;
               if(_log.isDebugEnabled()){
-                _log.error("CommunityServiceUtilListener thread is :" + Thread.currentThread().hashCode());
+                _log.debug("CommunityServiceUtilListener thread is :" + Thread.currentThread().hashCode());
                 _log.debug("Setting Manager for Sensor Plugin -- Manager  : "+ myManagerAddress +" For Agent : " +myAddress);
               }
               _log.info("Setting Manager for Sensor Plugin -- Manager 2: "+ myManagerAddress +" For Agent : " +myAddress);
