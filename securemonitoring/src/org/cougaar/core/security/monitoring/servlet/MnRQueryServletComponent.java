@@ -94,7 +94,6 @@ public class MnRQueryServletComponent
   }
   
    public void setCommunityService(CommunityService cs) {
-     System.out.println(" set community services call for Servlet component :");
      this.cs=cs;
    }
   /*

@@ -244,7 +244,6 @@ public class EventQueryPlugin extends ComponentPlugin {
   }
 
   public void setParameter(Object o) {
-    System.out.println("setParameter called with: " + o);
     if (!(o instanceof List)) {
       throw new IllegalArgumentException("Expecting a List parameter " +
                                          "instead of " + 
