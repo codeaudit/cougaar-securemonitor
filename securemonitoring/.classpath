@@ -7,5 +7,7 @@
 	<classpathentry kind="src" path="regress/src"/>
 	<classpathentry kind="src" path="/securityservices"/>
 	<classpathentry kind="src" path="test/src"/>
+	<classpathentry kind="lib" path="lib/security/secure_util.jar"/>
+	<classpathentry kind="lib" path="lib/security/securityservices.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
