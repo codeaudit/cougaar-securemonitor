@@ -264,10 +264,10 @@ public abstract class MnRQueryBase extends ComponentPlugin {
     // loggingService.debug("Size of result with target is :" +targetagents.size() );
     
     //loggingService.debug("Size of result with target is :" +targetagents.size() );
-    sourceofAttackAgents=searchBySourceOfAttack(sourceOfAttack,caps,sensors);
+    sourceofAttackAgents=searchBySourceOrTargetOfAttack(sourceOfAttack,caps,sensors,true,false);
     //loggingService.debug("Size of result with source of ATTACK  is :" +sourceofAttackAgents.size() );
    
-    targetofAttackAgents=searchByTargetOfAttack(targetOfAttack,caps,sensors);
+    targetofAttackAgents=searchBySourceOrTargetOfAttack(targetOfAttack,caps,sensors,false,true);
     // loggingService.debug("Size of result with target of ATTACK  is :" +targetofAttackAgents.size() );
     
     if (((community!=null) || (role!=null))&& (commagents.isEmpty())) {
@@ -525,112 +525,26 @@ public abstract class MnRQueryBase extends ComponentPlugin {
     return agentlist;
   }
   
-  private List searchBySourceOfAttack(String agentname,CapabilitiesObject caps, boolean sensors) {
-    String key=null;
-    Enumeration keys=caps.keys();
-    RegistrationAlert reg;
-    Source []sources =null;
-    AdditionalData [] additionaldatas=null;
-    AdditionalData data=null;
-    ArrayList agentlist=new ArrayList();
-    /*if(agentname==null) {
-      return agentlist;
-      }
-    */
-    while(keys.hasMoreElements()) {
-      key=(String)keys.nextElement();
-      reg= (RegistrationAlert)caps.get(key);
-      sources=reg.getSources();
-      additionaldatas=reg.getAdditionalData();
-      if(agentname==null) {
-        if(sensors) {
-          //loggingService.debug("Looking for sensors agents when source of attack is null  :");
-          if((reg.getType().equals(IdmefMessageFactory.SensorType))){
-            //loggingService.debug(" adding sensor key when source of attack is null:"+key);
-            agentlist.add(reg.getAgentName());
-          }
-        }
-        else {
-          //loggingService.debug("Looking for Security  managerwhen source of attack is null :");
-          if(reg.getType().equals(IdmefMessageFactory.SecurityMgrType)) {
-            //loggingService.debug(" adding security manager  keywhen source of attack is null  :"+key);
-            agentlist.add(key);
-          }
-        }
-        continue;
-      }
-      if(sources==null) {
-        return agentlist;
-      }
-      if(additionaldatas==null) {
-        return agentlist;
-      }
-      for(int i=0;i<additionaldatas.length;i++) {
-        data=additionaldatas[i];
-        org.cougaar.core.security.monitoring.idmef.Agent agentinfo=null;
-        if((data.getType().equalsIgnoreCase("xml"))&&(data.getXMLData()!=null)) {
-          if(data.getXMLData() instanceof org.cougaar.core.security.monitoring.idmef.Agent){ 
-            agentinfo=( org.cougaar.core.security.monitoring.idmef.Agent)data.getXMLData();
-          }
-        }
-        if(agentinfo!=null) {
-          if(agentname.trim().equals(agentinfo.getName())) {
-            String [] ref=agentinfo.getRefIdents();
-            if(ref!=null) {
-              String refstring=null;
-              boolean found=true;
-              for(int x=0;x<ref.length;x++) {
-                refstring=ref[x];
-                for(int z=0;z<sources.length;z++) {
-                  if(refstring.trim().equals(sources[z].getIdent().trim())) {
-                    found=true;
-                    break;
-                  }
-                }
-                if(found)
-                  break;
-              }
-              if(found) {
-                if(sensors) {
-                  //    loggingService.debug("Looking for sensors agents :");
-                  if((reg.getType().equals(IdmefMessageFactory.SensorType))){
-                    //loggingService.debug(" adding sensor key :"+key);
-                    agentlist.add(reg.getAgentName());
-                  }
-                }
-                else {
-                  //loggingService.debug("Looking for Security  manager :");
-                  if(reg.getType().equals(IdmefMessageFactory.SecurityMgrType)) {
-                    //loggingService.debug(" adding security manager  key :"+key);
-                    agentlist.add(key);
-                  }
-                }
-		
-              }
-            }
-          }
-        }
-      }
-    }
-    return agentlist;
-  }
-  
-  private List searchByTargetOfAttack(String agentname,CapabilitiesObject caps, boolean sensors) {
+  private List searchBySourceOrTargetOfAttack(String agentname,CapabilitiesObject caps, boolean sensors, 
+                                              boolean source, boolean target) {
     String key=null;
     Enumeration keys=caps.keys();
     RegistrationAlert reg;
     Target [] targets =null;
+    Source []sources =null;
     AdditionalData [] additionaldatas=null;
     AdditionalData data=null;
     ArrayList agentlist=new ArrayList();
-    /*if(agentname==null) {
-      return agentlist;
-      }
-    */
+    
     while(keys.hasMoreElements()) {
       key=(String)keys.nextElement();
       reg= (RegistrationAlert)caps.get(key);
-      targets=reg.getTargets();
+      if(target){
+        targets=reg.getTargets();
+      }
+      if(source){
+        sources=reg.getSources();
+      }
       additionaldatas=reg.getAdditionalData();
       if(agentname==null) {
         if(sensors) {
@@ -649,7 +563,10 @@ public abstract class MnRQueryBase extends ComponentPlugin {
         }
         continue;
       }
-      if(targets==null) {
+      if((target)&&(targets==null)) {
+        return agentlist;
+      }
+      if((source)&&(sources==null)) {
         return agentlist;
       }
       if(additionaldatas==null) {
@@ -671,10 +588,25 @@ public abstract class MnRQueryBase extends ComponentPlugin {
               boolean found=true;
               for(int x=0;x<ref.length;x++) {
                 refstring=ref[x];
-                for(int z=0;z<targets.length;z++) {
-                  if(refstring.trim().equals(targets[z].getIdent().trim())) {
-                    found=true;
-                    break;
+                int length= 0;
+                if(source){
+                  length = sources.length;
+                }
+                if(target){
+                  length = targets.length;
+                }
+                for(int z=0;z<length;z++) {
+                  if(source) {
+                    if(refstring.trim().equals(sources[z].getIdent().trim())) {
+                      found=true;
+                      break;
+                    }
+                  }
+                  if(target){
+                    if(refstring.trim().equals(targets[z].getIdent().trim())) {
+                      found=true;
+                      break;
+                    }
                   }
                 }
                 if(found)
@@ -703,9 +635,8 @@ public abstract class MnRQueryBase extends ComponentPlugin {
       }
     }
     return agentlist;
-    // return new ArrayList();
   }
-
+  
   private class Status {
     public Object value;
   }
@@ -1205,7 +1136,7 @@ public abstract class MnRQueryBase extends ComponentPlugin {
   } 
 
   private class RootListener 
-  implements Runnable, CommunityServiceUtilListener {
+    implements Runnable, CommunityServiceUtilListener {
     public void getResponse(Set entities) {
       _isRoot = !(entities == null || entities.isEmpty());
       _rootReady = true;

@@ -74,8 +74,7 @@ public class EventViewerServlet  extends HttpServlet {
     /** @return true if the object "passes" the predicate */
     public boolean execute(Object o) {
       if (o instanceof Event)  {
-	Event event= (Event)o;
-	return true;
+        return true;
       }
       return false;
     }

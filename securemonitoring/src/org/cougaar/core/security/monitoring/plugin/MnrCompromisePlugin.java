@@ -93,8 +93,8 @@ public class MnrCompromisePlugin extends ComponentPlugin {
   private static final String RECOVER_VERB = "RecoverFromFailure";
   private static final String REVOKE_SESSION_KEYS_VERB = BlackboardCompromise.REVOKE_SESSION_KEY_VERB;
   private static final String REVOKE_AGENT_CERT_VERB = BlackboardCompromise.REVOKE_AGENT_CERT_VERB;
-  private ConfigParserService configParser = null;
-  /** Subscription to recover tasks */
+  
+/** Subscription to recover tasks */
   private IncrementalSubscription recoverTasks = null;
   /** Predicate for Recover Tasks */
   private UnaryPredicate recoverPredicate = new UnaryPredicate() {
@@ -221,9 +221,6 @@ public class MnrCompromisePlugin extends ComponentPlugin {
       }
     }
 
-    configParser = (ConfigParserService)this.getServiceBroker().getService(this,
-                                                                           ConfigParserService.class,
-                                                                           null);
     this.domainService = (DomainService) this.getServiceBroker().getService(this,
                                                                             DomainService.class, 
                                                                             null);

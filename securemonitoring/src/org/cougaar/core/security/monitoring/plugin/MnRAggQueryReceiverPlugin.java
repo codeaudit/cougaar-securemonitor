@@ -330,8 +330,6 @@ public class MnRAggQueryReceiverPlugin extends MnRAggQueryBase  {
         loggingService.debug(" Relay or relay Content is NULL in publishNewAggSubQueries ");
       } 
     }
-    ArrayList subQueries=new ArrayList();
-    ThreadService ts=(ThreadService) getServiceBroker().getService(this, ThreadService.class, null);
     UIDService uidService=(UIDService) getServiceBroker().getService(this,UIDService.class,null);
     if(uidService==null) {
       if( loggingService.isDebugEnabled()) {
@@ -339,21 +337,30 @@ public class MnRAggQueryReceiverPlugin extends MnRAggQueryBase  {
       }
     }
     DrillDownQuery query=(DrillDownQuery)queryrelay.getContent();
+     UID relayUid= queryrelay.getUID();
     if(query.getOriginatorsUID()==null) {
       if( loggingService.isDebugEnabled()) {
         loggingService.debug("publishNewAggSubQueries Agg Query Relay DIRECTLY FROM SOURCE :"+queryrelay.getSource()); 
       }
       query.setOriginatorsUID(queryrelay.getUID());
       if(loggingService.isDebugEnabled()) {
-        loggingService.debug("Setting originator UID : "+query.getOriginatorsUID() +" publishNewAggSubQueries Relay ID : "+queryrelay.getUID()); 
+        loggingService.debug("Setting originator UID : "+query.getOriginatorsUID() +" publishNewAggSubQueries Relay ID : "+relayUid); 
       }
     }
-    MnRAggRateCalculator ratecalculator=(MnRAggRateCalculator)query.getAggregationType();
+    processAggQuery(query,capabilitiesTable,relayUid );
+  }
+
+  private void  processAggQuery(DrillDownQuery query, CapabilitiesObject capabilitiesTable, UID relayUid) {
     Enumeration enumKeys=capabilitiesTable.keys();
     Vector alreadyPublished=new Vector();
-    AggQueryMapping aggQueryMapping;
-    RegistrationAlert regAlert=null;
-    String key =null;
+    String key = null;
+    RegistrationAlert regAlert =null;
+    ArrayList subQueries=new ArrayList();
+    AggQueryMapping aggQueryMapping =null;
+    ThreadService ts=(ThreadService) getServiceBroker().getService(this, ThreadService.class, null);
+    if( loggingService.isDebugEnabled()) {
+      loggingService.debug(" RECEIVED RELAY in  processAggQuery");
+    }
     while(enumKeys.hasMoreElements()) {
       key=(String)enumKeys.nextElement();
       regAlert= (RegistrationAlert)capabilitiesTable.get(key);
@@ -376,20 +383,18 @@ public class MnRAggQueryReceiverPlugin extends MnRAggQueryBase  {
         if(publishedUID!=null) {
           alreadyPublished.add(regAlert.getAgentName());
           subQueries.add(new AggQueryResult(publishedUID));
-          if( loggingService.isDebugEnabled()) {
-            loggingService.debug(" Published Agg Query to MnR Manager in  processNewAggQuery to " +key);
-          }
         }
         
       }//end of  if(regAlert.getType().equals(IdmefMessageFactory.SecurityMgrType))
         
-    }// end of while(enumkeys.hasMoreElements())
-    aggQueryMapping=new AggQueryMapping(query.getOriginatorsUID(),queryrelay.getUID(),subQueries);
+    }
+    MnRAggRateCalculator ratecalculator=(MnRAggRateCalculator)query.getAggregationType();
+    aggQueryMapping=new AggQueryMapping(query.getOriginatorsUID(),relayUid ,subQueries);
     getBlackboardService().publishAdd(aggQueryMapping);
     MnRAggRateCalculator newratecalculator=new MnRAggRateCalculator(ratecalculator);
     newratecalculator.setBlackboardService(getBlackboardService());
     newratecalculator.setLoggingService(loggingService);
-    newratecalculator.setUID(queryrelay.getUID());
+    newratecalculator.setUID(relayUid);
     newratecalculator.setDomainService(getDomainService());
     newratecalculator.setAddress(myAddress);
     if( loggingService.isDebugEnabled()) {
@@ -397,13 +402,10 @@ public class MnRAggQueryReceiverPlugin extends MnRAggQueryBase  {
     }
     ts.getThread(this, newratecalculator).schedule(
       0,(long)newratecalculator._timewindow);
-
   }
   
   public void processNewAggQuery(Collection newAggQuery, CapabilitiesObject capabilitiesTable) {
     CmrRelay queryrelay=null;
-    Enumeration enumKeys=null;
-    RegistrationAlert regAlert=null;
     DrillDownQuery query=null;
     if(capabilitiesTable==null) {
       if( loggingService.isDebugEnabled()) {
@@ -432,64 +434,22 @@ public class MnRAggQueryReceiverPlugin extends MnRAggQueryBase  {
     }
     Iterator iter=newAggQuery.iterator();
     String key=null;
-    ArrayList subQueries=new ArrayList();
+    ArrayList subQueries= null;
     ThreadService ts=(ThreadService) getServiceBroker().getService(this, ThreadService.class, null);
     while(iter.hasNext()) {
       queryrelay=(CmrRelay)iter.next();
       query=(DrillDownQuery)queryrelay.getContent();
+      UID relayUid= queryrelay.getUID();
       if(query.getOriginatorsUID()==null) {
         if( loggingService.isDebugEnabled()) {
           loggingService.debug("Received Agg Query Relay DIRECTLY FROM SOURCE :"+queryrelay.getSource()); 
         }
-        query.setOriginatorsUID(queryrelay.getUID());
+        query.setOriginatorsUID(relayUid);
         if(loggingService.isDebugEnabled()) {
-          loggingService.debug("Setting originator UID : "+query.getOriginatorsUID() +" Received Relay ID : "+queryrelay.getUID()); 
+          loggingService.debug("Setting originator UID : "+query.getOriginatorsUID() +" Received Relay ID : "+relayUid); 
         }
       }
-      MnRAggRateCalculator ratecalculator=(MnRAggRateCalculator)query.getAggregationType();
-      enumKeys=capabilitiesTable.keys();
-      Vector alreadyPublished=new Vector();
-      AggQueryMapping aggQueryMapping;
-      if( loggingService.isDebugEnabled()) {
-        loggingService.debug(" RECEIVED RELAY in  processNewAggQuery");
-      }
-      while(enumKeys.hasMoreElements()) {
-        key=(String)enumKeys.nextElement();
-        regAlert= (RegistrationAlert)capabilitiesTable.get(key);
-        if( loggingService.isDebugEnabled()) {
-          loggingService.debug("key is : "+ key + "Registration type :"+ regAlert.getType() );
-          loggingService.debug("Agent name from registration alert is  : "+ regAlert.getAgentName() ) ;
-        }
-        if((regAlert.getType().equals(IdmefMessageFactory.SensorType))){
-          UID publishedUID=publishAggToSensor(regAlert,alreadyPublished,query);
-          if(publishedUID!=null) {
-            alreadyPublished.add(regAlert.getAgentName());
-            subQueries.add(new AggQueryResult(publishedUID));
-            if( loggingService.isDebugEnabled()) {
-              loggingService.debug(" Published Sensor Agg Query in  processNewAggQuery to " +regAlert.getAgentName());
-            }
-          }
-        }// end of  if((regAlert.getType().equals(IdmefMessageFactory.SensorType)))
-        if(regAlert.getType().equals(IdmefMessageFactory.SecurityMgrType)) {
-          UID publishedUID=publishAggToMnrMgr(key,query);
-          if(publishedUID!=null) {
-            alreadyPublished.add(regAlert.getAgentName());
-            subQueries.add(new AggQueryResult(publishedUID));
-          }
-
-        }//end of  if(regAlert.getType().equals(IdmefMessageFactory.SecurityMgrType))
-        
-      }// end of while(enumkeys.hasMoreElements())
-      aggQueryMapping=new AggQueryMapping(query.getOriginatorsUID(),queryrelay.getUID(),subQueries);
-      getBlackboardService().publishAdd(aggQueryMapping);
-      MnRAggRateCalculator newratecalculator=new MnRAggRateCalculator(ratecalculator);
-      newratecalculator.setBlackboardService(getBlackboardService());
-      newratecalculator.setLoggingService(loggingService);
-      newratecalculator.setUID(queryrelay.getUID());
-      newratecalculator.setDomainService(getDomainService());
-      newratecalculator.setAddress(myAddress);
-      ts.getThread(this, newratecalculator).schedule(
-	0,(long)newratecalculator._timewindow);
+      processAggQuery(query,capabilitiesTable,relayUid );
     }// end of  while(iter.hasNext())
     
   }
@@ -617,20 +577,20 @@ public class MnRAggQueryReceiverPlugin extends MnRAggQueryBase  {
   }
 
   /*
-  private String getAgentName(String sensorId) {
+    private String getAgentName(String sensorId) {
     String agentName=null;
     if(sensorId==null){
-      if( loggingService.isDebugEnabled()) {
-        loggingService.debug("WARN : Cannot get agent Name from sensor id as sensorId is NULL  ");
-      }
-      return agentName;
+    if( loggingService.isDebugEnabled()) {
+    loggingService.debug("WARN : Cannot get agent Name from sensor id as sensorId is NULL  ");
+    }
+    return agentName;
     }
     int index=sensorId.indexOf('/');
     if(index!=-1) {
-      agentName=sensorId.substring(0,index);
+    agentName=sensorId.substring(0,index);
     }
     return agentName;
-  }
+    }
 
   */
 
