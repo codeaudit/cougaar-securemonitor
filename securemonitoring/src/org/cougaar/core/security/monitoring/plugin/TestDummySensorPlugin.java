@@ -67,11 +67,9 @@ public class TestDummySensorPlugin  extends  ComponentPlugin   {
   private AttributeBasedAddress mgrAddress;
   //private MessageAddress mgrAddress;
   private MessageAddress myAddress;
-  private MessageAddress destcluster;
   private String sensor_name="SensorTest";
   private String dest_community=null;
   private Object param;
-  private String dest_agent;
   private String _mySecurityCommunity;
     
   /**
@@ -388,13 +386,6 @@ public class TestDummySensorPlugin  extends  ComponentPlugin   {
   public String getDestinationCommunity(String role) {
     if(communityService==null) {
       log.error(" Community Service is null" +myAddress.toString()); 
-    }
-    String destrole=null;
-    if(role.equalsIgnoreCase("member")) {
-      destrole="SecurityMnRManager-Enclave";
-    }
-    else if(role.equalsIgnoreCase("SecurityMnRManager-Enclave")) {
-      destrole="SecurityMnRManager-Society";
     }
     String filter="(CommunityType=" + 
       CommunityServiceUtil.SECURITY_COMMUNITY_TYPE + ")";

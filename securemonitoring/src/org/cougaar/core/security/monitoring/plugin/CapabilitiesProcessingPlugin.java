@@ -509,7 +509,6 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
     Classification[] classifications=newregobject.getClassifications();
     Source[] sources=newregobject.getSources();
     Target[] targets=newregobject.getTargets();
-    AdditionalData[]data=newregobject.getAdditionalData();
     int existinglength=existingClassifications.length;
     int newlength=classifications.length;
     boolean found= false;

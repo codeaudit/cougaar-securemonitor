@@ -137,8 +137,6 @@ public class CapabilitiesConsolidationPlugin extends ComponentPlugin {
   /** Holds value of property loggingService. */
   private LoggingService loggingService;
   private boolean readcollection=false;
-  private Object mylock=new Object();
-  
   private CommunityServiceUtil _csu;
   
   /**

@@ -335,7 +335,7 @@ public class MnRQueryReceiverPlugin extends MnRQueryBase {
               if(latestCallBack.containsKey(relay.getUID())) {
                 FindAgentCallback callback=(FindAgentCallback )latestCallBack.get(relay.getUID());
                 if(this.equals(callback)) {
-                  createSubQuery(capabilities, agents, relay);
+                  createSubQuery(agents, relay);
                 }
                 else {
                   if (loggingService.isDebugEnabled()) {
@@ -443,7 +443,7 @@ public class MnRQueryReceiverPlugin extends MnRQueryBase {
               if(latestCallBack.containsKey(fRelay.getUID())) {
                 FindAgentCallback callback=(FindAgentCallback )latestCallBack.get(fRelay.getUID());
                 if(this.equals(callback)) {
-                  createSubQuery(capabilities, agents, fRelay);
+                  createSubQuery(agents, fRelay);
                 }
                 else {
                   if (loggingService.isDebugEnabled()) {
@@ -468,8 +468,7 @@ public class MnRQueryReceiverPlugin extends MnRQueryBase {
     }//end while()
   }  
   
-  private void createSubQuery(CapabilitiesObject capabilities, 
-                              Collection subManager, CmrRelay relay) {
+  private void createSubQuery(Collection subManager, CmrRelay relay) {
     QueryMapping mapping;
     MRAgentLookUp agentlookupquery=null;
     CmrFactory factory=(CmrFactory)getDomainService().getFactory("cmr");
@@ -486,7 +485,6 @@ public class MnRQueryReceiverPlugin extends MnRQueryBase {
       }
       Iterator response_iterator=subManager.iterator();
       String key=null;
-      RegistrationAlert reg;
       MessageAddress dest_address;
       ArrayList relay_uid_list=new ArrayList();
       //boolean modified=false;

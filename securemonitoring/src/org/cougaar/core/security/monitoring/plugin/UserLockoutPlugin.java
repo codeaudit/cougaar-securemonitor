@@ -122,17 +122,17 @@ public class UserLockoutPlugin extends ResponderPlugin {
     new Action(Action.OTHER, IdmefAssessments.USER_LOCKOUT)
   };
   private final static Confidence USER_LOCKOUT_CONFIDENCE =
-  new Confidence(Confidence.MEDIUM, null);
+    new Confidence(Confidence.MEDIUM, null);
 
   private final static Assessment USER_LOCKOUT_ASSESSMENT =
-  new Assessment(new Impact(Impact.MEDIUM, Impact.SUCCEEDED,
-                            Impact.USER, IdmefAssessments.USER_LOCKOUT),
-                 USER_LOCKOUT_ACTION,
-                 USER_LOCKOUT_CONFIDENCE);
+    new Assessment(new Impact(Impact.MEDIUM, Impact.SUCCEEDED,
+                              Impact.USER, IdmefAssessments.USER_LOCKOUT),
+                   USER_LOCKOUT_ACTION,
+                   USER_LOCKOUT_CONFIDENCE);
 
   public static final Classification LOGIN_FAILURE =
-  new Classification(IdmefClassifications.LOGIN_FAILURE, "",
-                     Classification.VENDOR_SPECIFIC);
+    new Classification(IdmefClassifications.LOGIN_FAILURE, "",
+                       Classification.VENDOR_SPECIFIC);
    
   private static final String[] CLASSIFICATIONS = {
     IdmefClassifications.LOGIN_FAILURE
@@ -144,40 +144,40 @@ public class UserLockoutPlugin extends ResponderPlugin {
    * login failures
    */
   private static final UnaryPredicate LOGIN_FAILURES_PREDICATE =
-  new UnaryPredicate() {
-    public boolean execute(Object o) {
-      if (o instanceof Event) {
-        IDMEF_Message msg = ((Event) o).getEvent();
-        if (msg instanceof RegistrationAlert ||
-            msg instanceof ConsolidatedCapabilities) {
-          return false;
-        }
-        if (msg instanceof Alert) {
-          Alert alert = (Alert) msg;
-          if (alert.getAssessment() != null) {
-            return false; // never look at assessment alerts
-          } // end of if (alert.getAssessment() != null)
-          Classification cs[] = alert.getClassifications();
-          if (cs != null) {
-            for (int i = 0; i < cs.length; i++) {
-              if (IdmefClassifications.LOGIN_FAILURE.equals(cs[i].getName())) {
-                AdditionalData ad[] = alert.getAdditionalData();
-                if (ad != null) {
-                  for (int j = 0; j < ad.length; j++) {
-                    if (LoginFailureEvent.FAILURE_REASON.equals(ad[j].getMeaning())) {
-                      return (LoginFailureEvent.FAILURE_REASONS[UserService.LF_PASSWORD_MISMATCH].equals(ad[j].getAdditionalData()));
+    new UnaryPredicate() {
+      public boolean execute(Object o) {
+        if (o instanceof Event) {
+          IDMEF_Message msg = ((Event) o).getEvent();
+          if (msg instanceof RegistrationAlert ||
+              msg instanceof ConsolidatedCapabilities) {
+            return false;
+          }
+          if (msg instanceof Alert) {
+            Alert alert = (Alert) msg;
+            if (alert.getAssessment() != null) {
+              return false; // never look at assessment alerts
+            } // end of if (alert.getAssessment() != null)
+            Classification cs[] = alert.getClassifications();
+            if (cs != null) {
+              for (int i = 0; i < cs.length; i++) {
+                if (IdmefClassifications.LOGIN_FAILURE.equals(cs[i].getName())) {
+                  AdditionalData ad[] = alert.getAdditionalData();
+                  if (ad != null) {
+                    for (int j = 0; j < ad.length; j++) {
+                      if (LoginFailureEvent.FAILURE_REASON.equals(ad[j].getMeaning())) {
+                        return (LoginFailureEvent.FAILURE_REASONS[UserService.LF_PASSWORD_MISMATCH].equals(ad[j].getAdditionalData()));
+                      }
                     }
                   }
+                  return false;
                 }
-                return false;
               }
             }
           }
         }
+        return false;
       }
-      return false;
-    }
-  };
+    };
 
   /**
    * For OperatingModes value range
@@ -190,7 +190,7 @@ public class UserLockoutPlugin extends ResponderPlugin {
    * Lockout duration operating mode range
    */
   private static final OMCRangeList LOCKOUT_DURATION_RANGE =
-  new OMCRangeList(LD_VALUES);
+    new OMCRangeList(LD_VALUES);
 
   private static final String LOCKOUT_DURATION = AdaptiveMnROperatingModes.LOCKOUT_DURATION;
 
@@ -198,18 +198,18 @@ public class UserLockoutPlugin extends ResponderPlugin {
    * For the lockout duration OperatingMode
    */
   private static final UnaryPredicate LOCKOUT_DURATION_PREDICATE =
-  new UnaryPredicate() {
-    public boolean execute(Object o) {
-      if (o instanceof OperatingMode) {
-        OperatingMode om = (OperatingMode) o;
-        String omName = om.getName();
-        if (LOCKOUT_DURATION.equals(omName)) {
-          return true;
+    new UnaryPredicate() {
+      public boolean execute(Object o) {
+        if (o instanceof OperatingMode) {
+          OperatingMode om = (OperatingMode) o;
+          String omName = om.getName();
+          if (LOCKOUT_DURATION.equals(omName)) {
+            return true;
+          }
         }
+        return false;
       }
-      return false;
-    }
-  };
+    };
 
   private static class RegistrationPredicate implements UnaryPredicate {
     private String _agent;
@@ -426,7 +426,7 @@ public class UserLockoutPlugin extends ResponderPlugin {
               } 
             }
           },"UserLockoutThread-withLockTime");
-         disablethread.start();
+        disablethread.start();
       }                                                                                                                                         
     }
   }
@@ -559,7 +559,7 @@ public class UserLockoutPlugin extends ResponderPlugin {
     AgentIdentificationService ais    = (AgentIdentificationService)
       sb.getService(this, AgentIdentificationService.class, null);
     String               agentName    = ais.getName();
-    MessageAddress       myAddress    = ais.getMessageAddress();
+    //MessageAddress       myAddress    = ais.getMessageAddress();
 
     bbs.openTransaction();
     Collection c = bbs.query(new RegistrationPredicate(agentName));
@@ -609,7 +609,6 @@ public class UserLockoutPlugin extends ResponderPlugin {
   private class ServicesListener  implements ServiceAvailableListener {
     public void serviceAvailable(ServiceAvailableEvent ae) {
       Class sc = ae.getService();
-      ServiceBroker sb = ae.getServiceBroker();
       if (sc == UserService.class ) {
         _log.info(" Got user service in user lockout plugin");
       }

@@ -224,7 +224,6 @@ public class MnRQueryResponderPlugin extends MnRQueryBase {
     FindAgentCallback fac = new FindAgentCallback() {
         public void execute(Collection res) {
           String key=null;
-          RegistrationAlert reg;
           MessageAddress dest_address;
           if(latestCallBack.containsKey(relay.getUID())) {
             FindAgentCallback callback=(FindAgentCallback )latestCallBack.get(relay.getUID());
@@ -257,7 +256,6 @@ public class MnRQueryResponderPlugin extends MnRQueryBase {
           ArrayList relay_uid_list=new ArrayList();
           while(response_iterator.hasNext()) {
             key=(String)response_iterator.next();
-            //reg=(RegistrationAlert)capabilities.get(key);
             dest_address=MessageAddress.getMessageAddress(key);
             if (loggingService.isDebugEnabled()) {
               loggingService.debug("Adding sensor agent to response :"+ dest_address.toString());
@@ -300,7 +298,6 @@ public class MnRQueryResponderPlugin extends MnRQueryBase {
   
   public void updateResponse (QueryMapping map) {
     CmrRelay relay; // Original query
-    UID uid;
     CmrRelay response_relay; // subquery sent to lower level managers
     MRAgentLookUpReply reply;
     List agentList=new ArrayList();

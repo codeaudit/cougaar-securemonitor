@@ -65,20 +65,16 @@ import org.w3c.dom.Node;
 /**
  *  Use the TraX interface to perform a transformation.
  */
-public class EventViewerServlet
-  extends HttpServlet
-{
+public class EventViewerServlet  extends HttpServlet {
+ 
   private SimpleServletSupport support;
-  private ConfigFinder confFinder;
-
-   /** Creates new predicate to search for Events */
-  class IdmefEventPredicate implements UnaryPredicate
-  {
+  
+/** Creates new predicate to search for Events */
+  class IdmefEventPredicate implements UnaryPredicate {
     /** @return true if the object "passes" the predicate */
     public boolean execute(Object o) {
       if (o instanceof Event)  {
 	Event event= (Event)o;
-	IDMEF_Message msg = event.getEvent();
 	return true;
       }
       return false;
@@ -87,7 +83,6 @@ public class EventViewerServlet
 
   public void setSimpleServletSupport(SimpleServletSupport support) {
     this.support = support;
-    confFinder = ConfigFinder.getInstance();
   }
 
   public void init(ServletConfig config)
@@ -111,8 +106,6 @@ public class EventViewerServlet
    
     out.println("<H2>IDMEF Events (" + collection.size() + " events found) </H2><BR>");
     Iterator it = collection.iterator();
-    String document = null;
-
     out.print("<table border=\"1\" cellpadding=\"10\">");
     out.print("<tr>");
     out.print("<td><b><i>Alert ID</i></b></td>");
@@ -131,8 +124,6 @@ public class EventViewerServlet
 
     while (it.hasNext()) {
       IDMEF_Message msg = ((Event)it.next()).getEvent();
-      document = msg.toString();
-      //System.out.println("IDMEF message:\n" + document);
       processMessage(out, msg);
     }
     out.println("</body></html>");
@@ -195,7 +186,7 @@ public class EventViewerServlet
       // Targets
       out.print("<td>");
       Target[] targets = alert.getTargets();
-       if (targets != null) {
+      if (targets != null) {
 	for (int i = 0 ; i < targets.length ; i++) {
 	  out.print("[" + i + "]");
 	  IDMEF_Node n = targets[i].getNode();
@@ -203,7 +194,7 @@ public class EventViewerServlet
 	  out.print("<br>");
 	}
       }
-     out.print("</td>");
+      out.print("</td>");
 
       // Additional Data
       AdditionalData[] additionalData = alert.getAdditionalData();
@@ -242,23 +233,23 @@ public class EventViewerServlet
   }
 
   private void outputAdditionalData(PrintWriter out,
-                        AdditionalData[] additionalData) {
+                                    AdditionalData[] additionalData) {
     StringBuffer value = new StringBuffer();
     if (additionalData != null) {
       for(int i = 0 ; i < additionalData.length ; i++) {
         if (additionalData[i] != null) {
           value.append( additionalData[i].getType() + "/" +
-                         additionalData[i].getMeaning());
+                        additionalData[i].getMeaning());
           if (!AdditionalData.XML.equals(additionalData[i].getType())) {
-             value.append("/" + additionalData[i].getAdditionalData() + "<br/>");
+            value.append("/" + additionalData[i].getAdditionalData() + "<br/>");
           } else {
             try {
-               DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-               DocumentBuilder builder = factory.newDocumentBuilder();
-               Document document = builder.newDocument();
-               Node node=additionalData[i].getXMLData().convertToXML(document);
-               document.appendChild(node);
-               value.append(XMLUtils.doc2String(document));
+              DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+              DocumentBuilder builder = factory.newDocumentBuilder();
+              Document document = builder.newDocument();
+              Node node=additionalData[i].getXMLData().convertToXML(document);
+              document.appendChild(node);
+              value.append(XMLUtils.doc2String(document));
             }
             catch (Exception e) {
               value .append("Unable to retrieve XML data: " + e);
@@ -282,7 +273,7 @@ public class EventViewerServlet
       if ( addresses != null) {
         for (int i = 0 ; i < addresses.length ; i++) {
           out.print("Address[" + i + "]/" + addresses[i].getCategory()
-		  + " = " + addresses[i].getAddress());
+                    + " = " + addresses[i].getAddress());
         }
       }
     }

@@ -231,15 +231,15 @@ public class MnRAggRateCalculator
     data.add(adddata);
     adddata=imessage.createAdditionalData(AdditionalData.INTEGER, 
                                           DrillDownQueryConstants.TOTAL_CURRENT_EVENTS,
-                                          new Integer(currentcount).toString() );
+                                          Integer.toString(currentcount));
     data.add(adddata);
     adddata=imessage.createAdditionalData(AdditionalData.INTEGER, 
                                           DrillDownQueryConstants.TOTAL_EVENTS,
-                                          new Integer (total).toString() );
+                                          Integer.toString(total));
     data.add(adddata);
     adddata=imessage.createAdditionalData(AdditionalData.REAL, 
                                           DrillDownQueryConstants.RATE,
-                                          new Double(rate).toString());
+                                          Double.toString(rate));
     data.add(adddata);
     alert = imessage.createAlert(_sensorinfo, detecttime,
                                  sources, targets,

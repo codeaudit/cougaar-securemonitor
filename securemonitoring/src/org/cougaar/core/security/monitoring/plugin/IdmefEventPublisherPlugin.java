@@ -99,12 +99,18 @@ extends ComponentPlugin
 
  
   protected void setupSubscriptions() {
+    _log = (LoggingService)getBindingSite().getServiceBroker().getService
+      (this, LoggingService.class, null);
     try {
       String propString = System.getProperty("org.cougaar.core.security.idmef.eventsize");
       _cacheSize = Integer.parseInt(propString);
       propString = System.getProperty("org.cougaar.core.security.idmef.interval");
       _cacheInterval = Integer.parseInt(propString);
-    } catch (Exception ex) {}
+    } catch (Exception ex) {
+      if(_log.isWarnEnabled()){
+        _log.warn("Exception occured while getting the system property "+ ex.getMessage());
+      }
+    }
     _log = (LoggingService)getBindingSite().getServiceBroker().getService
       (this, LoggingService.class, null);
     _eventService = (EventService)getBindingSite().getServiceBroker().getService

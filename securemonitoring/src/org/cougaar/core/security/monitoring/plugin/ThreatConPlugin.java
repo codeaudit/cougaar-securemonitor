@@ -44,7 +44,7 @@ public class ThreatConPlugin extends ComponentPlugin {
   private LoggingService _log;
 
   private static final String _omName =
-  "org.cougaar.core.security.monitoring.PERCEIVED_THREAT_LEVEL";
+    "org.cougaar.core.security.monitoring.PERCEIVED_THREAT_LEVEL";
   private static final String[] OPERATING_MODE_VALUES = {"LOW", "HIGH"};
   private static final OMCRangeList OMRANGE = new OMCRangeList(OPERATING_MODE_VALUES);
 
@@ -60,18 +60,6 @@ public class ThreatConPlugin extends ComponentPlugin {
 	return false;
       }
     };
-
-  public void setParameter(Object o) {
-    if (!(o instanceof List)) {
-      throw new IllegalArgumentException("Expecting a List parameter " +
-                                         "instead of " + 
-                                         ( (o == null)
-                                           ? "null" 
-                                           : o.getClass().getName() ));
-    }
-
-    List l = (List) o;
-  }
 
   protected void setupSubscriptions() {
     ServiceBroker sb = getServiceBroker();

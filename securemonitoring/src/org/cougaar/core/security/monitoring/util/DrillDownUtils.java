@@ -61,7 +61,7 @@ public class DrillDownUtils {
   public static boolean matchOriginatorUID(IDMEF_Message message,UID givenUID){
     boolean matches =false;
     if(!(message instanceof Alert)){
-      System.out.println(" Returning as IDMEF Message in matchOriginatorsUID is NOT INSTANCE of ALERT");
+      //System.out.println(" Returning as IDMEF Message in matchOriginatorsUID is NOT INSTANCE of ALERT");
       return matches;
     }
     Alert alert=(Alert)message;

@@ -334,10 +334,8 @@ public class EventQueryPlugin extends ComponentPlugin {
    * Sets up the AggregationQuery and event subscriptions.
    */
   protected void setupSubscriptions() {
-    _log = (LoggingService)
-	getServiceBroker().getService(this, LoggingService.class, null);
-    
     ServiceBroker        sb           = getBindingSite().getServiceBroker();
+    _log = (LoggingService)sb.getService(this, LoggingService.class, null);
     DomainService        ds           = getDomainService(); 
     CmrFactory           cmrFactory   = (CmrFactory) ds.getFactory("cmr");
     IdmefMessageFactory  imessage     = cmrFactory.getIdmefMessageFactory();

@@ -157,7 +157,12 @@ public class LoginEventPublisher extends IdmefEventPublisher {
     int serverPort = 0;
     try {
       serverPort = Integer.parseInt(eventTargets[1]);
-    } catch (Exception ex) {}
+    } 
+    catch (Exception ex) {
+      if( _logger.isWarnEnabled()){
+        _logger.warn("Error in getting server port no :"+ ex.getMessage());
+      }
+    }
     String protocol = eventTargets[2];
     String userName = eventTargets[3];
 

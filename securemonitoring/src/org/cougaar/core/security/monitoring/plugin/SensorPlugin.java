@@ -419,7 +419,6 @@ public abstract class SensorPlugin extends ComponentPlugin {
       sb.releaseService(this,CommunityService.class,_cs);
       _cs=null;
     }
-    return;
   }
 
   private class Semaphore {
@@ -481,6 +480,9 @@ public abstract class SensorPlugin extends ComponentPlugin {
    * agent as the enclave security manager
    * @deprecated
    */
+  // TODO: This method is not used anymore, but it would have to
+  // be fixed if used again.
+  /*
   private boolean isSecurityManagerLocal(CommunityService cs,
                                          String community,
                                          String agentName) {
@@ -499,13 +501,13 @@ public abstract class SensorPlugin extends ComponentPlugin {
     }
     return false;
   }
+  */
 
   private static class RegistrationPredicate implements UnaryPredicate {
     private String _agent;
     private List _targets;
     private List _capabilities;
     private List _data;
-    private String _agentName;
     private SensorInfo _sensor;
 
     public RegistrationPredicate(SensorInfo sensor,

@@ -182,13 +182,13 @@ public class IdmefEventPublisher implements EventPublisher {
     String evtData = event.getData();
     if(reason != null) {
       data.add(_idmefFactory.createAdditionalData(AdditionalData.STRING,
-			                                             event.getReasonIdentifier(),
-			                                             event.getReason()));
+                                                  event.getReasonIdentifier(),
+                                                  event.getReason()));
     }
     if(evtData != null) {
       data.add(_idmefFactory.createAdditionalData(AdditionalData.STRING,
-		                                               event.getDataIdentifier(),
-			                                             event.getData()));
+                                                  event.getDataIdentifier(),
+                                                  event.getData()));
     }
     // since there isn't a data model for cougaar Agents, the Agent object is
     // added to the AdditionalData of an IDMEF message
@@ -208,25 +208,25 @@ public class IdmefEventPublisher implements EventPublisher {
 
     // create the alert for this event
     Alert alert = _idmefFactory.createAlert(_sensorInfo,
-                                             dt,
-                                             sources,
-                                             targets,
-                                             classifications,
-                                             data);
+                                            dt,
+                                            sources,
+                                            targets,
+                                            classifications,
+                                            data);
     /*
-    if(_logger.isDebugEnabled()) {
+      if(_logger.isDebugEnabled()) {
       try {
-        _logger.debug("Alert in XML format:\n");
-        DocumentBuilder _docBuilder =
-          DocumentBuilderFactory.newInstance().newDocumentBuilder();
-        Document document = _docBuilder.newDocument();
-        document.appendChild(alert.convertToXML(document));
-        _logger.debug(XMLUtils.doc2String(document));
+      _logger.debug("Alert in XML format:\n");
+      DocumentBuilder _docBuilder =
+      DocumentBuilderFactory.newInstance().newDocumentBuilder();
+      Document document = _docBuilder.newDocument();
+      document.appendChild(alert.convertToXML(document));
+      _logger.debug(XMLUtils.doc2String(document));
       }
       catch( Exception e ){
-        e.printStackTrace();
+      e.printStackTrace();
       }
-    }
+      }
     */
     return _cmrFactory.newEvent(alert);
   }

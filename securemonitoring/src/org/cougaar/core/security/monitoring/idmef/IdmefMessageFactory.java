@@ -1555,9 +1555,6 @@ final public class IdmefMessageFactory {
   // Need for Analyzer information as per IDMEF v1.0 draft
   private String m_osName;
   private String m_osVersion;
-    
-  private static String PROCESS_NAME = "org.cougaar.core.node.Node";
-    
   private Agent m_agent;
   private MessageAddress m_agentId;
   private UIDServer m_uidServer;

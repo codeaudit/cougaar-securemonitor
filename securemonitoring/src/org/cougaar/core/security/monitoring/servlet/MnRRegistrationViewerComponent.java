@@ -33,9 +33,7 @@ import org.cougaar.core.security.monitoring.blackboard.CapabilitiesObject;
 import org.cougaar.core.security.monitoring.idmef.RegistrationAlert;
 import org.cougaar.core.service.AgentIdentificationService;
 import org.cougaar.core.service.BlackboardService;
-import org.cougaar.core.service.DomainService;
 import org.cougaar.core.service.LoggingService;
-import org.cougaar.core.service.community.CommunityService;
 import org.cougaar.core.servlet.BaseServletComponent;
 import org.cougaar.util.UnaryPredicate;
 
@@ -56,16 +54,11 @@ import javax.servlet.http.HttpServletResponse;
 import edu.jhuapl.idmef.Classification;
 
 
-/**
- *  Use the TraX interface to perform a transformation.
- */
 public class MnRRegistrationViewerComponent
   extends BaseServletComponent implements BlackboardClient  {
   private MessageAddress agentId;
   private AgentIdentificationService ais;
   private BlackboardService blackboard;
-  private DomainService ds;
-  private CommunityService cs;
   private LoggingService logging;
   private String path;
 
@@ -83,14 +76,6 @@ public class MnRRegistrationViewerComponent
 
   public void setBlackboardService(BlackboardService blackboard) {
     this.blackboard = blackboard;
-  }
-
-  public void setDomainService(DomainService ds) {
-    this.ds = ds;
-  }
-  
-  public void setCommunityService(CommunityService cs) {
-    this.cs=cs;
   }
 
   public void setAgentIdentificationService( AgentIdentificationService agentis){

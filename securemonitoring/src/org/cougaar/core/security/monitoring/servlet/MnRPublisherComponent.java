@@ -33,10 +33,8 @@ import org.cougaar.core.security.monitoring.blackboard.CmrFactory;
 import org.cougaar.core.security.monitoring.blackboard.CmrRelay;
 import org.cougaar.core.security.monitoring.blackboard.FormatEvent;
 import org.cougaar.core.security.monitoring.blackboard.MnRAggRateCalculator;
-import org.cougaar.core.service.AgentIdentificationService;
 import org.cougaar.core.service.BlackboardService;
 import org.cougaar.core.service.DomainService;
-import org.cougaar.core.service.community.CommunityService;
 import org.cougaar.core.servlet.BaseServletComponent;
 import org.cougaar.lib.aggagent.query.AggregationQuery;
 import org.cougaar.lib.aggagent.query.ScriptSpec;
@@ -56,16 +54,9 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 
-/**
- *  Use the TraX interface to perform a transformation.
- */
-public class MnRPublisherComponent
-extends BaseServletComponent implements BlackboardClient  {
-  private MessageAddress agentId;
-  private AgentIdentificationService ais;
+public class MnRPublisherComponent extends BaseServletComponent implements BlackboardClient  {
   private BlackboardService blackboard;
   private DomainService ds;
-  private CommunityService cs;
   //private NamingService ns;
   private String path;
 
@@ -81,13 +72,6 @@ extends BaseServletComponent implements BlackboardClient  {
     path=(String)l.get(0);
   }
 
-  public void setAgentIdentificationService(AgentIdentificationService ais) {
-    this.ais = ais;
-    if(this.ais!=null) {
-      agentId = ais.getMessageAddress(); 
-    }
-  }
-
   public void setBlackboardService(BlackboardService blackboard) {
     this.blackboard = blackboard;
   }
@@ -95,16 +79,6 @@ extends BaseServletComponent implements BlackboardClient  {
   public void setDomainService(DomainService ds) {
     this.ds = ds;
   }
-  
-  public void setCommunityService(CommunityService cs) {
-    //System.out.println(" set community services call for Servlet component :");
-    this.cs=cs;
-  }
-  /*
-    public void setNamingService(NamingService ns) {
-    //System.out.println(" set  Naming services call for Servlet component :");
-    this.ns=ns;
-    }*/
   
   protected Servlet createServlet() {
     return new PublisherServlet();
@@ -156,7 +130,6 @@ extends BaseServletComponent implements BlackboardClient  {
       throws IOException {
       response.setContentType("text/html");
       PrintWriter out = response.getWriter();
-      boolean message=false;
       boolean query=false;
       String parameter=null;
       String mnrMgr=null;
@@ -164,8 +137,6 @@ extends BaseServletComponent implements BlackboardClient  {
       out.println(CreateHeader());
       if(parameter!=null) {
         mnrMgr=(String)parameter;
-        //out.println(" Received pasrameter to ish new message");
-        // message=true;
       }
       parameter =(String)request.getParameter("query");
       if(parameter!=null) {
@@ -234,13 +205,6 @@ extends BaseServletComponent implements BlackboardClient  {
   public String  CreatePage( HttpServletRequest req) {
     StringBuffer buf =new StringBuffer();
     buf.append("<H2>MnR Message and Drill dwown Query Publisher </H2><BR>");
-    /* buf.append("<table>");
-       buf.append("<TR><TH>Action </TH><TH>Button</TH></TR>\n");
-       buf.append("<form action=\"" + req.getRequestURI() + "\" method =\"post\">");
-       buf.append("<TR><TD>Publish Message :<input name=\"message\"  value=\"yes\">");
-       buf.append("</td><td><input type=\"submit\">&nbsp;&nbsp;&nbsp;</td></tr>");
-       buf.append("</form></table>");
-    */
     buf.append(" <br>  <br>  <br>");
     buf.append("<table>");
     buf.append("<TR><TH>Action </TH><TH>Button</TH></TR>\n");

@@ -34,10 +34,9 @@ import org.cougaar.core.security.monitoring.blackboard.CmrRelay;
 import org.cougaar.core.security.monitoring.blackboard.MRAgentLookUp;
 import org.cougaar.core.security.monitoring.blackboard.MRAgentLookUpReply;
 import org.cougaar.core.security.monitoring.idmef.IdmefMessageFactory;
-import org.cougaar.core.service.AgentIdentificationService;
 import org.cougaar.core.service.BlackboardService;
+import org.cougaar.core.service.AgentIdentificationService;
 import org.cougaar.core.service.DomainService;
-import org.cougaar.core.service.community.CommunityService;
 import org.cougaar.core.servlet.BaseServletComponent;
 import org.cougaar.util.UnaryPredicate;
 
@@ -61,11 +60,10 @@ import edu.jhuapl.idmef.Classification;
 public class MnRQueryServletComponent
   extends BaseServletComponent implements BlackboardClient  {
   private MessageAddress agentId;
-  private AgentIdentificationService ais;
   private BlackboardService blackboard;
   private DomainService ds;
-  private CommunityService cs;
-  //private NamingService ns;
+  
+//private NamingService ns;
   private String path;
 
   public void load() {
@@ -81,11 +79,10 @@ public class MnRQueryServletComponent
   }
 
   public void setAgentIdentificationService(AgentIdentificationService ais) {
-    this.ais = ais;
     agentId = ais.getMessageAddress(); 
   }
 
-   public void setBlackboardService(BlackboardService blackboard) {
+  public void setBlackboardService(BlackboardService blackboard) {
     this.blackboard = blackboard;
   }
 
@@ -93,14 +90,11 @@ public class MnRQueryServletComponent
     this.ds = ds;
   }
   
-   public void setCommunityService(CommunityService cs) {
-     this.cs=cs;
-   }
   /*
-  public void setNamingService(NamingService ns) {
-     System.out.println(" set  Naming services call for Servlet component :");
-     this.ns=ns;
-  }
+    public void setNamingService(NamingService ns) {
+    System.out.println(" set  Naming services call for Servlet component :");
+    this.ns=ns;
+    }
   */
 
   protected Servlet createServlet() {
@@ -113,14 +107,14 @@ public class MnRQueryServletComponent
   }
   
 
-    public String getBlackboardClientName() {
+  public String getBlackboardClientName() {
     return toString();
   }
 
   // odd BlackboardClient method:
   public long currentTimeMillis() {
     throw new UnsupportedOperationException(
-        this+" asked for the current time???");
+      this+" asked for the current time???");
   }
 
   // unused BlackboardClient method:
@@ -129,8 +123,8 @@ public class MnRQueryServletComponent
     //
     // see "ComponentPlugin" for details.
     throw new UnsupportedOperationException(
-        this+" only supports Blackboard queries, but received "+
-        "a \"trigger\" event: "+event);
+      this+" only supports Blackboard queries, but received "+
+      "a \"trigger\" event: "+event);
   }
 
   private class QueryServlet extends HttpServlet {
@@ -147,147 +141,139 @@ public class MnRQueryServletComponent
     }
     
     public void doGet(HttpServletRequest request,
-		    HttpServletResponse response)
-    throws IOException {
-    response.setContentType("text/html");
-    PrintWriter out = response.getWriter();
-    out.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">");
-    out.println("<html>");
-    out.println("<head>");
-    out.println("<title>MnRQuery</title>");
-    out.println("</head>");
-    out.println("<body>");
-    out.println("<H2>MnRQuery </H2><BR>");
-    out.println("<table>");
-    out.println("<form action=\"\" method =\"post\">");
-    out.println("<tr ><td>Community </td><td>");
-    out.println("<TextArea name=community row=1 col=40></TextArea></td></tr>");
-    out.println("<tr ><td>Role </td><td>");
-    out.println("<TextArea name=role row=1 col=40></TextArea></td></tr>");
-    out.println("<tr ><td>ClassificationName </td><td>");
-    out.println("<TextArea name=classificationName row=1 col=40></TextArea></td></tr>");
-    out.println("<tr ><td>Manager Address </td><td>");
-    out.println("<TextArea name=mgraddress row=1 col=40></TextArea></td></tr>");
-    out.println("<tr></tr><tr><td><input type=\"submit\">&nbsp;&nbsp;&nbsp;</td>");
-    out.println("<td><input type=\"reset\"></td></tr>");
-    out.println("</form></table>");
-    out.println("</body></html>");
-    out.flush();
-    out.close();
+                      HttpServletResponse response)
+      throws IOException {
+      response.setContentType("text/html");
+      PrintWriter out = response.getWriter();
+      out.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">");
+      out.println("<html>");
+      out.println("<head>");
+      out.println("<title>MnRQuery</title>");
+      out.println("</head>");
+      out.println("<body>");
+      out.println("<H2>MnRQuery </H2><BR>");
+      out.println("<table>");
+      out.println("<form action=\"\" method =\"post\">");
+      out.println("<tr ><td>Community </td><td>");
+      out.println("<TextArea name=community row=1 col=40></TextArea></td></tr>");
+      out.println("<tr ><td>Role </td><td>");
+      out.println("<TextArea name=role row=1 col=40></TextArea></td></tr>");
+      out.println("<tr ><td>ClassificationName </td><td>");
+      out.println("<TextArea name=classificationName row=1 col=40></TextArea></td></tr>");
+      out.println("<tr ><td>Manager Address </td><td>");
+      out.println("<TextArea name=mgraddress row=1 col=40></TextArea></td></tr>");
+      out.println("<tr></tr><tr><td><input type=\"submit\">&nbsp;&nbsp;&nbsp;</td>");
+      out.println("<td><input type=\"reset\"></td></tr>");
+      out.println("</form></table>");
+      out.println("</body></html>");
+      out.flush();
+      out.close();
    
 
-  }
-   public void doPost(HttpServletRequest request,
-		    HttpServletResponse response)
-    throws IOException {
-     response.setContentType("text/html");
-     PrintWriter out = response.getWriter();
-     String classname=null;
-     String role=null;
-     String community=null;
-     String mgrAddress=null;
-     classname =(String)request.getParameter("classificationName");
-     role=(String)request.getParameter("role");
-     community=(String)request.getParameter("community");
-     mgrAddress=(String)request.getParameter("mgraddress");
-     if((classname==null)&&(role==null)&&(community==null)){
-       out.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">");
-       out.println("<html>");
-       out.println("<head>");
-       out.println("<title>MnRQuery</title>");
-       out.println("</head>");
-       out.println("<body>");
-       out.println("<H2>MnRQuery </H2><BR>");
-       out.println(" No Classification name  role  community specified :");
-       out.println("</body></html>");
-       out.flush();
-       out.close();
-      return;
-     }
-     out.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">");
-     out.println("<html>");
-     out.println("<head>");
-     out.println("<title>MnRQuery</title>");
-     out.println("</head>");
-     out.println("<body>");
-     out.println("<H2>MnRQuery </H2><BR>");
-     out.println(" checking whether community exists :<br>");
-     
-     CmrFactory factory=(CmrFactory)ds.getFactory("cmr");
-     IdmefMessageFactory imessage=factory.getIdmefMessageFactory();
-     Classification classification=imessage.createClassification(classname, null );
-     MRAgentLookUp agentlookup=new  MRAgentLookUp(null,null,null,null,classification,null,null,true);
-     if((community!=null)&& (!community.equals(""))) {
-       System.out.println(" setting community to :"+community); 
-       agentlookup.community=community;
-     }
-     else {
-       agentlookup.community=null;
-     }
-     if((role!=null) && (!role.equals(""))) {
-       System.out.println("setting role to :"+role);
-       agentlookup.role=role;
-     }
-     else {
-       agentlookup.role=null;
-     }
-     if(mgrAddress!=null) {
-       if(mgrAddress.equals("")) {
-         out.println("<H2> MAnager  Address is null :</H2>");
-       }
-     }
-     MessageAddress dest_address=MessageAddress.getMessageAddress(mgrAddress);
-     CmrRelay relay = factory.newCmrRelay(agentlookup,dest_address);
-     try {
-       blackboard.openTransaction();
-       blackboard.publishAdd(relay);
-
-     } finally {
-       blackboard.closeTransactionDontReset();
-     }
-     boolean atleastone=false;
-     out.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">");
-     out.println("<html>");
-     out.println("<head>");
-     out.println("<title>MnRQuery</title>");
-     out.println("</head>");
-     out.println("<body>");
-     out.println("<H2>MnRQuery </H2><BR>");
-      boolean printed=false;
-     while(!atleastone) {
-       
-       Collection responsecol=null;
-       try {
-         blackboard.openTransaction();
-        responsecol=blackboard.query(new QueryEventPredicate());
-       }finally {
-         blackboard.closeTransactionDontReset();
-       }
-       Iterator it = responsecol.iterator();
-       MRAgentLookUpReply  reply;
-      
-       CmrRelay previous=null;
-       while(it.hasNext()) {
-	 relay=(CmrRelay)it.next();
-	 agentlookup=(MRAgentLookUp)relay.getContent() ;
-	 if((relay.getSource().equals(agentId)) && (relay.getResponse()!=null)) {
-	   atleastone=true;
-	   out.println(" Query was" +agentlookup.toString());
-	   out.println(" Response is  :");
-	   reply=(MRAgentLookUpReply )relay.getResponse();
-	   out.println(reply.toString());
-	 }
-	 else {
-	   //out.println("relay receive was :"+relay.toString());
-	 }
-       }
-       out.println("no response yet :");
+    }
+    public void doPost(HttpServletRequest request,
+                       HttpServletResponse response)
+      throws IOException {
+      response.setContentType("text/html");
+      PrintWriter out = response.getWriter();
+      String classname=null;
+      String role=null;
+      String community=null;
+      String mgrAddress=null;
+      classname =(String)request.getParameter("classificationName");
+      role=(String)request.getParameter("role");
+      community=(String)request.getParameter("community");
+      mgrAddress=(String)request.getParameter("mgraddress");
+      if((classname==null)&&(role==null)&&(community==null)){
+        out.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">");
+        out.println("<html>");
+        out.println("<head>");
+        out.println("<title>MnRQuery</title>");
+        out.println("</head>");
+        out.println("<body>");
+        out.println("<H2>MnRQuery </H2><BR>");
+        out.println(" No Classification name  role  community specified :");
+        out.println("</body></html>");
         out.flush();
-     }
-     out.flush();
-     out.close();
+        out.close();
+        return;
+      }
+      out.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">");
+      out.println("<html>");
+      out.println("<head>");
+      out.println("<title>MnRQuery</title>");
+      out.println("</head>");
+      out.println("<body>");
+      out.println("<H2>MnRQuery </H2><BR>");
+      out.println(" checking whether community exists :<br>");
+     
+      CmrFactory factory=(CmrFactory)ds.getFactory("cmr");
+      IdmefMessageFactory imessage=factory.getIdmefMessageFactory();
+      Classification classification=imessage.createClassification(classname, null );
+      MRAgentLookUp agentlookup=new  MRAgentLookUp(null,null,null,null,classification,null,null,true);
+      if((community!=null)&& (!community.equals(""))) {
+        agentlookup.community=community;
+      }
+      else {
+        agentlookup.community=null;
+      }
+      if((role!=null) && (!role.equals(""))) {
+        agentlookup.role=role;
+      }
+      else {
+        agentlookup.role=null;
+      }
+      if(mgrAddress!=null) {
+        if(mgrAddress.equals("")) {
+          out.println("<H2> MAnager  Address is null :</H2>");
+        }
+      }
+      MessageAddress dest_address=MessageAddress.getMessageAddress(mgrAddress);
+      CmrRelay relay = factory.newCmrRelay(agentlookup,dest_address);
+      try {
+        blackboard.openTransaction();
+        blackboard.publishAdd(relay);
+
+      } finally {
+        blackboard.closeTransactionDontReset();
+      }
+      boolean atleastone=false;
+      out.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0 Transitional//EN\">");
+      out.println("<html>");
+      out.println("<head>");
+      out.println("<title>MnRQuery</title>");
+      out.println("</head>");
+      out.println("<body>");
+      out.println("<H2>MnRQuery </H2><BR>");
+      while(!atleastone) {
+        Collection responsecol=null;
+        try {
+          blackboard.openTransaction();
+          responsecol=blackboard.query(new QueryEventPredicate());
+        }finally {
+          blackboard.closeTransactionDontReset();
+        }
+        Iterator it = responsecol.iterator();
+        MRAgentLookUpReply  reply;
+       
+        while(it.hasNext()) {
+          relay=(CmrRelay)it.next();
+          agentlookup=(MRAgentLookUp)relay.getContent() ;
+          if((relay.getSource().equals(agentId)) && (relay.getResponse()!=null)) {
+            atleastone=true;
+            out.println(" Query was" +agentlookup.toString());
+            out.println(" Response is  :");
+            reply=(MRAgentLookUpReply )relay.getResponse();
+            out.println(reply.toString());
+          }
+        }
+        out.println("no response yet :");
+        out.flush();
+      }
+      out.flush();
+      out.close();
          
-   }
+    }
   }
 }
 

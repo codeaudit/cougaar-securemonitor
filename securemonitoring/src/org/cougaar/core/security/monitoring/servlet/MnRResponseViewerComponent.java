@@ -50,24 +50,17 @@ import org.cougaar.core.security.monitoring.blackboard.QueryMapping;
 import org.cougaar.core.security.monitoring.plugin.MnRQueryBase;
 import org.cougaar.core.service.AgentIdentificationService;
 import org.cougaar.core.service.BlackboardService;
-import org.cougaar.core.service.DomainService;
 import org.cougaar.core.service.LoggingService;
-import org.cougaar.core.service.community.CommunityService;
 import org.cougaar.core.servlet.BaseServletComponent;
 import org.cougaar.core.util.UID;
 import org.cougaar.util.UnaryPredicate;
 
 
-/**
- *  Use the TraX interface to perform a transformation.
- */
 public class MnRResponseViewerComponent
-extends BaseServletComponent implements BlackboardClient  {
+  extends BaseServletComponent implements BlackboardClient  {
   private MessageAddress agentId;
   private AgentIdentificationService ais;  
   private BlackboardService blackboard;
-  private DomainService ds;
-  private CommunityService cs;
   private LoggingService logging;
   private String path;
 
@@ -93,13 +86,6 @@ extends BaseServletComponent implements BlackboardClient  {
     this.blackboard = blackboard;
   }
 
-  public void setDomainService(DomainService ds) {
-    this.ds = ds;
-  }
-  
-  public void setCommunityService(CommunityService cs) {
-    this.cs=cs;
-  }
   public void setLoggingService(LoggingService ls) {
     this.logging=ls;
   }
@@ -190,28 +176,29 @@ extends BaseServletComponent implements BlackboardClient  {
       }
       Iterator iter=querresponsecollection.iterator();
       CmrRelay relay=null;
-      MRAgentLookUpReply reply=null;
-      MRAgentLookUp query=null;
       StringBuffer localsb=new StringBuffer();
       StringBuffer remotesb=new StringBuffer();
       localsb.append("<H3> Locally published Queries & Their Response </h3>");
       localsb.append("<table align=\"center\" border=\"2\">\n");
-      localsb.append("<TR><TH> Relay ID  </TH><TH> Source </TH><TH>TARGET </TH><TH>SubQuery -- status </TH><TH>QUERY </TH><TH> Response </TH></TR>\n");
+      localsb.append("<TR><TH> Relay ID  </TH><TH> Source </TH><TH>TARGET </TH><TH>SubQuery -- status </TH>"+
+                     "<TH>QUERY </TH><TH> Response </TH></TR>\n");
       remotesb.append("<H3> Remotly published Queries & Their Response </h3>");
       remotesb.append("<table align=\"center\" border=\"2\">\n");
-      remotesb.append("<TR><TH> Relay ID  </TH><TH> Source </TH><TH>TARGET </TH><TH>SubQuery --  status </TH><TH>QUERY </TH><TH> Response </TH></TR>\n");              
+      remotesb.append("<TR><TH> Relay ID  </TH><TH> Source </TH><TH>TARGET </TH><TH>SubQuery --  status </TH>"+
+                      "<TH>QUERY </TH><TH> Response </TH></TR>\n");              
       while(iter.hasNext()) {
 	relay = (CmrRelay)iter.next();
         UID uid=relay.getUID();
         QueryMapping mapping=MnRQueryBase.findQueryMappingFromBB(uid,querymapping);
-	boolean isorginator=MnRQueryBase.isRelayQueryOriginator(uid,querymapping);
+	//boolean isorginator=MnRQueryBase.isRelayQueryOriginator(uid,querymapping);
         boolean isSubQuery=MnRQueryBase.isRelaySubQuery(uid,querymapping);
         UID originalUID=null;
         if(mapping!=null) {
           if(!isSubQuery) {
             originalUID=mapping.getRelayUID();
             if(logging.isDebugEnabled()) {
-              logging.debug(" It it is not sub query then it should be the originator. Either it should have received the query from local components of from upper MnR Managers ");
+              logging.debug(" It it is not sub query then it should be the originator. Either it should have "+
+                            "received the query from local components of from upper MnR Managers ");
               if(uid.equals(originalUID)) {
                 logging.debug(" relay uid equals relay uid ... Vola this is correct");
               }
@@ -275,7 +262,8 @@ extends BaseServletComponent implements BlackboardClient  {
           sb.append("<ol>"); 
           for(int i=0;i<list.size();i++) {
             outstandingquery=(OutStandingQuery)list.get(i);
-            sb.append("<li>Sub Query id:"+ outstandingquery.getUID().toString()+" ---  "+!outstandingquery.isQueryOutStanding()+"</li>\n");
+            sb.append("<li>Sub Query id:"+ outstandingquery.getUID().toString()+" ---  "+
+                      !outstandingquery.isQueryOutStanding()+"</li>\n");
           }
           sb.append("</ol>"); 
         }

@@ -44,7 +44,6 @@ import org.cougaar.core.service.BlackboardService;
 import org.cougaar.core.service.EventService;
 import org.cougaar.core.service.LoggingService;
 import org.cougaar.core.service.UIDService;
-import org.cougaar.core.service.community.CommunityService;
 import org.cougaar.multicast.AttributeBasedAddress;
 import org.cougaar.util.UnaryPredicate;
 
@@ -57,13 +56,10 @@ import org.cougaar.util.UnaryPredicate;
 public class ThreatConLevelReporter extends ComponentPlugin {
   
   private LoggingService _log;
-  private CommunityService _cs;
   private EventService _es;
   private UIDService _uid;
   private static final String[] OPERATING_MODE_VALUES = {"LOW", "HIGH"};
   private static final OMCRangeList OMRANGE = new OMCRangeList(OPERATING_MODE_VALUES);
-  private OperatingMode _currentThreatCon = null;
-  
   
   /**
    * Subscription to InterAgentOperatingModePolicy(s)
@@ -76,14 +72,14 @@ public class ThreatConLevelReporter extends ComponentPlugin {
     new UnaryPredicate() {
       public boolean execute(Object o) {
         if (o instanceof OperatingModePolicy) {
-            if (o instanceof InterAgentOperatingModePolicy) {
-              InterAgentOperatingModePolicy iaomp =
-                (InterAgentOperatingModePolicy) o;
-              return iaomp.appliesToThisAgent();
-            }
-    	    return true;
-    	  }
-	      return false;
+          if (o instanceof InterAgentOperatingModePolicy) {
+            InterAgentOperatingModePolicy iaomp =
+              (InterAgentOperatingModePolicy) o;
+            return iaomp.appliesToThisAgent();
+          }
+          return true;
+        }
+        return false;
       }
     };
     
@@ -109,7 +105,6 @@ public class ThreatConLevelReporter extends ComponentPlugin {
   protected void setupSubscriptions() {
     ServiceBroker sb = getServiceBroker();
     _log = (LoggingService)sb.getService(this, LoggingService.class, null);
-    _cs = (CommunityService)sb.getService(this, CommunityService.class, null);
     _es = (EventService)sb.getService(this, EventService.class, null);
     _uid = (UIDService)sb.getService(this, UIDService.class, null);
     BlackboardService bbs = getBlackboardService();
@@ -146,9 +141,9 @@ public class ThreatConLevelReporter extends ComponentPlugin {
   public void execute() {
     if (_subscription.hasChanged()) {
       // notify all the agents in a particular enclave/security community 
-    	removePolicies(_subscription.getRemovedCollection());
-    	addPolicies(_subscription.getAddedCollection());
-    	changePolicies(_subscription.getChangedCollection());
+      removePolicies(_subscription.getRemovedCollection());
+      addPolicies(_subscription.getAddedCollection());
+      changePolicies(_subscription.getChangedCollection());
     }
   }
   
@@ -189,8 +184,8 @@ public class ThreatConLevelReporter extends ComponentPlugin {
           modified = true;
         } else {
           if(debug) {
-          _log.debug("not modifying operating mode value since the values the same (" + newValue + ").");
-        }
+            _log.debug("not modifying operating mode value since the values the same (" + newValue + ").");
+          }
         }
         // doesn't make sense to constrain an operating mode more than once
         // therefore, we take the last constrain
@@ -224,7 +219,6 @@ public class ThreatConLevelReporter extends ComponentPlugin {
   }
   private InterAgentOperatingMode createThreatConMode(InterAgentOperatingModePolicy iaomp) {
     InterAgentOperatingMode iaom = null;
-    boolean modified = false;
     ConstraintPhrase []constraints = iaomp.getOperatingModeConstraints();
     for(int i = constraints.length - 1; i >= 0; i--) {
       ConstraintPhrase c = constraints[i];
