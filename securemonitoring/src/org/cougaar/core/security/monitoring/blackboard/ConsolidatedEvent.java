@@ -26,11 +26,8 @@
 
 package org.cougaar.core.security.monitoring.blackboard;
 
-import org.cougaar.core.blackboard.Publishable;
 import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.util.UID;
-
-import java.io.Serializable;
 
 import edu.jhuapl.idmef.IDMEF_Message;
 
@@ -40,7 +37,7 @@ import edu.jhuapl.idmef.IDMEF_Message;
  * report consolidation
  *  
  */
-public interface ConsolidatedEvent extends Serializable, Publishable
+public interface ConsolidatedEvent
 {
   public UID getParentUID();
   public UID getOriginatorUID();

@@ -44,6 +44,7 @@ import org.cougaar.core.security.monitoring.blackboard.DrillDownQuery;
 import org.cougaar.core.security.monitoring.blackboard.Event;
 import org.cougaar.core.security.monitoring.blackboard.RemoteConsolidatedEvent;
 import org.cougaar.core.security.monitoring.blackboard.SensorAggregationDrillDownQuery;
+import org.cougaar.core.security.monitoring.blackboard.AggregatedResponse;
 import org.cougaar.core.security.monitoring.util.DrillDownUtils;
 import org.cougaar.core.security.util.CommunityServiceUtil;
 import org.cougaar.core.security.util.CommunityServiceUtilListener;
@@ -58,7 +59,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Set;
-
+import java.util.List;
 
 
 class AggQueryMappingPredicate implements UnaryPredicate {
@@ -166,4 +167,30 @@ public abstract class MnRAggQueryBase extends QueryBase{
     return queryObject;
     
   } 
+
+  public void publishResponse(Collection response, CmrRelay relay ){
+    List list=new ArrayList();
+    Iterator detailsiter=response.iterator();
+    Object obj=null;
+    ConsolidatedEvent event=null;
+    while(detailsiter.hasNext()){
+      obj=detailsiter.next();
+      if(obj instanceof RemoteConsolidatedEvent) {
+        if (loggingService.isDebugEnabled()) {
+          loggingService.debug("Adding Remote Consolidated response from :" +((RemoteConsolidatedEvent)obj).getSource()); 
+        }
+        event= createConsolidatedEvent((RemoteConsolidatedEvent)obj);
+        list.add(event );
+      }
+      else {
+        list.add(obj);
+      }
+    }
+    if (loggingService.isDebugEnabled()) {
+      loggingService.debug("Creating Response for  Query and size of response is :" +list.size() ); 
+    }
+    AggregatedResponse aggresponse=new AggregatedResponse(list);
+    relay.updateResponse(relay.getSource(),aggresponse);
+    getBlackboardService().publishChange(relay);
+  }
 }

@@ -119,7 +119,7 @@ public abstract class QueryBase extends ComponentPlugin {
     public void run() {
       getBlackboardService().openTransaction();
       try {
-        execute();
+         execute();
       } finally {
         getBlackboardService().closeTransaction();
       }

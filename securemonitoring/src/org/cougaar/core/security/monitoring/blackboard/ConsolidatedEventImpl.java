@@ -36,70 +36,14 @@ import edu.jhuapl.idmef.IDMEF_Message;
 
 /** Event implementation
  */
-public class ConsolidatedEventImpl implements ConsolidatedEvent
+public class ConsolidatedEventImpl extends ConsolidatedEventBase implements ConsolidatedEvent
 {
-  protected IDMEF_Message theMessage;
-  protected MessageAddress theAgent;
-  //protected UID parentUID;
-  /*
-    public ConsolidatedEventImpl(UID aUID) {
-    setparentUID(aUID);
-    }
-  */
-
   public ConsolidatedEventImpl(MessageAddress aSource,
                                IDMEF_Message aMessage)  {
-    setSource(aSource);
-    setEvent(aMessage);
+    super(aSource,aMessage);
   }
 
   
-  private void setEvent(IDMEF_Message aMessage){
-    theMessage = aMessage;
-  }
-  
-  private void setSource(MessageAddress aSource) {
-    theAgent = aSource;
-  }
-
-  public IDMEF_Message getEvent(){
-    return theMessage;
-  }
-
-  public MessageAddress getSource() {
-    return theAgent;
-  }
-  
-  public UID getParentUID() { 
-    UID parentUID=null;
-    IDMEF_Message message=getEvent();
-    if(message!=null) {
-      parentUID= DrillDownUtils.getUID(message,DrillDownQueryConstants.PARENT_UID);
-    }  
-    return parentUID;
-  }
-
-  public UID getOriginatorUID() { 
-    UID originatorUID=null;
-    IDMEF_Message message=getEvent();
-    if(message!=null) {
-      originatorUID= DrillDownUtils.getUID(message,DrillDownQueryConstants.ORIGINATORS_UID);
-    }  
-    return originatorUID;
-  }
-
-  /** ******************************************************************
-   *  Publishable interface
-   */
-
-  public boolean isPersistable() {
-    return true;
-  }
-
-  /** ******************************************************************
-   *
-   */
-
   public String toString() {
     StringBuffer buff=new StringBuffer("Consolidated Event : \n");
     if(theAgent!=null){
@@ -113,12 +57,6 @@ public class ConsolidatedEventImpl implements ConsolidatedEvent
     return buff.toString();
   }
   
-  public String getDocument() {
-    return toString();
-  }
   
-  public org.w3c.dom.Element getXML(org.w3c.dom.Document document) {
-    return XMLize.getPlanObjectXML(this, document);
-  }
   
 }

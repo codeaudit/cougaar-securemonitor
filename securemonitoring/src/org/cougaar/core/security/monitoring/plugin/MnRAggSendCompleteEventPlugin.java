@@ -140,32 +140,7 @@ public class MnRAggSendCompleteEventPlugin extends MnRAggQueryBase {
         }
         continue;
       }
-      List list=new ArrayList();
-      Iterator detailsiter=detailedresponse.iterator();
-      if (loggingService.isDebugEnabled()) {
-        loggingService.debug("Creating Response for Complete Events Query :" +detailedresponse.size() ); 
-      }
-      Object obj=null;
-      ConsolidatedEvent event=null;
-      while(detailsiter.hasNext()){
-        obj=detailsiter.next();
-        if(obj instanceof RemoteConsolidatedEvent) {
-          if (loggingService.isDebugEnabled()) {
-            loggingService.debug("Adding Remote Consolidated response from :" +((RemoteConsolidatedEvent)obj).getSource()); 
-          }
-          event= createConsolidatedEvent((RemoteConsolidatedEvent)obj);
-          list.add(event );
-        }
-        else {
-          list.add(obj);
-        }
-      }
-      if (loggingService.isDebugEnabled()) {
-        loggingService.debug("Creating Response for  Complete Events Query and size of response is :" +list.size() ); 
-      }
-      AggregatedResponse aggresponse=new AggregatedResponse(list);
-      relay.updateResponse(relay.getSource(),aggresponse);
-      getBlackboardService().publishChange(relay);
+      publishResponse(detailedresponse,relay);
     }
     
   }

@@ -37,61 +37,13 @@ import edu.jhuapl.idmef.IDMEF_Message;
 
 /** Event implementation
  */
-public class RemoteConsolidatedEvent implements java.io.Serializable,Publishable {
+public class RemoteConsolidatedEvent extends ConsolidatedEventBase  {
   protected IDMEF_Message theMessage;
   protected MessageAddress theAgent;
  
   public RemoteConsolidatedEvent(ConsolidatedEvent event)  {
-    //setparentUID(event.getparentUID());
-    setSource(event.getSource());
-    setEvent(event.getEvent());
+    super(event.getSource(),event.getEvent());
   }
-
-  
-  private void setEvent(IDMEF_Message aMessage) {
-    theMessage = aMessage;
-  }
-  private void setSource(MessageAddress aSource) {
-    theAgent = aSource;
-  }
-
-  public IDMEF_Message getEvent()  {
-    return theMessage;
-  }
-
-  public MessageAddress getSource() {
-    return theAgent;
-  }
-
-  public UID getParentUID() { 
-    UID parentUID=null;
-    IDMEF_Message message=getEvent();
-    if(message!=null) {
-      parentUID= DrillDownUtils.getUID(message,DrillDownQueryConstants.PARENT_UID);
-    }  
-    return parentUID;
-  }
-  
-  public UID getOriginatorUID() { 
-    UID originatorUID=null;
-    IDMEF_Message message=getEvent();
-    if(message!=null) {
-      originatorUID= DrillDownUtils.getUID(message,DrillDownQueryConstants.ORIGINATORS_UID);
-    }  
-    return originatorUID;
-  }
- 
-  /** ******************************************************************
-   *  Publishable interface
-   */
-
-  public boolean isPersistable() {
-    return true;
-  }
-
-  /** ******************************************************************
-   *
-   */
 
   public String toString() {
     String s = null;
@@ -101,11 +53,4 @@ public class RemoteConsolidatedEvent implements java.io.Serializable,Publishable
     return s;
   }
   
-  public String getDocument() {
-    return toString();
-  }
-  
-  public org.w3c.dom.Element getXML(org.w3c.dom.Document document) {
-    return XMLize.getPlanObjectXML(this, document);
-  }
 }
