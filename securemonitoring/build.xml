@@ -104,8 +104,10 @@
       <!-- The base directories where the regression test result files are located -->
       <property name="securityservices.results" value="${securityservices.regress}${file.separator}results"/>
 
+      <!--
       <echo message="Dumping properties..."/>
       <echoproperties/>
+      -->
       <if>
         <isset property="anthill.cougaar.branch.name"/>
         <then>
