@@ -89,15 +89,19 @@ org.cougaar.core.security.monitoring.LOGIN_FAILURE_RATE > 36000 :
 #{playclause}
 
 PERCEIVED_THREAT_LEVEL == LOW
-    : org.cougaar.core.security.monitoring.MAX_LOGIN_FAILURES = 10
+// the default is 3, but the mop tests we reuse the same ID for success
+// and failures, increase it to 100 for mop tests to prevent user logout
+    : org.cougaar.core.security.monitoring.MAX_LOGIN_FAILURES = 100
     : org.cougaar.core.security.monitoring.LOCKOUT_DURATION = 60
     : org.cougaar.core.security.monitoring.PERCEIVED_THREAT_LEVEL = "LOW"
     : [agent.#{enclave.capitalize}PolicyManager]org.cougaar.core.security.policy.PREVENTIVE_MEASURE_POLICY = LOW;
 //    : com.telcordia.mode.AdaptiveFilterOperatingModeScope = LOGIN_FAILURES
 
 PERCEIVED_THREAT_LEVEL == HIGH
-    : org.cougaar.core.security.monitoring.MAX_LOGIN_FAILURES = 3
-    : org.cougaar.core.security.monitoring.LOCKOUT_DURATION = 600
+// the default is 3, but the mop tests we reuse the same ID for success
+// and failures, increase it to 20 for mop tests to prevent user logout
+    : org.cougaar.core.security.monitoring.MAX_LOGIN_FAILURES = 60
+    : org.cougaar.core.security.monitoring.LOCKOUT_DURATION = 60
     : org.cougaar.core.security.monitoring.PERCEIVED_THREAT_LEVEL = "HIGH"
 //    : com.telcordia.mode.AdaptiveFilterOperatingModeScope = LOGIN_JAR_SECURITYMGR_CRYPTO_FAILURES
     : [agent.#{enclave.capitalize}PolicyManager]org.cougaar.core.security.policy.PREVENTIVE_MEASURE_POLICY = HIGH;
@@ -122,14 +126,14 @@ END
 org.cougaar.core.security.monitoring.LOGIN_FAILURE_RATE <= 360000 : PERCEIVED_THREAT_LEVEL = 1;
 org.cougaar.core.security.monitoring.LOGIN_FAILURE_RATE > 360000 : PERCEIVED_THREAT_LEVEL = 2;
 PERCEIVED_THREAT_LEVEL == 1
-    : org.cougaar.core.security.monitoring.MAX_LOGIN_FAILURES = 10
+    : org.cougaar.core.security.monitoring.MAX_LOGIN_FAILURES = 100
     : org.cougaar.core.security.monitoring.LOCKOUT_DURATION = 60
     : org.cougaar.core.security.monitoring.PERCEIVED_THREAT_LEVEL = LOW;
 //    : com.telcordia.mode.AdaptiveFilterOperatingModeScope = LOGIN_FAILURES;
 
 PERCEIVED_THREAT_LEVEL == 2
-    : org.cougaar.core.security.monitoring.MAX_LOGIN_FAILURES = 3
-    : org.cougaar.core.security.monitoring.LOCKOUT_DURATION = 600
+    : org.cougaar.core.security.monitoring.MAX_LOGIN_FAILURES = 60
+    : org.cougaar.core.security.monitoring.LOCKOUT_DURATION = 60
     : org.cougaar.core.security.monitoring.PERCEIVED_THREAT_LEVEL = HIGH;
 //    : com.telcordia.mode.AdaptiveFilterOperatingModeScope = LOGIN_JAR_SECURITYMGR_CRYPTO_FAILURES;
 
