@@ -64,16 +64,17 @@
         <fail message="ant version 1.5 or above is required. Current version is ${ant.version}"
               if="ant.version.incorrect"/>
          -->
+        <property name="jdk.version.needed" value="1.4.2"/>
         <condition property="vm.version.incorrect" value="true">
           <not>
-            <contains string="${java.vm.version}" substring="1.4.2"/>
+            <contains string="${java.vm.version}" substring="${jdk.version.needed}"/>
           </not>
         </condition>
-        <fail message="JDK 1.4.1_02 required. Current version is ${java.vm.version}"
+        <fail message="JDK ${jdk.version.needed} required. Current version is ${java.vm.version}"
               if="vm.version.incorrect"/>
     </target>
 
-    <target name="ant-contrib-setup" unless="ant.contrib.ext.loaded">
+    <target name="ant-contrib-setup" depends="tstamp" unless="ant.contrib.ext.loaded">
         <taskdef resource="net/sf/antcontrib/antcontrib.properties">
           <classpath>
              <pathelement location="${securityservices.base}/build/lib/ant-contrib-1.0b1.jar"/>
