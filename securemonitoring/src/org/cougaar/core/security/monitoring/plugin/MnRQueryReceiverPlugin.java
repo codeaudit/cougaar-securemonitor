@@ -169,11 +169,7 @@ public class MnRQueryReceiverPlugin extends MnRQueryBase {
   private CapabilitiesObject      _capabilities;
   private ThreadService threadService=null;
   private final Map latestCallBack = Collections.synchronizedMap(new HashMap());
-  
-  // private String param;
-  private boolean root = false;
-  private String myRole = null;
-  
+    
   public void setParameter(Object o){
     if (!(o instanceof List)) {
       throw new IllegalArgumentException("Expecting a List parameter " +
@@ -181,14 +177,6 @@ public class MnRQueryReceiverPlugin extends MnRQueryBase {
                                          ( (o == null)
                                            ? "null" 
                                            : o.getClass().getName() ));
-    }
-     
-    List l = (List) o;
-    Iterator iter = l.iterator();
-    String param=null; ;
-    param = (String)iter.next();
-    if(param.equalsIgnoreCase("root")){
-      root = true;
     }
   }
   
@@ -227,7 +215,6 @@ public class MnRQueryReceiverPlugin extends MnRQueryBase {
     Collection newRemoteQueryCollection;
     Collection newLocalQueryCollection;
     Collection removedRemoteQueryCol;
-    boolean removedRelays=false;
     Collection queryMappingCollection=getBlackboardService().query(new QueryMappingPredicate());
     /*
       Check if remote relays has changed . If it has changed then we are interested in removed
@@ -248,7 +235,6 @@ public class MnRQueryReceiverPlugin extends MnRQueryBase {
         if (loggingService.isDebugEnabled()) {
           loggingService.debug(myAddress + " REMOTE RELAY Remove Notification in MnRQueryReceiver size of removed relay "+removedRemoteQueryCol.size() );
         }
-        removedRelays=true;
         removeRelays(removedRemoteQueryCol,queryMappingCollection);
       }
     }
@@ -509,7 +495,6 @@ public class MnRQueryReceiverPlugin extends MnRQueryBase {
       }
       while(response_iterator.hasNext()) {
         key=(String)response_iterator.next();
-        reg=(RegistrationAlert)capabilities.get(key);
         dest_address=MessageAddress.getMessageAddress(key);
         if (loggingService.isDebugEnabled()) {
           loggingService.debug("Creators Address for Sub Query relay is :"

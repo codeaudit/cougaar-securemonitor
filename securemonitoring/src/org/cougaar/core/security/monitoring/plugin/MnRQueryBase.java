@@ -233,7 +233,6 @@ public abstract class MnRQueryBase extends ComponentPlugin {
   private void finishFindAgent(MRAgentLookUp query, CapabilitiesObject caps, 
                                boolean sensors, Collection commagents,
                                FindAgentCallback callback) {
-    Enumeration keys=caps.keys();
     Classification queryClassification=query.classification;
     Source querySource=query.source;
     Target queryTarget=query.target;
@@ -368,9 +367,6 @@ public abstract class MnRQueryBase extends ComponentPlugin {
     while(keys.hasMoreElements()) {
       key=(String)keys.nextElement();
       reg= (RegistrationAlert)caps.get(key);
-      if (loggingService.isDebugEnabled()) {
-        //loggingService.debug("In capabilities object : Key is "+ key  );
-      }
       Classification [] classifications=reg.getClassifications();
       if(classifications==null) {
         return agentlist;
@@ -426,15 +422,9 @@ public abstract class MnRQueryBase extends ComponentPlugin {
       return agentlist;
       }
     */
-    if (loggingService.isDebugEnabled()) {
-      //loggingService.debug("In  searchBySources FUNCTION  query is :"+searchSource);
-    }
     while(keys.hasMoreElements()) {
       key=(String)keys.nextElement();
       reg= (RegistrationAlert)caps.get(key);
-      if (loggingService.isDebugEnabled()) {
-        //loggingService.debug(" in capabilities object : Key is "+ key );
-      }
       sources=reg.getSources();
       if(searchSource==null) {
         if(sensors) {
@@ -489,15 +479,9 @@ public abstract class MnRQueryBase extends ComponentPlugin {
       return agentlist;
       }
     */
-    if (loggingService.isDebugEnabled()) {
-      //loggingService.debug(" in  searchByTargets FUNCTION  query is :"+searchTarget);
-    }
     while(keys.hasMoreElements()) {
       key=(String)keys.nextElement();
       reg= (RegistrationAlert)caps.get(key);
-      if (loggingService.isDebugEnabled()) {
-        //loggingService.debug(" in capabilities object : Key is "+ key );
-      }
       targets=reg.getTargets();
       if(searchTarget==null) {
         if(sensors) {
@@ -553,15 +537,9 @@ public abstract class MnRQueryBase extends ComponentPlugin {
       return agentlist;
       }
     */
-    if (loggingService.isDebugEnabled()) {
-      //loggingService.debug(" in  searchBySourcesofattack  FUNCTION  query is :"+agentname);
-    }
     while(keys.hasMoreElements()) {
       key=(String)keys.nextElement();
       reg= (RegistrationAlert)caps.get(key);
-      if (loggingService.isDebugEnabled()) {
-        //loggingService.debug(" in capabilities object : Key is "+ key );
-      }
       sources=reg.getSources();
       additionaldatas=reg.getAdditionalData();
       if(agentname==null) {
@@ -649,15 +627,9 @@ public abstract class MnRQueryBase extends ComponentPlugin {
       return agentlist;
       }
     */
-    if (loggingService.isDebugEnabled()) {
-      //loggingService.debug(" in  searchByTargetofattack  FUNCTION  query is :"+agentname);
-    }
     while(keys.hasMoreElements()) {
       key=(String)keys.nextElement();
       reg= (RegistrationAlert)caps.get(key);
-      if (loggingService.isDebugEnabled()) {
-        //loggingService.debug(" in capabilities object : Key is "+ key );
-      }
       targets=reg.getTargets();
       additionaldatas=reg.getAdditionalData();
       if(agentname==null) {
@@ -797,9 +769,6 @@ public abstract class MnRQueryBase extends ComponentPlugin {
         ispresent=true;
         return ispresent;
       }
-      else {
-        //  loggingService.debug(" source or Target is not present :");
-      }
     }
     return ispresent ;
   }
@@ -898,9 +867,6 @@ public abstract class MnRQueryBase extends ComponentPlugin {
           loggingService.debug("In Idmef node queryCategory are equal :");
           categoryequal=true;
         }
-      }
-      if(existingCategory==null){
-        //loggingService.debug("existing Category category is NULL :");
       }
       
       if( nameequal &&  addressequal && categoryequal) {
