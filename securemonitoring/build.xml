@@ -63,11 +63,11 @@
              mechanism you are using for your build.
       -->
       <if>
-        <isset property="dependency.artifacts.dir"/>
+        <isset property="anthill.dependency.artifacts.dir"/>
         <then>
-          <echo message="Anthill build - Using JAR files from ${dependency.artifacts.dir}"/>
+          <echo message="Anthill build - Using JAR files from ${anthill.dependency.artifacts.dir}"/>
           <path id="dependency.artificats.dir.path">    
-            <fileset dir="${dependency.artifacts.dir}">
+            <fileset dir="${anthill.dependency.artifacts.dir}">
               <include name="*/*.jar"/>
             </fileset>
           </path>
@@ -284,10 +284,10 @@
          </fileset>
         </copy>
         <if>
-          <isset property="artifacts.dir"/>
+          <isset property="anthill.artifacts.dir"/>
           <then>
             <echo message="Copying jar files to anthill artifact repository..."/>
-             <copy todir="${artifacts.dir}">
+             <copy todir="${anthill.artifacts.dir}">
                 <fileset dir="${securityservices.base}/output/signed">
                   <patternset>
                      <include name="*.jar"/>
