@@ -50,7 +50,6 @@ import org.cougaar.core.mts.MessageAddress;
 import org.cougaar.core.security.constants.AdaptiveMnROperatingModes;
 import org.cougaar.core.security.constants.IdmefAssessments;
 import org.cougaar.core.security.constants.IdmefClassifications;
-import org.cougaar.core.security.crypto.ldap.KeyRingJNDIRealm;
 import org.cougaar.core.security.monitoring.blackboard.CmrRelay;
 import org.cougaar.core.security.monitoring.blackboard.Event;
 import org.cougaar.core.security.monitoring.blackboard.NewEvent;
@@ -166,7 +165,7 @@ public class UserLockoutPlugin extends ResponderPlugin {
                 if (ad != null) {
                   for (int j = 0; j < ad.length; j++) {
                     if (LoginFailureEvent.FAILURE_REASON.equals(ad[j].getMeaning())) {
-                      return (LoginFailureEvent.FAILURE_REASONS[KeyRingJNDIRealm.LF_PASSWORD_MISMATCH].equals(ad[j].getAdditionalData()));
+                      return (LoginFailureEvent.FAILURE_REASONS[UserService.LF_PASSWORD_MISMATCH].equals(ad[j].getAdditionalData()));
                     }
                   }
                 }

@@ -43,8 +43,8 @@ import java.util.Set;
 import org.cougaar.core.component.ServiceBroker;
 import org.cougaar.core.security.constants.IdmefAssessments;
 import org.cougaar.core.security.constants.IdmefClassifications;
-import org.cougaar.core.security.crypto.CertificateCache;
 import org.cougaar.core.security.crypto.CertificateStatus;
+import org.cougaar.core.security.crypto.CertificateType;
 import org.cougaar.core.security.crypto.CertificateUtility;
 import org.cougaar.core.security.monitoring.blackboard.Event;
 import org.cougaar.core.security.monitoring.blackboard.NewEvent;
@@ -401,7 +401,7 @@ public class CertificateRevokerPlugin extends ResponderPlugin {
     for(int i = 0; i < len; i++) {
       dn = certChain[i].getIssuerDN().getName();
       title = CertificateUtility.findAttribute(dn, "t");
-      if(title.equals(CertificateCache.CERT_TITLE_CA)) {
+      if(title.equals(CertificateType.CERT_TITLE_CA)) {
         return dn;
       }
     }
