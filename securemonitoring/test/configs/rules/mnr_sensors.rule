@@ -48,20 +48,15 @@ society.each_node do |node|
   # Adds plugin in the PolicyDomainManagers to notify 
   # agents in a particular security community of the
   # threat con level 
-  node.each_facet(:role) do |facet|
-    if facet[:role] == $facetManagement
-      facetval = node.host.get_facet(:enclave)
-      enclave = facetval[0..0] + facetval[1..facetval.length].downcase 
-      policyDomainMgr = enclave + "PolicyDomainManager"
-      securityComm = facetval + "-SECURITY-COMM"
-
-      node.each_agent do |agent|
-        if agent.name == policyDomainMgr
-          # for threat con level reporter
-          agent.add_component do |c|
-            c.classname = "org.cougaar.core.security.monitoring.plugin.ThreatConLevelReporter"
-            c.add_argument(securityComm);
-          end
+  node.each_agent do |agent|
+    agent.each_facet do |facet|
+      if facet[:role] == $facetPolicyManagerAgent
+        # for threat con level reporter
+        enclave = node.host.get_facet(:enclave).capitalize
+        securityComm = enclave + "-SECURITY-COMM"
+        agent.add_component do |c|
+          c.classname = "org.cougaar.core.security.monitoring.plugin.ThreatConLevelReporter"
+          c.add_argument(securityComm);
         end
       end
     end
@@ -94,34 +89,30 @@ society.each_agent(true) do |agent|
     end   
   end
 
-  if defined?(threatConServlet)
-    if agent.name =~ /EnclaveMnRManager/
-      agent.add_component do |c|
-        c.classname = servletComponent
-        c.add_argument(threatConServlet)
-        c.add_argument("/threatConMonitor")
+  agent.each_facet do |facet|
+    if facet[:role] == $facetMonitoringManagerAgent
+      if defined?(threatConServlet)
+        agent.add_component do |c|
+          c.classname = servletComponent
+          c.add_argument(threatConServlet)
+          c.add_argument("/threatConMonitor")
+        end
       end
-    end
-  end
-
-  if defined?(userLockout)
-    if agent.name =~ /EnclaveMnRManager/
-      agent.add_component do |c|
-        c.classname = userLockout
-        c.add_argument("600")
-        c.add_argument("86400")
-        c.add_argument("org.cougaar.core.security.monitoring.MAX_LOGIN_FAILURES")
+      if defined?(userLockout)
+        agent.add_component do |c|
+          c.classname = userLockout
+          c.add_argument("600")
+          c.add_argument("86400")
+          c.add_argument("org.cougaar.core.security.monitoring.MAX_LOGIN_FAILURES")
+        end
       end
-    end
-  end
-
-  if defined?(revokerPlugin)
-    if agent.name =~ /EnclaveMnRManager/
-      agent.add_component do |c|
-        c.classname = revokerPlugin
-        c.add_argument("600")
-        c.add_argument("86400")
-        c.add_argument("org.cougaar.core.security.crypto.MAX_MESSAGE_FAILURE")
+      if defined?(revokerPlugin)
+        agent.add_component do |c|
+          c.classname = revokerPlugin
+          c.add_argument("600")
+          c.add_argument("86400")
+          c.add_argument("org.cougaar.core.security.crypto.MAX_MESSAGE_FAILURE")
+        end
       end
     end
   end

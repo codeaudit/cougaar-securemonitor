@@ -3,10 +3,25 @@
 # AGG-AggregationPlugin.rule
 
 society.each_agent do |agent|
-  if agent.name =~ /.*MnRManager.*/ \
-      or agent.name == 'AGG-Agent' or agent.name == "SCmrmanager"
+  needComponent = false
+  if agent.name == 'AGG-Agent' or agent.name == "SCmrmanager"
+    needComponent = true
+  end
+  if !needComponent
+    agent.each_facet do |facet|
+      if facet[:role] == $facetMonitoringManagerAgent ||
+           facet[:role] == $facetRootMonitoringManagerAgent
+        needComponent = true
+        break
+      end
+    end
+  end
+  if needComponent
     agent.add_component do |c|
       c.classname = "org.cougaar.lib.aggagent.plugin.AggregationPlugin"
+    end
+    agent.add_component do |c|
+      c.classname = "org.cougaar.lib.aggagent.plugin.AlertPlugin"
     end
   end
 end

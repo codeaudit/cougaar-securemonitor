@@ -31,24 +31,22 @@ if !(@createMRManagerCompleted)
   File.open(filename ,"w") { |file|
     file << opentag
     file << "\n"
-    society.each_node do |node|
-      node.each_facet(:role) do |facet|
-        if facet[:role] == $facetRootManagement
+    society.each_agent do |agent|
+      agent.each_facet(:role) do |facet|
+        if facet[:role] == $facetRootMonitoringManagerAgent
           foundRoot = true
-          agentname = "SocietyMnRManager"
           file << mgrtag
-          file << "\"#{agentname}\""
+          file << "\"#{agent.name}\""
           file << attributecommunity
-          file << "\"ROOT-SECURITY-COMM\""
+          file << "\"ROOT-MnR-SECURITY-COMM\""
           file << attclostag 
           file << "\n"
         end
-        if facet[:role] == $facetManagement
+        if facet[:role] == $facetMonitoringManagerAgent
           foundManager = true
-          enclave = node.host.get_facet(:enclave)
-          agentname = enclave[0..0] + enclave[1..enclave.length].downcase + "EnclaveMnRManager"  
+          enclave = agent.node.host.get_facet(:enclave).capitalize
           file << mgrtag
-          file << "\"#{agentname}\""
+          file << "\"#{agent.name}\""
           file << attributecommunity
           file << "\"#{enclave}-SECURITY-COMM\""
           file << attclostag 
@@ -61,10 +59,4 @@ if !(@createMRManagerCompleted)
   }
   scheduleConfigChange(filename)
 
-  if !foundRoot
-    puts "Warning: no #{$facetRootManagement} facet found"
-  end
-  if !foundManager
-    puts "Warning: no #{$facetManagement} facet found"
-  end
 end
