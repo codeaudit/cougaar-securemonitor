@@ -28,12 +28,23 @@
 package org.cougaar.core.security.monitoring.blackboard;
 
 import org.cougaar.core.blackboard.Publishable;
+import org.cougaar.core.util.UniqueObject;
+import org.cougaar.core.util.UID;
 
 import java.util.Hashtable;
 
-public class CapabilitiesObject extends Hashtable implements Publishable {
+public class CapabilitiesObject extends Hashtable implements Publishable,UniqueObject {
+  private UID id;
     public boolean isPersistable() {
     return true;
   }  
+
+  public void setUID(UID uid){
+    id= uid;
+  }
    
+  public UID getUID(){
+    return id;
+  }
+
 }
