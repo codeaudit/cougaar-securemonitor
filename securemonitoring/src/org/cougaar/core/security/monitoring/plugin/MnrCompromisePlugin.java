@@ -31,6 +31,8 @@ package org.cougaar.core.security.monitoring.plugin;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.Enumeration;
 import java.util.StringTokenizer;
 import java.util.Vector;
@@ -143,7 +145,16 @@ public class MnrCompromisePlugin extends ComponentPlugin {
       return false;
     }
   };
-  
+ 
+  private UnaryPredicate diagnosisPredicate = new UnaryPredicate() {
+    public boolean execute(Object o) {
+      if (o instanceof AgentCompromiseInfo) {
+        return ((AgentCompromiseInfo)o).getType().equals(AgentCompromiseInfo.SENSOR);
+      }
+      return false;
+    }
+  };
+
 /** UIDService */
   private UIDService uidService = null;
   /** Domain Service */
@@ -605,20 +616,52 @@ public class MnrCompromisePlugin extends ComponentPlugin {
         // check for coordinator action
         String coordinatorOn = System.getProperty("org.cougaar.core.security.coordinatorOn");
         if (coordinatorOn != null && coordinatorOn.equalsIgnoreCase("true")) {
-          
-          
+          // check if status already changed
+          Collection c = getBlackboardService().query(diagnosisPredicate);
+          Iterator it = c.iterator();
+          String level = AgentCompromiseInfo.NONE;
+          AgentCompromiseInfo info = null;
+          while (it.hasNext()) {
+            info = (AgentCompromiseInfo)it.next();
+            if (sourceAgent.equals(info.getSourceAgent())) {
+              level = info.getDiagnosis();
+              break;
+            }
+          }
+
+          if (level.equals(AgentCompromiseInfo.SEVERE)) {
+            // already reach max.
+                if (logging.isDebugEnabled()) {
+                  logging.debug("Level already changed for diagnosis: " + info.getDiagnosis());
+                }
+            return;
+          }
+          if (level.equals(AgentCompromiseInfo.MODERATE)) {
+            level = AgentCompromiseInfo.SEVERE;
+              getBlackboardService().publishRemove(info);
+          }
+          else {
+            level = AgentCompromiseInfo.MODERATE;
+          }
           // signal compromise to AgentCompromiseSensor
           // sendDiagnosis
-            String diagnosis = AgentCompromiseInfo.SEVERE;
+          if (info != null) {
+            // keep the timestamp! It is the start of compromise
+            timestamp = info.getTimestamp();
+          }
 
-            // change
-            AgentCompromiseInfo info = new AgentCompromiseInfo(AgentCompromiseInfo.SENSOR,
-              timestamp, sourceAgent, sourceNode, sourceHost, diagnosis);
+              // change
+          info = new AgentCompromiseInfo(AgentCompromiseInfo.SENSOR,
+              timestamp, sourceAgent, sourceNode, sourceHost, level);
 
-            getBlackboardService().publishAdd(info);
-            if (logging.isDebugEnabled()) {
-              logging.debug("Agent compromised action initialized for agent: " + sourceAgent);
-            }
+          getBlackboardService().publishAdd(info);
+              if (logging.isDebugEnabled()) {
+                logging.debug("Agent compromised action initialized for agent: " + sourceAgent + " level: " + level);
+              }
+          if (level.equals(AgentCompromiseInfo.NONE)) {
+            logging.warn("Cannot find diagnosis for : " + sourceAgent);
+          }
+          
         }
         else {
           resolveCompromises(scope, timestamp, sourceHost, sourceNode, sourceAgent);
