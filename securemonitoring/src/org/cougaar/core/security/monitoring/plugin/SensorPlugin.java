@@ -154,7 +154,8 @@ public abstract class SensorPlugin extends ComponentPlugin {
 
   private String enableMnR;
 
-  public void setDomainService(DomainService aDomainService) {
+  private boolean getManagerOnly; 
+ public void setDomainService(DomainService aDomainService) {
     _domainService = aDomainService;
     _log = (LoggingService) getServiceBroker().
       getService(this, LoggingService.class, null);
@@ -210,9 +211,10 @@ public abstract class SensorPlugin extends ComponentPlugin {
     }
     _csu = new CommunityServiceUtil(sb);
     // register this sensor's capabilities
-    if( !_blackboard.didRehydrate()) {
-      getSecurityManager();
+    if( _blackboard.didRehydrate()) {
+      getManagerOnly=true;
     }
+    getSecurityManager();
     managerSubscription=(IncrementalSubscription)getBlackboardService().subscribe(new ManagerAgentPredicate());
     unregister=(IncrementalSubscription)getBlackboardService().subscribe(new UnRegisterPredicate());
     reregister=(IncrementalSubscription)getBlackboardService().subscribe(new RegisterPredicate());
@@ -242,6 +244,7 @@ public abstract class SensorPlugin extends ComponentPlugin {
       if(_log.isDebugEnabled()){
         _log.debug("Registering Sensor Capabilities for agent "+ myAddress.toString());
       }
+      getManagerOnly =false;
       getSecurityManager();
     }
     if(!managerSubscription.hasChanged()){
@@ -301,7 +304,9 @@ public abstract class SensorPlugin extends ComponentPlugin {
                 _log.debug("Setting Manager for Sensor Plugin -- Manager  : "+ myManagerAddress +" For Agent : " +myAddress);
               }
               _log.info("Setting Manager for Sensor Plugin -- Manager 2: "+ myManagerAddress +" For Agent : " +myAddress);
-              registerCapabilities(addr,true);
+	      if(!getManagerOnly) {
+                registerCapabilities(addr,true);
+              }
             }
           }
         }
