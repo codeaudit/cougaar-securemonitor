@@ -300,6 +300,7 @@
     </target>
 
     <target name="call-ant-submodule">
+       <echo message="Invoking ${ant.target.name} on ${securityservices.base}/../${build.module.name}/build.xml"/>
        <ant antfile="build.xml"
             dir="${securityservices.base}/../${build.module.name}"
             inheritAll="false"
@@ -314,7 +315,9 @@
          Usually the value of "ant.target.name" should be "all" -->
     <target name="build-module">
        <echo message="******************** Building: ${securityservices.base}/../${build.module.name}"/>
-       <antcall target="call-ant-submodule"/>
+       <antcall target="call-ant-submodule">
+          <param name="build.module.name" value="@{build.module.name}"/>
+       </antcall>
        <echo message="Copying jar file to superior modules: ${module.superiors}"/>
        <for list="${module.superiors}" delimiter="," param="build.module.superior.name">
          <sequential>
@@ -336,8 +339,7 @@
        <if>
           <available file="${securityservices.base}/../${build.module.name}" type="dir"/>
           <then>
-            <!-- Module has been checked out. Update module.
-                 TODO: handle tags. -->
+            <!-- Module has been checked out. Update module. -->
             <property name="cvs.command" value="-q update -d"/>
           </then>
           <else>
@@ -396,6 +398,7 @@
              <sequential>
                <antcall target="call-ant-submodule">
                   <param name="ant.target.name" value="clean"/>
+                  <param name="build.module.name" value="@{build.module.name}"/>
                </antcall>
              </sequential>
            </for>
