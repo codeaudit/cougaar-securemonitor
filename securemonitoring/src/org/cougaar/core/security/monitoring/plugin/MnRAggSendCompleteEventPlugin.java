@@ -95,9 +95,6 @@ public class MnRAggSendCompleteEventPlugin extends MnRAggQueryBase {
   }
   
   protected synchronized void execute() {
-    if(!enableMnR){
-      return;
-    }
     Collection newAllevents =null;
     Collection removedAllEventsRequest =null;
     if(completeEventsRequest.hasChanged()) {

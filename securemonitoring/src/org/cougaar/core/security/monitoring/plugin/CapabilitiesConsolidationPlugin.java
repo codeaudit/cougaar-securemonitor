@@ -138,7 +138,7 @@ public class CapabilitiesConsolidationPlugin extends ComponentPlugin {
   private LoggingService loggingService;
   private boolean readcollection=false;
   private CommunityServiceUtil _csu;
-  private boolean enableMnR;
+  private String enableMnR;
   
   /**
    * Used by the binding utility through reflection to set my DomainService
@@ -176,12 +176,15 @@ public class CapabilitiesConsolidationPlugin extends ComponentPlugin {
     if (loggingService.isDebugEnabled()) {
       loggingService.debug("Mgr Object is published");
     }
+  
+     enableMnR = System.getProperty("org.cougaar.core.security.enableMnR");
+  if (enableMnR == null || !enableMnR.equals("1")) {
     _csu.amIRoot(new RegistrationListener());
+  }
         
     modifiedcapabilities= (IncrementalSubscription)getBlackboardService().subscribe(new ModifiedCapabilitiesPredicate(loggingService));
     capabilitiesRelays= (IncrementalSubscription)getBlackboardService().subscribe(new ConsolidatedCapabilitiesRelayPredicate(loggingService));
     agentRegistrations= (IncrementalSubscription)getBlackboardService().subscribe(new AgentRegistrationPredicate(loggingService));
-     enableMnR = Boolean.valueOf(System.getProperty("org.cougaar.core.security.enableMnR","true")).booleanValue();
   }
   
 
@@ -214,9 +217,6 @@ public class CapabilitiesConsolidationPlugin extends ComponentPlugin {
    * Top level plugin execute loop.  
    */
   protected void execute () {
-    if(!enableMnR){
-      return;
-    }
     updateRelayedCapabilities();
     // Unwrap subordinate capabilities from new/changed/deleted relays
     loggingService.debug("Update of relay called from :"+myAddress.toAddress());
@@ -1159,8 +1159,15 @@ public class CapabilitiesConsolidationPlugin extends ComponentPlugin {
   }
 
   private void registerManager() {
+    if (enableMnR != null && enableMnR.equals("1")) {
+      return;
+    }
+
     CommunityServiceUtilListener listener = new CommunityServiceUtilListener() {
 	public void getResponse(Set entities) {
+          if (enableMnR != null && enableMnR.equals("2")) {
+            return;
+          }
 	  Iterator it = entities.iterator();
 	  if (entities.size() == 0) {
 	    loggingService.warn("Could not find a security manager");
@@ -1186,6 +1193,10 @@ public class CapabilitiesConsolidationPlugin extends ComponentPlugin {
 
   private class RegistrationListener implements CommunityServiceUtilListener {
     public void getResponse(Set entities) {
+      if (enableMnR != null && enableMnR.equals("2")) {
+        return;
+      }
+
       if (entities == null || entities.isEmpty()) {
         registerManager();
       } else {

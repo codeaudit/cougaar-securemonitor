@@ -161,9 +161,6 @@ public class MnRAggQueryReceiverPlugin extends MnRAggQueryBase  {
   }
   
   protected void execute () {
-    if(!enableMnR){
-      return;
-    }
     Collection removedRemoteAggQuery=null;
     Collection capabilitiesCollection=null;
     Collection newRemoteAggQuery=null;

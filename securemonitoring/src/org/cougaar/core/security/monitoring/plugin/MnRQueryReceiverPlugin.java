@@ -207,9 +207,6 @@ public class MnRQueryReceiverPlugin extends MnRQueryBase {
   }
 
   protected synchronized void execute () {
-    if(!enableMnR){
-      return;
-    }
     if (loggingService.isDebugEnabled()) {
       loggingService.debug(myAddress + "MnRQueryReceiver execute().....");
     }

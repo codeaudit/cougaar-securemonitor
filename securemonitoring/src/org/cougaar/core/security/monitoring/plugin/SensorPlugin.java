@@ -152,7 +152,7 @@ public abstract class SensorPlugin extends ComponentPlugin {
   
   private IncrementalSubscription reregister;
 
-  private boolean enableMnR;
+  private String enableMnR;
 
   public void setDomainService(DomainService aDomainService) {
     _domainService = aDomainService;
@@ -216,7 +216,10 @@ public abstract class SensorPlugin extends ComponentPlugin {
     managerSubscription=(IncrementalSubscription)getBlackboardService().subscribe(new ManagerAgentPredicate());
     unregister=(IncrementalSubscription)getBlackboardService().subscribe(new UnRegisterPredicate());
     reregister=(IncrementalSubscription)getBlackboardService().subscribe(new RegisterPredicate());
-    enableMnR = Boolean.valueOf(System.getProperty("org.cougaar.core.security.enableMnR","true")).booleanValue();
+    enableMnR = System.getProperty("org.cougaar.core.security.enableMnR");
+    if (enableMnR != null) {
+      _log.warn("MnR community service test " + enableMnR);
+    }
   }
   
    
@@ -226,9 +229,6 @@ public abstract class SensorPlugin extends ComponentPlugin {
    * responsible for handling unregister and reregister of Sensor during handoff 
    */
   protected void execute(){
-    if(!enableMnR){
-      return;
-    }
     Collection unregCol=unregister.getAddedCollection();
     if((unregCol!=null ) && (unregCol.size()>0)){
       if(_log.isDebugEnabled()){
@@ -266,11 +266,19 @@ public abstract class SensorPlugin extends ComponentPlugin {
   }
 
   private void getSecurityManager() {
+    if (enableMnR != null && enableMnR.equals("1")) {
+      return;
+    }
+
     if(_log.isDebugEnabled()) {
       _log.debug("getSecurityManager called in Sensor Plugin:"); 
     }
     CommunityServiceUtilListener listener = new CommunityServiceUtilListener() {
         public void getResponse(Set entities) {
+          if (enableMnR != null && enableMnR.equals("2")) {
+            return;
+          }
+
           if(_log.isDebugEnabled()) {
             _log.debug(" Call Back called for agent :"+  myAddress);
           }

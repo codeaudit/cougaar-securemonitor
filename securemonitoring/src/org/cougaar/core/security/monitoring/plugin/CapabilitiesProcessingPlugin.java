@@ -154,7 +154,6 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
   private EventService   eventService;
   private MessageAddress myAddress=null;
   private Object param;
-  private boolean enableMnR;
   
   /**
    * Used by the binding utility through reflection to set my DomainService
@@ -228,7 +227,6 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
       (new ConsolidatedCapabilitiesPredicate()); 
     notification=(IncrementalSubscription)getBlackboardService().subscribe
       (new NotificationPredicate());
-     enableMnR = Boolean.valueOf(System.getProperty("org.cougaar.core.security.enableMnR","true")).booleanValue();
   }
 
 
@@ -236,9 +234,6 @@ public class CapabilitiesProcessingPlugin extends ComponentPlugin {
    * Top level plugin execute loop.  
    */
   protected void execute () {
-    if(!enableMnR){
-      return;
-    }
     loggingService.debug("Execute of Capabilities processing plugin called "+myAddress.toString());
   
     updateRelayedCapabilities();
