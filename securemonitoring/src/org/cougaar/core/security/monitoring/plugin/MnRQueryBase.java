@@ -118,6 +118,9 @@ public abstract class MnRQueryBase extends QueryBase {
       CommunityServiceUtilListener listener = 
         new CommunityServiceUtilListener() {
           public void getResponse(Set agents) {
+      if (enableMnR != null && enableMnR.equals("2")) {
+        return;
+      }
             if(loggingService.isDebugEnabled()) {
               loggingService.debug(" Response received in callback for community search "+ agents.size());
               loggingService.debug("Calling finishFindAgent:");
@@ -587,6 +590,10 @@ public abstract class MnRQueryBase extends QueryBase {
                            myAddress); 
       csul.getResponse(Collections.EMPTY_SET);
     } else {
+      if (enableMnR != null && enableMnR.equals("1")) {
+        return;
+      }
+
       _csu.getAgents(community, role, csul);
     }
   }

@@ -48,7 +48,7 @@ public abstract class QueryBase extends ComponentPlugin {
   protected  boolean _isRoot;
   protected boolean _rootReady;
   
-  private String enableMnR;
+  protected String enableMnR;
  
   /**
    * Used by the binding utility through reflection to set my DomainService
@@ -97,9 +97,6 @@ public abstract class QueryBase extends ComponentPlugin {
      enableMnR = System.getProperty("org.cougaar.core.security.enableMnR");
     if (enableMnR != null) {
       loggingService.warn("MnR community service request test " + enableMnR);
-      if (enableMnR.equals("1")) {
-        return;
-      }
     }
 
     if (myAddress == null) {
@@ -109,6 +106,9 @@ public abstract class QueryBase extends ComponentPlugin {
           getServiceBroker().getService(this, LoggingService.class, null); 
       }
       _csu = new CommunityServiceUtil(getServiceBroker());
+      if (enableMnR.equals("1")) {
+        return;
+      }
       _csu.amIRoot(new RootListener());
     }
   }
