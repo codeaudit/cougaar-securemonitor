@@ -55,7 +55,7 @@ import org.cougaar.core.security.policy.CryptoClientPolicy;
 import org.cougaar.core.security.policy.SecurityPolicy;
 import org.cougaar.core.security.policy.TrustedCaPolicy;
 import org.cougaar.core.security.services.crypto.KeyRingService;
-import org.cougaar.core.services.util.ConfigParserService;
+import org.cougaar.core.security.services.util.ConfigParserService;
 import org.cougaar.core.security.util.CommunityServiceUtil;
 import org.cougaar.core.service.AgentIdentificationService;
 import org.cougaar.core.service.community.Community;
