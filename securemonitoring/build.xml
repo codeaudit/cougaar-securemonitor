@@ -468,8 +468,9 @@
         <delete dir="${securityservices.output}"   includeEmptyDirs="true" quiet="true"/>
         <delete dir="${securityservices.regress}"  includeEmptyDirs="true" quiet="true"/>
         <delete dir="${securityservices.staging}"  includeEmptyDirs="true" quiet="true"/>
-        <delete dir="${securityservices.base}" quiet="true"
-                includes="*.zip"/>
+        <delete quiet="true">
+            <fileset dir="${securityservices.base}" includes="*.zip"/>
+        </delete>
         <delete dir="${cougaar.workspace}" includeEmptyDirs="true" quiet="true"/>
         <echo message="+++++ Cleaned environment"/>
     </target>
