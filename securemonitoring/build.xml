@@ -173,6 +173,7 @@
     	  <fileset dir="${securityservices.signed}">
             <patternset>
                <include name="*.jar"/>
+               <exclude name="configs_*.jar"/>
             </patternset>
          </fileset>
         </copy>
