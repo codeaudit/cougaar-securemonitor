@@ -1,0 +1,28 @@
+#DESC NSCD - Name service cache daemon cache lookup of user-name
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the nscd_t domain.
+#
+daemon_domain(nscd)
+
+allow nscd_t { etc_t resolv_conf_t }:file r_file_perms;
+allow nscd_t etc_t:lnk_file read;
+can_network(nscd_t)
+
+allow nscd_t self:unix_stream_socket create_stream_socket_perms;
+
+can_unix_connect(userdomain, nscd_t)
+allow userdomain var_run_nscd_t:sock_file rw_file_perms;
+
+allow nscd_t sysctl_kernel_t:dir search;
+allow nscd_t sysctl_kernel_t:file read;
+allow nscd_t self:process setsched;
+allow nscd_t self:unix_dgram_socket create_socket_perms;
+allow nscd_t self:fifo_file { read write };
+allow nscd_t self:capability kill;
+
+dontaudit nscd_t sysadm_home_dir_t:dir search;

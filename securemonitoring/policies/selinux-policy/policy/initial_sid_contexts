@@ -1,0 +1,34 @@
+# FLASK
+
+#
+# Define the security context for each initial SID
+# sid sidname   context
+
+sid kernel	system_u:system_r:kernel_t
+sid security	system_u:object_r:security_t
+sid unlabeled	system_u:object_r:unlabeled_t
+sid fs		system_u:object_r:fs_t
+sid file	system_u:object_r:file_t
+sid file_labels	system_u:object_r:file_labels_t
+sid init	system_u:system_r:init_t
+sid any_socket 	system_u:system_r:any_socket_t
+sid port	system_u:object_r:port_t
+sid netif	system_u:object_r:netif_t
+sid netmsg	system_u:object_r:netmsg_t
+sid node	system_u:object_r:node_t
+sid igmp_packet system_u:system_r:igmp_packet_t
+sid icmp_socket system_u:system_r:icmp_socket_t
+sid tcp_socket  system_u:system_r:tcp_socket_t
+sid sysctl_modprobe	system_u:object_r:sysctl_modprobe_t
+sid sysctl	system_u:object_r:sysctl_t
+sid sysctl_fs	system_u:object_r:sysctl_fs_t
+sid sysctl_kernel	system_u:object_r:sysctl_kernel_t
+sid sysctl_net	system_u:object_r:sysctl_net_t
+sid sysctl_net_unix	system_u:object_r:sysctl_net_unix_t
+sid sysctl_vm	system_u:object_r:sysctl_vm_t
+sid sysctl_dev	system_u:object_r:sysctl_dev_t
+sid kmod	system_u:system_r:kernel_t
+sid policy	system_u:object_r:policy_config_t
+sid scmp_packet	system_u:system_r:scmp_packet_t
+
+# FLASK

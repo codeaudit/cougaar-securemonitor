@@ -1,0 +1,2 @@
+# usbmodules
+/usr/sbin/usbmodules            system_u:object_r:usbmodules_exec_t

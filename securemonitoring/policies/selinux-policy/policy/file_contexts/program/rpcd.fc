@@ -1,0 +1,4 @@
+# RPC daemons
+/sbin/rpc\..*			system_u:object_r:rpcd_exec_t
+/usr/sbin/rpc\..*		system_u:object_r:rpcd_exec_t
+/usr/sbin/exportfs		system_u:object_r:rpcd_exec_t

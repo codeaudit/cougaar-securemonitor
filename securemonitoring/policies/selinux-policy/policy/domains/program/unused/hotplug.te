@@ -1,0 +1,67 @@
+#DESC Hotplug - Hardware event manager
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the hotplug_t domain.
+#
+# hotplug_exec_t is the type of the hotplug executable.
+#
+daemon_domain(hotplug)
+
+# allow kmod to run a shell to interpret the script
+allow kmod_t shell_exec_t:file execute;
+
+type etc_hotplug_t, file_type, sysadmfile;
+
+allow hotplug_t self:fifo_file { read write getattr ioctl };
+allow hotplug_t self:unix_dgram_socket create_socket_perms;
+allow hotplug_t self:unix_stream_socket create_socket_perms;
+allow hotplug_t self:udp_socket create_socket_perms;
+
+# get info from /proc
+allow hotplug_t proc_t:dir r_dir_perms;
+allow hotplug_t proc_t:file r_file_perms;
+allow hotplug_t proc_t:lnk_file read;
+
+allow hotplug_t devtty_t:chr_file rw_file_perms;
+
+allow hotplug_t { bin_t sbin_t }:dir search;
+allow hotplug_t { bin_t sbin_t }:lnk_file read;
+can_exec(hotplug_t, { bin_t sbin_t ls_exec_t shell_exec_t etc_hotplug_t etc_t })
+
+r_dir_file(hotplug_t, usbdevfs_t)
+allow hotplug_t usbdevfs_device_t:file getattr;
+
+# read config files
+allow hotplug_t etc_t:dir r_dir_perms;
+allow hotplug_t etc_t:{ file lnk_file } r_file_perms;
+allow hotplug_t etc_runtime_t:file { setattr rw_file_perms };
+
+allow hotplug_t kernel_t:process sigchld;
+
+# for sleep
+allow hotplug_t sysctl_kernel_t:dir search;
+allow hotplug_t sysctl_kernel_t:file read;
+
+domain_auto_trans(kmod_t, hotplug_exec_t, hotplug_t)
+domain_auto_trans_read(hotplug_t, insmod_exec_t, insmod_t)
+allow hotplug_t insmod_exec_t:lnk_file read;
+domain_auto_trans_read(hotplug_t, mount_exec_t, mount_t)
+domain_auto_trans_read(hotplug_t, ifconfig_exec_t, ifconfig_t)
+ifdef(`pump.te', `domain_auto_trans_read(hotplug_t, pump_exec_t, pump_t)')
+
+# init scripts run /etc/hotplug/usb.rc
+domain_auto_trans(initrc_t, etc_hotplug_t, hotplug_t)
+
+r_dir_file(hotplug_t, etc_hotplug_t)
+
+ifdef(`ifconfig.te', `domain_auto_trans(sysadm_t, ifconfig_exec_t, ifconfig_t)')
+
+allow hotplug_t modules_object_t:dir search;
+allow hotplug_t modules_dep_t:file r_file_perms;
+
+# for lsmod
+dontaudit hotplug_t self:capability sys_module;

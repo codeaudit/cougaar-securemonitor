@@ -1,0 +1,6 @@
+# squid
+/usr/sbin/squid			system_u:object_r:squid_exec_t
+/var/cache/squid(/.*)?		system_u:object_r:squid_cache_t
+/var/spool/squid(/.*)?		system_u:object_r:squid_cache_t
+/var/log/squid(/.*)?		system_u:object_r:var_log_squid_t
+/etc/squid\.conf		system_u:object_r:squid_conf_t

@@ -1,0 +1,15 @@
+#DESC CLAM - Anti-virus program
+#
+# Author:  Brian May <bam@snoopy.apana.org.au>
+#
+
+#################################
+#
+# Rules for the clamscan_t domain.
+#
+# clamscan_t is the domain of the clamscan virus scanner
+#
+type clamscan_exec_t, file_type, sysadmfile, exec_type;
+
+# Everything else is in the user_clamscan_domain macro in
+# macros/program/clamav_macros.te.

@@ -1,0 +1,138 @@
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+# Modified by Reino Wallin <reino@oribium.com>
+# Multi NIC, and IPSEC features
+
+# Modified by Russell Coker
+# Move port types to their respective domains, add ifdefs, other cleanups.
+
+############################################
+#
+# Network types
+#
+
+# 
+# any_socket_t is the default destination
+# socket type for UDP traffic.  Unless a 
+# destination socket type is explicitly specified
+# using sendto_secure/sendmsg_secure, this type
+# is used for the udp_socket sendto permission check.
+#
+type any_socket_t, socket_type;
+role system_r types any_socket_t;
+
+#
+# igmp_packet_t is the type of kernel-generated IGMP packets.
+# icmp_socket_t is the type of the kernel socket used to send ICMP messages.
+# tcp_socket_t is the type of the kernel socket used to send TCP resets.
+# scmp_packet_t is the type for SCMP packets used by the SELOPT packet labeling.
+#
+type igmp_packet_t;
+role system_r types igmp_packet_t;
+type icmp_socket_t, socket_type;
+role system_r types icmp_socket_t;
+type tcp_socket_t, socket_type;
+role system_r types tcp_socket_t;
+type scmp_packet_t;
+role system_r types scmp_packet_t;
+
+#
+# port_t is the default type of INET port numbers.
+# The *_port_t types are used for specific port
+# numbers in net_contexts or net_contexts.mls.
+#
+type port_t, port_type;
+
+#
+# netif_t is the default type of network interfaces.
+# The netif_*_t types are used for specific network
+# interfaces in net_contexts or net_contexts.mls.
+#
+type netif_t, netif_type;
+type netif_eth0_t, netif_type;
+type netif_eth1_t, netif_type;
+type netif_eth2_t, netif_type;
+type netif_lo_t, netif_type;
+type netif_ippp0_t, netif_type;
+
+type netif_ipsec0_t, netif_type;
+type netif_ipsec1_t, netif_type;
+type netif_ipsec2_t, netif_type;
+
+#
+# netmsg_t is the default type of unlabeled received messages.
+# The netmsg_*_t types are used for specific network
+# interfaces in net_contexts or net_contexts.mls.
+#
+type netmsg_t, netmsg_type;
+type netmsg_eth0_t, netmsg_type;
+type netmsg_eth1_t, netmsg_type;
+type netmsg_eth2_t, netmsg_type;
+type netmsg_lo_t, netmsg_type;
+type netmsg_ippp0_t, netmsg_type;
+
+type netmsg_ipsec0_t, netmsg_type;
+type netmsg_ipsec1_t, netmsg_type;
+type netmsg_ipsec2_t, netmsg_type;
+
+#
+# node_t is the default type of network nodes.
+# The node_*_t types are used for specific network
+# nodes in net_contexts or net_contexts.mls.
+#
+type node_t, node_type;
+type node_lo_t, node_type;
+type node_internal_t, node_type;
+
+#
+# Permissions for the kernel-generated IGMP packets.
+#
+allow igmp_packet_t netif_type:netif { rawip_send rawip_recv };
+allow igmp_packet_t node_type:node { rawip_send rawip_recv };
+
+#
+# Permissions for the kernel ICMP socket.
+#
+allow icmp_socket_t netif_type:netif { rawip_send rawip_recv };
+allow icmp_socket_t node_type:node { rawip_send rawip_recv };
+allow icmp_socket_t netmsg_type:rawip_socket recvfrom;
+
+#
+# Permissions for the kernel TCP reset socket.
+#
+allow tcp_socket_t netif_type:netif { tcp_send tcp_recv };
+allow tcp_socket_t netmsg_type:tcp_socket recvfrom;
+allow tcp_socket_t node_type:node { tcp_send tcp_recv };
+
+#
+# Allow network messages to be received.
+#
+allow netmsg_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_eth0_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_eth0_t netif_eth0_t:netif { tcp_recv udp_recv rawip_recv };
+allow netmsg_eth1_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_eth1_t netif_eth1_t:netif { tcp_recv udp_recv rawip_recv };
+allow netmsg_eth2_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_eth2_t netif_eth2_t:netif { tcp_recv udp_recv rawip_recv };
+allow netmsg_lo_t node_lo_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_lo_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_lo_t netif_lo_t:netif { tcp_recv udp_recv rawip_recv };
+allow netmsg_ippp0_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_ippp0_t netif_ippp0_t:netif { tcp_recv udp_recv rawip_recv };
+allow netmsg_ipsec0_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_ipsec0_t netif_ipsec0_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_ipsec1_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_ipsec1_t netif_ipsec1_t:netif { tcp_recv udp_recv rawip_recv };
+allow netmsg_ipsec2_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_ipsec2_t netif_ipsec2_t:netif { tcp_recv udp_recv rawip_recv };
+
+#
+# Allow ICMP echo requests to be sent and received, and echo replies to 
+# be received (when packets are labeled)
+#
+ifdef(`ping.te',
+`allow ping_t netif_type:netif { rawip_send rawip_recv };
+allow ping_t node_type:node { rawip_send rawip_recv };
+allow ping_t netmsg_type:rawip_socket { recvfrom };')

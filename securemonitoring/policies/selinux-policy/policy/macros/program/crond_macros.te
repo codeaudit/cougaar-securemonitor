@@ -1,0 +1,81 @@
+#
+# Macros for crond domains.
+#
+
+#
+# Authors:  Jonathan Crowley (MITRE) <jonathan@mitre.org>,
+#	    Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser
+#
+
+#
+# crond_domain(domain_prefix)
+#
+# Define a derived domain for cron jobs executed by crond on behalf 
+# of a user domain.  These domains are separate from the top-level domain
+# defined for the crond daemon and the domain defined for system cron jobs,
+# which are specified in domains/program/crond.te.
+#
+undefine(`crond_domain')
+define(`crond_domain',`
+# Derived domain for user cron jobs, user user_crond_domain if not system
+ifelse(`system', `$1', `
+type $1_crond_t, domain;
+', `
+type $1_crond_t, domain, user_crond_domain;
+')
+
+# Permit a transition from the crond_t domain to this domain.
+# The transition is requested explicitly by the modified crond 
+# via execve_secure.  There is no way to set up an automatic
+# transition, since crontabs are configuration files, not executables.
+domain_trans(crond_t, shell_exec_t, $1_crond_t)
+
+ifdef(`mta.te', `
+domain_auto_trans($1_crond_t, sendmail_exec_t, $1_mail_t)
+# $1_mail_t should only be reading from the cron fifo not needing to write
+dontaudit $1_mail_t crond_t:fifo_file write;
+allow mta_user_agent $1_crond_t:fd use;
+')
+
+# The user role is authorized for this domain.
+role $1_r types $1_crond_t;
+
+# This domain is granted permissions common to most domains.
+every_domain($1_crond_t)
+
+# Use capabilities.
+allow $1_crond_t $1_crond_t:capability dac_override;
+
+# Inherit and use descriptors from initrc.
+allow $1_crond_t initrc_t:fd use;
+
+# 
+# Since crontab files are not directly executed,
+# crond must ensure that the crontab file has
+# a type that is appropriate for the domain of
+# the user cron job.  It performs an entrypoint
+# permission check for this purpose.
+#
+allow $1_crond_t $1_cron_spool_t:file entrypoint;
+
+# Access user files and dirs.
+file_type_auto_trans($1_crond_t, $1_home_dir_t, $1_home_t)
+
+file_type_auto_trans($1_crond_t, tmp_t, $1_tmp_t)
+
+# Run helper programs.
+can_exec_any($1_crond_t)
+
+# Run scripts in user home directory.
+can_exec($1_crond_t, $1_home_t)
+')
+
+# When system_crond_t domain executes a type $1 executable then transition to
+# domain $2, allow $2 to interact with crond_t as well.
+define(`system_crond_entry', `
+domain_auto_trans(system_crond_t, $1, $2)
+allow $2 crond_t:fifo_file { getattr read write ioctl };
+# a rule for privfd may make this obsolete
+allow $2 crond_t:fd use;
+allow $2 crond_t:process sigchld;
+')

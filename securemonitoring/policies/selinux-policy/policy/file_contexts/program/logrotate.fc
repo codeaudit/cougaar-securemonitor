@@ -1,0 +1,4 @@
+# logrotate
+/usr/sbin/logrotate		system_u:object_r:logrotate_exec_t
+/usr/sbin/logcheck		system_u:object_r:logrotate_exec_t
+/etc/cron\.(daily|weekly)/sysklogd system_u:object_r:logrotate_exec_t

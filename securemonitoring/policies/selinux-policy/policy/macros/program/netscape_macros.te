@@ -1,0 +1,36 @@
+#
+# Macros for netscape/mozilla (or other browser) domains.
+#
+
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser 
+#
+
+#
+# netscape_domain(domain_prefix)
+#
+# Define a derived domain for the netscape/mozilla program when executed by
+# a user domain.  
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/netscape.te. 
+#
+define(`netscape_domain',`
+x_client_domain($1, netscape, `, privlog')
+
+# Execute downloaded programs.
+can_exec($1_netscape_t, $1_netscape_rw_t)
+
+ifdef(`apache.te', `
+# additions by Brian May <bam@snoopy.apana.org.au> 2002-07-16
+allow $1_netscape_t httpd_t:tcp_socket { recvfrom connectto };
+allow httpd_t $1_netscape_t:tcp_socket { recvfrom acceptfrom };
+')
+
+dontaudit $1_netscape_t $1_home_t:dir rw_dir_perms;
+dontaudit $1_netscape_t $1_home_t:file rw_file_perms;
+
+# Use printer
+ifdef(`lpr.te', `domain_auto_trans($1_netscape_t, lpr_exec_t, $1_lpr_t)')
+
+')dnl end netscape macro

@@ -1,0 +1,347 @@
+#
+# Macros for all user login domains.
+#
+
+#
+# user_domain(domain_prefix)
+#
+# Define derived types and rules for an ordinary user domain.
+#
+# The type declaration and role authorization for the domain must be
+# provided separately.  Likewise, domain transitions into this domain
+# must be specified separately.  
+#
+undefine(`user_domain')
+define(`user_domain',`
+# Use capabilities
+allow $1_t self:capability { setgid chown fowner };
+dontaudit $1_t self:capability { sys_nice fsetid };
+
+# Type for home directory.
+ifelse($1, sysadm, `
+type $1_home_dir_t, file_type, sysadmfile, home_dir_type, home_type;
+type $1_home_t, file_type, sysadmfile, home_type;
+tmp_domain($1)
+', `
+type $1_home_dir_t, file_type, sysadmfile, home_dir_type, user_home_dir_type, home_type, user_home_type;
+type $1_home_t, file_type, sysadmfile, home_type, user_home_type;
+# do not allow privhome access to sysadm_home_dir_t
+file_type_auto_trans(privhome, $1_home_dir_t, $1_home_t)
+tmp_domain($1, `, user_tmpfile')
+')
+
+# Create, access, and remove files in home directory.
+file_type_auto_trans($1_t, $1_home_dir_t, $1_home_t)
+allow $1_t $1_home_t:dir_file_class_set { relabelfrom relabelto };
+
+# Bind to a Unix domain socket in /tmp.
+allow $1_t $1_tmp_t:unix_stream_socket name_bind;
+
+# Type for tty devices.
+type $1_tty_device_t, file_type, sysadmfile, ttyfile;
+# Access ttys.
+allow $1_t $1_tty_device_t:chr_file { setattr rw_file_perms };
+# Use the type when relabeling terminal devices.
+type_change $1_t tty_device_t:chr_file $1_tty_device_t;
+ifdef(`dpkg.te', `
+# Debian login is from shadow utils and does not allow resetting the perms.
+# have to fix this!
+type_change $1_t ttyfile:chr_file $1_tty_device_t;
+')
+
+# Type and access for pty devices.
+ifelse(`$1', `sysadm', `
+can_create_pty($1)
+', `
+can_create_pty($1, `, userpty_type')
+')
+
+# Use the type when relabeling pty devices.
+ifdef(`rlogind.te',
+`type_change $1_t rlogind_devpts_t:chr_file $1_devpts_t;')
+ifdef(`ssh.te', `
+type_change $1_t sshd_devpts_t:chr_file $1_devpts_t;
+
+# Connect to sshd.
+can_tcp_connect($1_t, sshd_t)
+
+# Connect to ssh proxy.
+can_tcp_connect($1_t, $1_ssh_t)
+
+allow $1_t sshd_t:fd use;
+allow $1_t sshd_t:tcp_socket rw_stream_socket_perms;
+# Use a Unix stream socket inherited from sshd.
+allow $1_t sshd_t:unix_stream_socket rw_stream_socket_perms;
+')dnl end of ssh section
+
+# Type for tmpfs/shm files.
+type $1_tmpfs_t, file_type, sysadmfile, tmpfsfile;
+# Use the type when creating files in tmpfs.
+file_type_auto_trans($1_t, tmpfs_t, $1_tmpfs_t)
+allow $1_tmpfs_t tmpfs_t:filesystem associate;
+
+# Read and write /var/catman.
+allow $1_t catman_t:dir rw_dir_perms;
+allow $1_t catman_t:notdevfile_class_set create_file_perms;
+
+# Modify mail spool file.
+allow $1_t mail_spool_t:dir r_dir_perms;
+allow $1_t mail_spool_t:file rw_file_perms;
+allow $1_t mail_spool_t:lnk_file read;
+
+#
+# Allow the query of filesystem quotas
+#
+allow $1_t fs_type:filesystem quotaget;
+
+# Run helper programs.
+can_exec_any($1_t)
+# Run programs developed by other users in the same domain.
+can_exec($1_t, $1_home_t)
+can_exec($1_t, $1_tmp_t)
+
+# Run user programs that require different permissions in their own domain.
+# These rules were moved into the individual program domains.
+
+# Instantiate derived domains for a number of programs.
+# These derived domains encode both information about the calling
+# user domain and the program, and allow us to maintain separation
+# between different instances of the program being run by different
+# user domains.
+ifdef(`gnome-pty-helper.te', `gph_domain($1)')
+ifdef(`su.te', `su_domain($1)')
+ifdef(`chkpwd.te', `chkpwd_domain($1)')
+ifdef(`screen.te', `screen_domain($1)')
+ifdef(`netscape.te', `netscape_domain($1)')
+ifdef(`games.te', `
+x_client_domain($1, games)
+rw_dir_create_file($1_games_t, games_data_t)
+')
+ifdef(`gpg.te', `gpg_domain($1)')
+ifdef(`xauth.te', `xauth_domain($1)')
+ifdef(`xserver.te', `xserver_domain($1)')
+ifdef(`lpr.te', `lpr_domain($1)')
+ifdef(`mta.te', `mail_domain($1)')
+ifdef(`sendmail.te', `sendmail_user_domain($1)')
+ifdef(`crontab.te', `crontab_domain($1)')
+ifdef(`ssh.te', `ssh_domain($1)')
+ifdef(`irc.te', `irc_domain($1)')
+ifdef(`clamav.te', `user_clamscan_domain($1)')
+ifdef(`fingerd.te', `fingerd_macro($1)')
+
+# Instantiate a derived domain for user cron jobs.
+ifdef(`crond.te', `crond_domain($1)')
+
+ifdef(`vmware.te', `
+# probably should have a separate domain for each user
+file_type_auto_trans(vmware_user_t, $1_home_dir_t, vmware_user_file_t)
+')
+
+# Read the mouse.
+allow $1_t mouse_device_t:chr_file r_file_perms;
+# Access other miscellaneous devices.
+allow $1_t misc_device_t:file_class_set rw_file_perms;
+
+# Use the network.
+can_network($1_t)
+
+#
+# connect_secure and sendmsg_secure calls with a 
+# peer or destination socket SID can be enforced
+# when using the loopback interface.  Enforcement
+# for real network interfaces will be possible when
+# a packet labeling mechanism is integrated.
+#
+allow $1_t node_lo_t:node enforce_dest;
+
+# Communicate within the domain.
+can_udp_send($1_t, $1_t)
+can_tcp_connect($1_t, $1_t)
+
+# Connect to inetd.
+ifdef(`inetd.te', `can_tcp_connect($1_t,inetd_t)')
+
+ifdef(`rshd.te',
+`# Connect second port to rshd.
+can_tcp_connect(rshd_t, $1_t)')
+
+# Connect data port to ftpd.
+ifdef(`ftpd.te', `can_tcp_connect(ftpd_t, $1_t)')
+
+# Connect to portmap.
+ifdef(`portmap.te', `can_tcp_connect($1_t, portmap_t)')
+
+# Inherit and use sockets from inetd
+ifdef(`inetd.te',
+`allow $1_t inetd_t:fd use;
+allow $1_t inetd_t:tcp_socket rw_stream_socket_perms;')
+
+# Allow system log read
+#allow $1_t kernel_t:system syslog_read;
+# else do not log it
+dontaudit $1_t kernel_t:system syslog_read;
+
+# Very permissive allowing every domain to see every type.
+allow $1_t kernel_t:system { ipc_info };
+
+# When the user domain runs ps, there will be a number of access
+# denials when ps tries to search /proc.  Do not audit these denials.
+dontaudit $1_t domain:dir r_dir_perms;
+dontaudit $1_t domain:notdevfile_class_set r_file_perms;
+
+# Some shells ask for w access to utmp, but will operate
+# correctly without it.  Do not audit write denials to utmp.
+dontaudit $1_t initrc_var_run_t:file { getattr read write };
+
+# do not audit getattr on tmpfile, otherwise ls -l /tmp fills the logs
+dontaudit $1_t tmpfile:dir_file_class_set getattr;
+
+# do not audit getattr on disk devices, otherwise KDE fills the logs
+dontaudit $1_t { removable_device_t fixed_disk_device_t }:blk_file getattr;
+
+ifdef(`xdm.te', `
+# Connect to the X server run by the X Display Manager.
+can_unix_connect($1_t, xdm_t)
+allow $1_t xdm_tmp_t:sock_file rw_file_perms;
+allow $1_t xdm_tmp_t:dir r_dir_perms;
+allow $1_t xdm_xserver_tmp_t:sock_file { read write };
+allow $1_t xdm_xserver_tmp_t:dir search;
+
+ifelse(`$1', sysadm, `', `
+file_type_auto_trans(xdm_t, $1_home_dir_t, $1_home_xauth_t, file)
+')dnl end ifelse sysadm
+')dnl end ifdef xdm.te
+
+# Access the sound device.
+allow $1_t sound_device_t:chr_file { getattr read write ioctl };
+
+# Allow reading dpkg origins file
+ifdef(`dpkg.te', `
+r_dir_file($1_t, etc_dpkg_t)
+')
+
+ifdef(`ftpd.te', `
+# uncomment the following for FTP access to all home directories
+# or you can just enable FTP access for certain user domains in the ftpd.te
+# file
+#file_type_auto_trans(ftpd_t, $1_home_dir_t, $1_home_t)
+')
+
+')
+
+
+###########################################################################
+#
+# Domains for ordinary users.
+#
+undefine(`full_user_role')
+define(`full_user_role', `
+
+# user_t/$1_t is an unprivileged users domain.
+type $1_t, domain, userdomain, unpriv_userdomain;
+
+# $1_r is authorized for $1_t for the initial login domain.
+role $1_r types $1_t;
+allow system_r $1_r;
+
+# Grant permissions within the domain.
+general_domain_access($1_t);
+
+# Grant read/search permissions to some of /proc.
+allow $1_t proc_t:dir r_dir_perms;
+allow $1_t proc_t:{ file lnk_file } r_file_perms;
+
+# Grand read/search permissions to many system types.
+#general_file_read_access($1_t);
+# Get attributes of file systems.
+allow $1_t fs_type:filesystem getattr;
+
+base_file_read_access($1_t)
+
+# Read directories and files with the readable_t type.
+# This type is a general type for "world"-readable files.
+allow $1_t readable_t:dir r_dir_perms;
+allow $1_t readable_t:notdevfile_class_set r_file_perms;
+
+# Stat /...security and lost+found.
+allow $1_t file_labels_t:dir getattr;
+allow $1_t lost_found_t:dir getattr;
+
+# Read the devpts root directory.
+allow $1_t devpts_t:dir r_dir_perms;
+ifdef(`sshd.te',
+`allow $1_t sshd_devpts_t:dir r_dir_perms;')
+
+# Read the /tmp directory and any /tmp files with the base type.
+# Temporary files created at runtime will typically use derived types.
+allow $1_t tmp_t:dir r_dir_perms;
+allow $1_t tmp_t:{ file lnk_file } r_file_perms;
+
+# Read /var, /var/spool, /var/run.
+allow $1_t var_t:dir r_dir_perms;
+allow $1_t var_t:notdevfile_class_set r_file_perms;
+allow $1_t var_spool_t:dir r_dir_perms;
+allow $1_t var_spool_t:notdevfile_class_set r_file_perms;
+allow $1_t var_run_t:dir r_dir_perms;
+allow $1_t var_run_t:{ file lnk_file } r_file_perms;
+
+# Read /etc.
+allow $1_t etc_t:dir r_dir_perms;
+allow $1_t etc_t:notdevfile_class_set r_file_perms;
+allow $1_t etc_runtime_t:{ file lnk_file } r_file_perms;
+
+# Read man directories and files.
+allow $1_t man_t:dir r_dir_perms;
+allow $1_t man_t:notdevfile_class_set r_file_perms;
+
+# Read /dev directories and any symbolic links.
+allow $1_t device_t:dir r_dir_perms;
+allow $1_t device_t:lnk_file r_file_perms;
+
+# Read and write /dev/tty and /dev/null.
+allow $1_t devtty_t:chr_file rw_file_perms;
+allow $1_t { null_device_t zero_device_t }:chr_file rw_file_perms;
+
+# Do not audit write denials to /etc/ld.so.cache.
+dontaudit $1_t ld_so_cache_t:file write;
+
+# Execute from the system shared libraries.
+uses_shlib($1_t);
+
+# Obtain the context of any SID, the SID for any context,
+# and the list of active SIDs.
+allow $1_t security_t:security { sid_to_context context_to_sid get_sids };
+
+# $1_t is also granted permissions specific to user domains.
+user_domain($1)
+
+# When an ordinary user domain runs su, su may try to
+# update the /root/.Xauthority file, and the user shell may
+# try to update the shell history. This isnt allowed, but 
+# we dont need to audit it.
+ifdef(`su.te', `
+dontaudit $1_su_t sysadm_home_t:dir  { read getattr search write add_name remove_name };
+dontaudit $1_su_t sysadm_home_t:file { read getattr create write link unlink };')
+dontaudit $1_t    sysadm_home_t:dir { read search getattr };
+dontaudit $1_t    sysadm_home_t:file { read getattr append };
+
+ifdef(`syslogd.te', `
+# Some programs that are left in $1_t will try to connect
+# to syslogd, but we do not want to let them generate log messages.
+# Do not audit.
+dontaudit $1_t devlog_t:sock_file { read write };
+dontaudit $1_t syslogd_t:unix_dgram_socket sendto;
+')
+
+# stop warnings about "ls -l" on directories with unlabelled files
+dontaudit $1_t file_t:{ dir file lnk_file } getattr;
+')
+
+undefine(`in_user_role')
+define(`in_user_role', `
+role user_r types $1;
+role cougaar_r types $1;
+#role staff_r types $1;
+')
+
+

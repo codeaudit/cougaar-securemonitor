@@ -1,0 +1,100 @@
+#DESC Bootloader - Lilo boot loader/manager
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the bootloader_t domain.
+#
+# bootloader_exec_t is the type of the bootloader executable.
+#
+type bootloader_t, domain, privlog, privmem;
+type bootloader_exec_t, file_type, sysadmfile, exec_type;
+type bootloader_tmp_t, file_type, sysadmfile, tmpfile;
+type etc_bootloader_t, file_type, sysadmfile;
+
+role sysadm_r types bootloader_t;
+role system_r types bootloader_t;
+
+create_append_log_file(bootloader_t, var_log_t)
+allow bootloader_t var_log_t:file write;
+
+domain_auto_trans(sysadm_t, bootloader_exec_t, bootloader_t)
+allow bootloader_t { initrc_t privfd }:fd use;
+
+file_type_auto_trans(bootloader_t, tmp_t, bootloader_tmp_t)
+allow bootloader_t bootloader_tmp_t:devfile_class_set create_file_perms;
+
+# for /vmlinuz sym link
+allow bootloader_t root_t:lnk_file read;
+
+allow bootloader_t { etc_t device_t }:dir r_dir_perms;
+allow bootloader_t etc_t:file r_file_perms;
+allow bootloader_t etc_t:lnk_file read;
+uses_shlib(bootloader_t)
+
+allow bootloader_t { fixed_disk_device_t removable_device_t }:blk_file rw_file_perms;
+allow bootloader_t etc_bootloader_t:file r_file_perms;
+# uncomment the following line if you use "lilo -p"
+#file_type_auto_trans(bootloader_t, etc_t, etc_bootloader_t, file);
+
+can_exec(bootloader_t, { bootloader_exec_t shell_exec_t bin_t sbin_t })
+allow bootloader_t shell_exec_t:lnk_file read;
+allow bootloader_t { bin_t sbin_t }:dir search;
+allow bootloader_t { bin_t sbin_t }:lnk_file read;
+
+allow bootloader_t { modules_dep_t modules_object_t }:file read;
+dontaudit bootloader_t modules_dep_t:file ioctl;
+allow bootloader_t modules_object_t:dir { read search };
+allow bootloader_t modules_conf_t:file read;
+
+# for ldd
+allow bootloader_t { insmod_exec_t fsadm_exec_t }:file { rx_file_perms execute_no_trans };
+allow bootloader_t insmod_exec_t:lnk_file { getattr read };
+
+dontaudit bootloader_t sysadm_home_dir_t:dir search;
+
+allow bootloader_t boot_t:dir rw_dir_perms;
+allow bootloader_t boot_t:{ file lnk_file } create_file_perms;
+allow domain boot_t:lnk_file getattr;
+ifdef(`rpm.te', `
+# needed for red hat
+allow bootloader_t boot_runtime_t:file { read getattr unlink };
+')
+
+allow bootloader_t self:capability { fsetid sys_rawio sys_admin mknod chown };
+# allow bootloader to get attributes of any device node
+allow bootloader_t file_type:dir_file_class_set getattr;
+dontaudit bootloader_t devpts_t:dir create_dir_perms;
+
+allow bootloader_t self:process { fork signal_perms };
+allow bootloader_t self:lnk_file read;
+allow bootloader_t self:dir search;
+allow bootloader_t self:fifo_file rw_file_perms;
+
+allow bootloader_t fs_t:filesystem getattr;
+
+allow bootloader_t proc_t:dir r_dir_perms;
+allow bootloader_t proc_t:file r_file_perms;
+allow bootloader_t proc_t:lnk_file read;
+allow bootloader_t sysctl_kernel_t:dir search;
+allow bootloader_t sysctl_kernel_t:file { getattr read };
+allow bootloader_t etc_runtime_t:file r_file_perms;
+
+allow bootloader_t devtty_t:chr_file rw_file_perms;
+allow bootloader_t { initrc_devpts_t admin_tty_type }:chr_file rw_file_perms;
+
+ifdef(`dpkg.te', `
+# for making an initrd
+can_exec(bootloader_t, mount_exec_t)
+ifdef(`chroot.te', `
+can_exec(bootloader_t, chroot_exec_t)
+')dnl end chroot.te
+')dnl end dpkg.te
+
+# for reading BIOS data
+allow bootloader_t memory_device_t:chr_file r_file_perms;
+
+allow bootloader_t policy_config_t:dir { search read };
+allow bootloader_t policy_config_t:file read;

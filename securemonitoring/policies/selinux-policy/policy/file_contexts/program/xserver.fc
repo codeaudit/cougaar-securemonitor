@@ -1,0 +1,9 @@
+# X server
+/dev/agpgart			system_u:object_r:agp_device_t
+/dev/dri(/.*)?			system_u:object_r:dri_device_t
+/usr/X11R6/bin/Xwrapper		system_u:object_r:xserver_exec_t
+/usr/X11R6/bin/X		system_u:object_r:xserver_exec_t
+/usr/X11R6/bin/XFree86		system_u:object_r:xserver_exec_t
+/var/lib/xkb(/.*)?		system_u:object_r:var_lib_xkb_t
+/var/log/XFree86.*		system_u:object_r:xserver_var_log_t
+/etc/init\.d/xfree86-common	system_u:object_r:xserver_exec_t

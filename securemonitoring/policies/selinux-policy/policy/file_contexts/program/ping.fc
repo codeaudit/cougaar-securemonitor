@@ -1,0 +1,2 @@
+# ping
+/bin/ping.* 			system_u:object_r:ping_exec_t

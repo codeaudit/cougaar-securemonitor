@@ -1,0 +1,81 @@
+#DESC Syslogd - System log daemon
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the syslogd_t domain.
+#
+# syslogd_t is the domain of syslogd.
+# syslogd_exec_t is the type of the syslogd executable.
+# devlog_t is the type of the Unix domain socket created 
+# by syslogd.
+#
+type syslogd_t, domain;
+role system_r types syslogd_t;
+uses_shlib(syslogd_t)
+type syslogd_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, syslogd_exec_t, syslogd_t)
+type devlog_t, file_type, sysadmfile;
+allow syslogd_t self:process { fork signal };
+
+# if something can log to syslog they should be able to log to the console
+allow privlog console_device_t:chr_file { ioctl read write getattr };
+
+type syslogd_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(syslogd_t, tmp_t, syslogd_tmp_t)
+type syslogd_var_run_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans(syslogd_t, var_run_t, syslogd_var_run_t, file)
+allow syslogd_t var_t:dir r_dir_perms;
+
+# read files in /etc
+allow syslogd_t etc_t:file r_file_perms;
+allow syslogd_t resolv_conf_t:{ file lnk_file } r_file_perms;
+
+# read localization information
+allow syslogd_t locale_t:dir r_dir_perms;
+allow syslogd_t locale_t:{file lnk_file} r_file_perms;
+
+# Use capabilities.
+allow syslogd_t syslogd_t:capability { net_bind_service dac_override };
+
+# Inherit and use descriptors from init.
+allow syslogd_t init_t:fd use;
+allow syslogd_t { initrc_devpts_t console_device_t }:chr_file { read write };
+
+# Modify/create log files.
+create_append_log_file(syslogd_t, var_log_t)
+
+# Create and bind to /dev/log or /var/run/log.
+file_type_auto_trans(syslogd_t, { device_t var_run_t }, devlog_t, sock_file)
+allow syslogd_t self:unix_dgram_socket create_socket_perms;
+allow syslogd_t self:unix_dgram_socket { sendto };
+allow syslogd_t self:unix_stream_socket create_socket_perms;
+allow syslogd_t self:unix_stream_socket { listen accept };
+allow syslogd_t devlog_t:unix_stream_socket name_bind;
+allow syslogd_t devlog_t:unix_dgram_socket name_bind;
+
+# Domains with the privlog attribute may log to syslogd.
+allow privlog devlog_t:sock_file rw_file_perms;
+can_unix_send(privlog,syslogd_t)
+can_unix_connect(privlog,syslogd_t)
+# allow /dev/log to be a link elsewhere for chroot setup
+allow privlog devlog_t:lnk_file read;
+
+# Write to the cron log.
+allow syslogd_t cron_log_t:file rw_file_perms;
+
+# Added by Us
+allow syslogd_t any_socket_t:udp_socket { sendto };
+allow syslogd_t netif_eth0_t:netif { udp_send };
+allow syslogd_t netif_lo_t:netif { udp_recv udp_send };
+allow syslogd_t netmsg_eth0_t:udp_socket { recvfrom };
+allow syslogd_t node_lo_t:node { udp_recv udp_send };
+allow syslogd_t node_t:node { udp_send };
+allow syslogd_t port_t:udp_socket { name_bind };
+allow syslogd_t syslogd_t:udp_socket { bind connect create read setopt write };
+allow syslogd_t var_spool_t:file { execute getattr read };
+allow syslogd_t var_yp_t:dir { search };
+
+

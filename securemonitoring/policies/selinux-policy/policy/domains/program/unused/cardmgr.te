@@ -1,0 +1,64 @@
+#DESC Cardmgr - PCMCIA control programs
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the cardmgr_t domain.
+#
+type cardmgr_t, domain, privlog;
+role system_r types cardmgr_t;
+role sysadm_r types cardmgr_t;
+every_domain(cardmgr_t)
+type cardmgr_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, cardmgr_exec_t, cardmgr_t)
+type cardctl_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(sysadm_t, cardctl_exec_t, cardmgr_t)
+
+# Use capabilities (net_admin for route), setuid for cardctl
+allow cardmgr_t self:capability { sys_admin net_admin mknod setuid };
+
+# Inherit and use descriptors from init.
+allow cardmgr_t init_t:fd use;
+
+# for /etc/resolv.conf
+file_type_auto_trans(cardmgr_t, etc_t, resolv_conf_t)
+
+allow cardmgr_t initrc_devpts_t:chr_file { read write };
+
+# Create pid file and temporary block and character device nodes
+type cardmgr_var_run_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans(cardmgr_t, { var_run_t device_t }, cardmgr_var_run_t, { blk_file chr_file file })
+
+# Create stab file and device nodes.
+type cardmgr_var_lib_t, file_type, sysadmfile;
+file_type_auto_trans(cardmgr_t, var_lib_t, cardmgr_var_lib_t, { blk_file chr_file file })
+
+# Create device files in /tmp.
+type cardmgr_dev_t, file_type, sysadmfile, tmpfile;
+type_transition cardmgr_t tmp_t:chr_file cardmgr_dev_t;
+allow cardmgr_t cardmgr_dev_t:chr_file create_file_perms;
+
+# Create symbolic links in /dev.
+type cardmgr_lnk_t, file_type, sysadmfile;
+type_transition cardmgr_t device_t:lnk_file cardmgr_lnk_t;
+allow cardmgr_t device_t:dir rw_dir_perms;
+allow cardmgr_t cardmgr_lnk_t:lnk_file create_file_perms;
+
+# Run a shell, normal commands, /etc/pcmcia scripts. 
+can_exec_any(cardmgr_t)
+
+# Run insmod and rmmod. 
+domain_auto_trans(cardmgr_t, insmod_exec_t, insmod_t)
+
+# Run ifconfig.
+domain_auto_trans(cardmgr_t, ifconfig_exec_t, ifconfig_t)
+allow ifconfig_t cardmgr_t:fd use;
+
+# Read /proc/PID directories for all domains (for fuser).
+allow cardmgr_t domain:notdevfile_class_set r_file_perms;
+allow cardmgr_t domain:dir r_dir_perms;
+
+ifdef(`apmd.te',
+`domain_auto_trans(apmd_t, cardmgr_exec_t, cardmgr_t)')

@@ -1,0 +1,3 @@
+# nscd
+/usr/sbin/nscd			system_u:object_r:nscd_exec_t
+/var/run/\.nscd_socket		system_u:object_r:var_run_nscd_t

@@ -1,0 +1,3 @@
+# radvd
+/etc/radvd\.conf                system_u:object_r:etc_radvd_t
+/usr/sbin/radvd                 system_u:object_r:radvd_exec_t

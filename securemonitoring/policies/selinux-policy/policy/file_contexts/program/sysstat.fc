@@ -1,0 +1,5 @@
+# sysstat and other sar programs
+/usr/lib/atsar/atsa.*		system_u:object_r:sysstat_exec_t
+/usr/lib/sysstat/sa.*		system_u:object_r:sysstat_exec_t
+/var/log/atsar(/.*)?		system_u:object_r:var_log_sysstat_t
+/var/log/sysstat(/.*)?		system_u:object_r:var_log_sysstat_t

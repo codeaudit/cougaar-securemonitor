@@ -1,0 +1,6 @@
+# dhcpd
+/etc/dhcpd.conf			system_u:object_r:etc_dhcpd_t
+/etc/dhcp3(/.*)?		system_u:object_r:etc_dhcpd_t
+/usr/sbin/dhcpd.*		system_u:object_r:dhcpd_exec_t
+/var/lib/dhcp(3)?		system_u:object_r:dhcp_state_t
+/var/lib/dhcp(3)?/dhcpd\.leases.*	system_u:object_r:dhcpd_state_t

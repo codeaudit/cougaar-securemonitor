@@ -1,0 +1,26 @@
+#DESC Tcpd - Access control facilities from internet services
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the tcpd_t domain.
+#
+type tcpd_t, domain, privlog;
+role system_r types tcpd_t;
+every_domain(tcpd_t)
+type tcpd_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(inetd_t, tcpd_exec_t, tcpd_t)
+
+type tcpd_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(tcpd_t, tmp_t, tcpd_tmp_t)
+
+# Use sockets inherited from inetd.
+allow tcpd_t inetd_t:tcp_socket rw_stream_socket_perms;
+
+# Run each daemon with a defined domain in its own domain.
+# These rules have been moved to each target domain's .te file.
+
+# Run other daemons in the inetd_child_t domain.
+domain_auto_trans(tcpd_t, inetd_child_exec_t, inetd_child_t)

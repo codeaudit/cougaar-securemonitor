@@ -1,0 +1,3 @@
+# klogd
+/sbin/klogd			system_u:object_r:klogd_exec_t
+/usr/sbin/klogd			system_u:object_r:klogd_exec_t

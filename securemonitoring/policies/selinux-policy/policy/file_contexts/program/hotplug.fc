@@ -1,0 +1,3 @@
+# hotplug
+/etc/hotplug/.*			system_u:object_r:etc_hotplug_t
+/sbin/hotplug			system_u:object_r:hotplug_exec_t

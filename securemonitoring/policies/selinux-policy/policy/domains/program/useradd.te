@@ -1,0 +1,68 @@
+#DESC Useradd - Manage system user accounts
+#
+# Authors:  Chris Vance <cvance@tislabs.com>
+#
+
+#################################
+#
+# Rules for the useradd_t domain.
+#
+# useradd_t is the domain of the useradd/userdel programs when
+# executed through the suseradd/suserdel wrapper.
+#
+type useradd_t, domain, privlog, auth, privowner;
+role sysadm_r types useradd_t;
+
+general_domain_access(useradd_t);
+
+uses_shlib(useradd_t);
+
+type useradd_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(sysadm_t, useradd_exec_t, useradd_t)
+
+# Add/remove user home directories
+file_type_auto_trans(useradd_t, home_root_t, user_home_dir_t)
+file_type_auto_trans(useradd_t, user_home_dir_t, user_home_t)
+
+# create mail spool file in /var/mail
+allow useradd_t mail_spool_t:dir {search write add_name remove_name};
+allow useradd_t mail_spool_t:file {create setattr getattr unlink};
+# /var/mail is a link to /var/spool/mail
+allow useradd_t mail_spool_t:lnk_file {read};
+
+# Use capabilities.
+allow useradd_t useradd_t:capability { fowner chown dac_override fsetid setuid sys_resource };
+
+# Allow access to context for shadow file
+allow useradd_t security_t:security { context_to_sid };
+
+# Inherit and use descriptors from login.
+allow useradd_t privfd:fd use;
+
+# Execute /usr/bin/{passwd,chfn,chsh} and /usr/sbin/{useradd,vipw}.
+allow useradd_t { bin_t sbin_t }:dir r_dir_perms;
+can_exec(useradd_t, { bin_t sbin_t shell_exec_t })
+
+# allow checking if a shell is executable
+allow useradd_t shell_exec_t:file execute;
+
+# Update /etc/shadow and /etc/passwd
+file_type_auto_trans(useradd_t, etc_t, shadow_t)
+allow useradd_t etc_t:file create_file_perms;
+
+allow useradd_t { etc_t shadow_t }:file { relabelfrom relabelto };
+
+# allow vipw to create temporary files under /var/tmp/vi.recover
+tmp_domain(useradd)
+
+# /usr/bin/userdel locks the user being deleted, allow write access to utmp
+allow useradd_t initrc_var_run_t:file { write };
+
+# useradd/userdel request read/write for /var/log/lastlog, and read of /dev, 
+# but will operate without them.
+dontaudit useradd_t { device_t var_t }:dir { search };
+
+# Access terminals.
+allow useradd_t ttyfile:chr_file rw_file_perms;
+allow useradd_t ptyfile:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow useradd_t gphdomain:fd use;')

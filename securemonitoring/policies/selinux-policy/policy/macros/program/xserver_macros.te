@@ -1,0 +1,163 @@
+#
+# Macros for X server domains.
+#
+
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser
+#
+
+#################################
+#
+# xserver_domain(domain_prefix)
+#
+# Define a derived domain for the X server when executed
+# by a user domain (e.g. via startx).  See the xdm_t domain
+# in domains/program/xdm.te if using an X Display Manager.
+#
+# The type declarations for the executable type for this program 
+# and the log type are provided separately in domains/program/xserver.te. 
+#
+# FIXME!  The X server requires far too many privileges.
+#
+undefine(`xserver_domain')
+ifdef(`xserver.te', `
+
+define(`xserver_domain',`
+# Derived domain based on the calling user domain and the program.
+type $1_xserver_t, domain, privlog, privmem;
+
+# Transition from the user domain to this domain.
+domain_auto_trans($1_t, xserver_exec_t, $1_xserver_t)
+
+ifelse($1, xdm, `
+# The system role is authorised for the xdm domain
+role system_r types $1_xserver_t;
+', `
+# The user role is authorized for this domain.
+role $1_r types $1_xserver_t;
+')dnl
+
+uses_shlib($1_xserver_t)
+can_network($1_xserver_t)
+
+# for access within the domain
+general_domain_access($1_xserver_t)
+
+# for access to lots of base files
+general_file_read_access($1_xserver_t)
+
+allow $1_xserver_t proc_t:dir search;
+
+# Use capabilities.
+# allow setuid/setgid for the wrapper program to change UID
+# sys_rawio is for iopl access - should not be needed for frame-buffer
+# sys_admin, locking shared mem?  chowning IPC message queues or semaphores?
+# admin of APM bios?
+# sys_nice is so that the X server can set a negative nice value
+allow $1_xserver_t self:capability { setuid setgid sys_rawio sys_admin sys_nice };
+dontaudit $1_xserver_t self:capability { dac_override dac_read_search };
+
+# memory_device_t access is needed if not using the frame buffer
+dontaudit $1_xserver_t memory_device_t:chr_file read;
+#allow $1_xserver_t memory_device_t:chr_file { rw_file_perms execute };
+# net_bind_service is needed if you want your X server to allow TCP connections
+# from other hosts, EG an XDM serving a network of X terms
+# if you want good security you do not want this
+# not sure why some people want chown, fsetid, and sys_tty_config.
+#allow $1_xserver_t self:capability { net_bind_service chown fsetid sys_tty_config };
+dontaudit $1_xserver_t self:capability chown;
+
+allow $1_xserver_t mtrr_device_t:file rw_file_perms;
+allow $1_xserver_t apm_bios_t:chr_file rw_file_perms;
+allow $1_xserver_t framebuf_device_t:chr_file rw_file_perms;
+allow $1_xserver_t devtty_t:chr_file rw_file_perms;
+allow $1_xserver_t devtty_t:lnk_file read;
+
+# Type for temporary files.
+tmp_domain($1_xserver)
+file_type_auto_trans($1_xserver_t, initrc_xserver_tmp_t, $1_xserver_tmp_t, sock_file)
+allow $1_t initrc_xserver_tmp_t:dir r_dir_perms;
+
+# Create files in /var/log with the xserver_var_log_t type.
+file_type_auto_trans($1_xserver_t, var_log_t, xserver_var_log_t)
+
+# Allow the user domain to signal the X server for termination.
+allow $1_t $1_xserver_t:process signal;
+
+# Allow the user domain to connect to the X server.
+can_unix_connect($1_t, $1_xserver_t)
+allow $1_t $1_xserver_tmp_t:sock_file rw_file_perms;
+allow $1_t $1_xserver_tmp_t:dir r_dir_perms;
+
+# Signal the user domain.
+allow $1_xserver_t $1_t:process signal;
+
+# Access AGP device.
+allow $1_xserver_t agp_device_t:chr_file rw_file_perms;
+
+# Access /proc/mtrr
+allow $1_xserver_t proc_t:file rw_file_perms;
+
+# Create and access /dev/dri devices.
+allow $1_xserver_t dri_device_t:dir { setattr rw_dir_perms };
+allow $1_xserver_t dri_device_t:chr_file create_file_perms;
+
+# Access ttys.
+ifelse($1, xdm, , `
+allow $1_xserver_t $1_tty_device_t:chr_file { setattr rw_file_perms };
+')
+allow $1_xserver_t tty_device_t:chr_file { setattr rw_file_perms };
+
+# Run helper programs in $1_xserver_t.
+can_exec_any($1_xserver_t)
+
+# Connect to xfs.
+ifdef(`xfs.te',
+`can_unix_connect($1_xserver_t, xfs_t)
+allow $1_xserver_t xfs_tmp_t:dir r_dir_perms;
+allow $1_xserver_t xfs_tmp_t:sock_file rw_file_perms;
+
+# Bind to the X server socket in /tmp.
+allow $1_xserver_t $1_xserver_tmp_t:unix_stream_socket name_bind;')
+
+# Communicate via System V shared memory.
+allow $1_xserver_t $1_t:shm rw_shm_perms;
+allow $1_t $1_xserver_t:shm rw_shm_perms;
+ifelse($1, xdm, `', `
+allow $1_xserver_t $1_tmpfs_t:file rw_file_perms;
+allow $1_t $1_xserver_tmpfs_t:file rw_file_perms;
+')
+
+# David Wheeler says he needs the following permission
+# for his X server.  Something is wrong here - the shared
+# memory pseudo file should be labeled $1_tmpfs_t and handled
+# by the rule above.  Needs further investigation.
+allow $1_xserver_t tmpfs_t:file rw_file_perms;
+
+# Type for tmpfs/shm files.
+type $1_xserver_tmpfs_t, file_type, sysadmfile;
+# Use this type when creating tmpfs/shm objects.
+file_type_auto_trans($1_xserver_t, tmpfs_t, $1_xserver_tmpfs_t)
+allow $1_xserver_tmpfs_t tmpfs_t:filesystem associate;
+
+# Use the mouse.
+allow $1_xserver_t mouse_device_t:chr_file rw_file_perms;
+
+ifelse($1, xdm, `
+dontaudit xdm_xserver_t sysadm_home_dir_t:dir { read search };
+', `
+# Access the home directory.
+allow $1_xserver_t $1_home_dir_t:dir { getattr read search };
+file_type_auto_trans($1_xserver_t, $1_home_dir_t, $1_home_xauth_t, file)
+')dnl end ifelse xdm
+
+allow $1_xserver_t var_lib_xkb_t:dir rw_dir_perms;
+allow $1_xserver_t var_lib_xkb_t:file create_file_perms;
+')dnl end macro definition
+
+', `
+
+define(`xserver_domain',`')
+
+')
+

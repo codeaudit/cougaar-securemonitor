@@ -1,0 +1,50 @@
+#DESC Netutils - Network utilities
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil>
+#
+
+#
+# Rules for the netutils_t domain.
+# This domain is for network utilities that require access to
+# special protocol families.
+#
+type netutils_t, domain, privlog;
+type netutils_exec_t, file_type, sysadmfile, exec_type;
+role system_r types netutils_t;
+role sysadm_r types netutils_t;
+
+uses_shlib(netutils_t)
+
+domain_auto_trans(initrc_t, netutils_exec_t, netutils_t)
+domain_auto_trans(sysadm_t, netutils_exec_t, netutils_t)
+
+# Inherit and use descriptors from init.
+allow netutils_t init_t:fd use;
+
+# Perform network administration operations and have raw access to the network.
+allow netutils_t self:capability { net_admin net_raw setuid setgid };
+
+# Create and use netlink sockets.
+allow netutils_t self:netlink_socket create_socket_perms;
+
+# Create and use packet sockets.
+allow netutils_t self:packet_socket create_socket_perms;
+
+# Create and use UDP sockets.
+allow netutils_t self:udp_socket create_socket_perms;
+
+# Create and use TCP sockets.
+allow netutils_t self:tcp_socket create_socket_perms;
+
+# Read certain files in /etc
+allow netutils_t etc_t:notdevfile_class_set r_file_perms;
+allow netutils_t resolv_conf_t:file r_file_perms;
+
+# Access terminals.
+allow netutils_t privfd:fd use;
+allow netutils_t admin_tty_type:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow netutils_t sysadm_gph_t:fd use;')
+
+# Added by us
+allow netutils_t var_spool_t:file { execute getattr read };
+

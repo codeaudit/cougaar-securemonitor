@@ -1,0 +1,51 @@
+#DESC Authoritative only name server
+#
+# Author: Russell Coker
+# 
+#
+
+#################################
+#
+# Rules for the nsd_t domain.
+#
+ifdef(`named.te', `', `
+type named_port_t, port_type;
+')
+
+daemon_domain(nsd)
+
+# A type for configuration files of nsd
+type nsd_conf_t, file_type, sysadmfile;
+# A type for zone files
+type nsd_zone_t, file_type, sysadmfile;
+
+r_dir_file(nsd_t, { nsd_conf_t nsd_zone_t })
+r_dir_file(initrc_t, nsd_conf_t)
+
+# Use capabilities. Surplus capabilities may be allowed.
+allow nsd_t self:capability { setuid setgid net_bind_service };
+
+allow nsd_t etc_t:{ file lnk_file } { getattr read };
+allow nsd_t resolv_conf_t:file { getattr read };
+
+# nsd can use network
+can_network(nsd_t)
+# allow client access from caching BIND
+ifdef(`named.te', `
+can_udp_send(named_t, nsd_t)
+can_udp_send(nsd_t, named_t)
+can_tcp_connect(named_t, nsd_t)
+')
+
+# if you want to allow all programs to contact the primary name server
+#can_udp_send(domain, nsd_t)
+#can_udp_send(nsd_t, domain)
+#can_tcp_connect(domain, nsd_t)
+
+# Bind to the named port.
+allow nsd_t named_port_t:udp_socket name_bind;
+allow nsd_t named_port_t:tcp_socket name_bind;
+
+allow nsd_t self:unix_stream_socket create_stream_socket_perms;
+allow nsd_t self:unix_dgram_socket create_socket_perms;
+

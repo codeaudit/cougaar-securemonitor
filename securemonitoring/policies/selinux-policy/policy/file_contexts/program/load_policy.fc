@@ -1,0 +1,4 @@
+# load_policy
+/usr/local/selinux/bin/load_policy	system_u:object_r:load_policy_exec_t
+/usr/local/bin/load_policy		system_u:object_r:load_policy_exec_t
+/usr/sbin/load_policy			system_u:object_r:load_policy_exec_t

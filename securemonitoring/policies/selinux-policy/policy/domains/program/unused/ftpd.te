@@ -1,0 +1,66 @@
+#DESC Ftpd - Ftp daemon
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the ftpd_t domain 
+#
+type ftp_port_t, port_type;
+type ftpd_t, domain, privlog, auth;
+role system_r types ftpd_t;
+every_domain(ftpd_t)
+type ftpd_exec_t, file_type, sysadmfile, exec_type;
+type etc_ftpd_t, file_type, sysadmfile;
+type ftpd_var_run_t, file_type, sysadmfile, pidfile;
+domain_auto_trans(initrc_t, ftpd_exec_t, ftpd_t)
+ifdef(`inetd.te', `domain_auto_trans(inetd_t, ftpd_exec_t, ftpd_t)')
+ifdef(`tcpd.te', `domain_auto_trans(tcpd_t, ftpd_exec_t, ftpd_t)')
+
+ifdef(`crond.te', `
+system_crond_entry(ftpd_exec_t, ftpd_t)
+can_exec(ftpd_t, { bin_t sbin_t shell_exec_t })
+')
+
+# Inherit and use descriptors from inetd.
+allow ftpd_t inetd_t:fd use;
+
+ifdef(`ftpd_daemon', `
+allow ftpd_t init_t:fd use;
+rw_dir_create_file(ftpd_t, var_lock_t)
+allow ftpd_t ftp_port_t:tcp_socket name_bind;
+can_tcp_connect(domain, ftpd_t)
+')
+ifdef(`ftp_shm', `
+allow ftpd_t tmpfs_t:file { read write };
+allow ftpd_t { tmpfs_t initrc_t }:shm { read write unix_read unix_write associate };
+')
+
+# Use sockets inherited from inetd.
+allow ftpd_t inetd_t:tcp_socket rw_stream_socket_perms;
+
+# Use capabilities.
+allow ftpd_t ftpd_t:capability { net_bind_service setuid setgid fowner fsetid chown sys_resource sys_chroot };
+
+# Connect to inetd.
+can_tcp_connect(ftpd_t,inetd_t)
+
+# Send SIGCHLD to inetd on death.
+allow ftpd_t inetd_t:process sigchld;
+
+# Create pid files.
+file_type_auto_trans(ftpd_t, var_run_t, ftpd_var_run_t)
+
+# Append to /var/log/wtmp.
+allow ftpd_t wtmp_t:file append;
+
+# Create and modify /var/log/xferlog.
+type xferlog_t, file_type, sysadmfile, logfile;
+file_type_auto_trans(ftpd_t, var_log_t, xferlog_t)
+
+# Execute /bin/ls (can comment this out for proftpd)
+# also may need rules to allow tar etc...
+can_exec(ftpd_t, ls_exec_t)
+
+allow { ftpd_t initrc_t } etc_ftpd_t:file r_file_perms;

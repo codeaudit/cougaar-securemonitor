@@ -1,0 +1,2 @@
+# crontab
+/usr/bin/(f)?crontab		system_u:object_r:crontab_exec_t

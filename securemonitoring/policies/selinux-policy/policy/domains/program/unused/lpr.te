@@ -1,0 +1,11 @@
+#DESC Lpr - Print client
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser 
+#
+
+
+# Type for the lpr, lpq, and lprm executables.
+type lpr_exec_t, file_type, sysadmfile, exec_type;
+
+# Everything else is in the lpr_domain macro in
+# macros/program/lpr_macros.te.

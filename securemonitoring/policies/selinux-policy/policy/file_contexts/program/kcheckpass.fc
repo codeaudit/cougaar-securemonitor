@@ -1,0 +1,2 @@
+# kcheckpass - password checking program for KDE
+/usr/bin/kcheckpass		system_u:object_r:kcheckpass_exec_t

@@ -1,0 +1,27 @@
+#DESC Sound - Sound utilities
+#
+# Authors:  Mark Westerman <mark.westerman@.com>
+#
+#################################
+#
+# Rules for the sound_t domain.
+#
+type sound_t, domain, privlog;
+role system_r types sound_t;
+every_domain(sound_t)
+type sound_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, sound_exec_t, sound_t)
+type sound_file_t, file_type, sysadmfile;
+
+# Use capabilities.
+# Commented out by default.
+#allow sound_t self:capability { sys_admin sys_rawio sys_time dac_override };
+
+# Inherit and use descriptors from init.
+allow sound_t init_t:fd use;
+
+# Read and write the sound device.
+allow sound_t sound_device_t:chr_file rw_file_perms;
+
+# Read and write ttys.
+allow sound_t sysadm_tty_device_t:chr_file rw_file_perms;

@@ -1,0 +1,62 @@
+#DESC Cups - Common Unix Printing System
+#
+# Created cups policy from lpd policy: Russell Coker <russell@coker.com.au>
+
+#################################
+#
+# Rules for the cupsd_t domain.
+#
+# cupsd_t is the domain of cupsd.
+# cupsd_exec_t is the type of the cupsd executable.
+#
+type ipp_port_t, port_type;
+type cupsd_t, domain, privlog;
+role system_r types cupsd_t;
+every_domain(cupsd_t)
+type cupsd_exec_t, file_type, sysadmfile, exec_type;
+type etc_cupsd_t, file_type, sysadmfile;
+type var_log_cups_t, file_type, sysadmfile;
+
+uses_shlib(cupsd_t)
+
+domain_auto_trans(initrc_t, cupsd_exec_t, cupsd_t)
+
+tmp_domain(cupsd)
+
+allow cupsd_t printer_t:chr_file rw_file_perms;
+
+type cupsd_var_run_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans(cupsd_t, var_run_t, cupsd_var_run_t)
+
+allow cupsd_t etc_cupsd_t:file create_file_perms;
+allow cupsd_t etc_cupsd_t:lnk_file read;
+allow cupsd_t etc_cupsd_t:dir { setattr rw_dir_perms };
+allow cupsd_t var_log_cups_t:file create_file_perms;
+allow cupsd_t var_log_cups_t:dir rw_dir_perms;
+allow cupsd_t proc_t:file r_file_perms;
+allow cupsd_t proc_t:dir r_dir_perms;
+can_exec(cupsd_t, cupsd_exec_t)
+allow cupsd_t cupsd_exec_t:dir r_dir_perms;
+
+# Use capabilities.
+allow cupsd_t cupsd_t:capability { fsetid net_bind_service fowner chown dac_override };
+
+# Inherit and use descriptors from init.
+allow cupsd_t init_t:fd use;
+
+# Bind to the cups/ipp port (631).
+allow cupsd_t ipp_port_t:tcp_socket name_bind;
+
+# Send to portmap.
+ifdef(`portmap.te', `can_udp_send(cupsd_t, portmap_t)')
+
+# Connect to ypbind.
+ifdef(`ypbind.te', `can_tcp_connect(cupsd_t, ypbind_t)')
+
+# Write to /var/spool/cups.
+allow cupsd_t print_spool_t:dir { setattr rw_dir_perms };
+allow cupsd_t print_spool_t:file create_file_perms;
+allow cupsd_t print_spool_t:file rw_file_perms;
+
+# Filter scripts may be shell scripts, and may invoke progs like /bin/mktemp
+can_exec(cupsd_t, { shell_exec_t bin_t })

@@ -1,0 +1,11 @@
+#DESC Cougaar
+#
+# File: cougaar.fc
+# Author(s):
+#
+# cougaar ultralog directory
+#/home/sacme/UL/cougaar(/.*)?   sacme:cougaar_r:cougaar_t
+#/home/sacme/acme_service(/.*)?   sacme:cougaar_r:cougaar_t
+/root/.Xauthority		system_u:object_r:user_home_t
+/root/.bash_profile	system_u:object_r:user_home_t
+

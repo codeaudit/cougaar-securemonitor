@@ -1,0 +1,33 @@
+#DESC RSHD - RSH daemon
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the rshd_t domain.
+#
+type rsh_port_t, port_type;
+type rshd_t, domain, privlog;
+role system_r types rshd_t;
+every_domain(rshd_t)
+type rshd_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(inetd_t, rshd_exec_t, rshd_t)
+domain_auto_trans(tcpd_t, rshd_exec_t, rshd_t)
+
+# Inherit and use descriptors from inetd.
+allow rshd_t inetd_t:fd use;
+
+# Use sockets inherited from inetd.
+allow rshd_t inetd_t:tcp_socket rw_stream_socket_perms;
+
+# Use capabilities.
+allow rshd_t rshd_t:capability { net_bind_service setuid setgid fowner fsetid chown dac_override};
+
+# Use the network.
+can_network(rshd_t)
+
+# Send SIGCHLD to inetd on death.
+allow rshd_t inetd_t:process sigchld;
+
+

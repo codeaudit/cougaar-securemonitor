@@ -1,0 +1,32 @@
+#DESC Ldconfig - Configure dynamic linker bindings
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the ldconfig_t domain.
+#
+type ldconfig_t, domain, privlog;
+type ldconfig_exec_t, file_type, sysadmfile, exec_type;
+
+role sysadm_r types ldconfig_t;
+role system_r types ldconfig_t;
+
+domain_auto_trans({ sysadm_t initrc_t ifdef(`dpkg.te', `dpkg_t') }, ldconfig_exec_t, ldconfig_t)
+dontaudit ldconfig_t device_t:dir search;
+allow ldconfig_t { initrc_devpts_t admin_tty_type }:chr_file rw_file_perms;
+allow ldconfig_t privfd:fd use;
+
+uses_shlib(ldconfig_t)
+
+file_type_auto_trans(ldconfig_t, etc_t, ld_so_cache_t)
+file_type_auto_trans(ldconfig_t, lib_t, shlib_t)
+# allow removing mis-labelled links
+allow ldconfig_t lib_t:lnk_file unlink;
+
+allow ldconfig_t userdomain:fd use;
+allow ldconfig_t etc_t:file { getattr read };
+allow ldconfig_t etc_t:lnk_file read;
+
+allow ldconfig_t fs_t:filesystem getattr;

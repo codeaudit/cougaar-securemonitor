@@ -1,0 +1,42 @@
+#DESC Admin - Domains for administrators.
+#
+#################################
+
+# sysadm_t is the system administrator domain.
+type sysadm_t, domain, privlog, privowner, admin, userdomain, privhome;
+allow privhome home_root_t:dir search;
+
+# system_r is authorized for sysadm_t for single-user mode.
+role system_r types sysadm_t; 
+
+# sysadm_r is authorized for sysadm_t for the initial login domain.
+role sysadm_r types sysadm_t;
+
+# sysadm_t is granted the permissions common to most domains.
+every_domain(sysadm_t)
+
+# sysadm_t is also granted permissions specific to administrator domains.
+admin_domain(sysadm)
+
+# Audit grantings of avc_toggle to the administrator domains.
+# Due to its sensitivity, we always audit this permission.
+auditallow admin kernel_t:system avc_toggle;
+
+
+define(`admin_tty_type', `{ sysadm_tty_device_t sysadm_devpts_t }')
+
+allow sysadm_t var_spool_t:file { execute };
+#allow sysadm_t sysadm_home_dir_t:dir { add_name read remove_name write };
+#allow sysadm_t sysadm_home_dir_t:file { create getattr link read unlink write };
+
+allow sysadm_t usr_t:file { execute };
+
+allow sysadm_t sysadm_t:packet_socket { create bind getopt ioctl read setopt };
+
+
+
+
+
+
+
+

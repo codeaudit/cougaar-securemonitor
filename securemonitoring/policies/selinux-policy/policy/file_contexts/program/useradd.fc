@@ -1,0 +1,7 @@
+# useradd
+/usr/local/selinux/bin/suseradd	system_u:object_r:useradd_exec_t
+/usr/local/selinux/bin/suserdel	system_u:object_r:useradd_exec_t
+/usr/local/selinux/bin/susermod	system_u:object_r:useradd_exec_t
+/usr/bin/susermod		system_u:object_r:useradd_exec_t
+/usr/bin/suseradd               system_u:object_r:useradd_exec_t
+/usr/bin/suserdel               system_u:object_r:useradd_exec_t

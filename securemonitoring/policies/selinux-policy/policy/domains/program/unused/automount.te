@@ -1,0 +1,49 @@
+#DESC Automount - Automount daemon
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil>
+#
+
+#################################
+#
+# Rules for the automount_t domain.
+#
+type automount_t, domain, privlog;
+role system_r types automount_t;
+every_domain(automount_t)
+type automount_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, automount_exec_t, automount_t)
+
+type autofs_t, fs_type, root_dir_type, sysadmfile;
+
+# Inherit and use descriptors from init.
+allow automount_t init_t:fd use;
+
+# Create pid file.
+type automount_var_run_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans(automount_t, var_run_t, automount_var_run_t)
+
+allow automount_t initrc_devpts_t:chr_file rw_file_perms;
+
+# for if the mount point is not labelled
+allow automount_t file_t:dir getattr;
+
+# Create temporary files.
+type automount_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(automount_t, tmp_t, automount_tmp_t)
+
+allow automount_t autofs_t:dir { create_dir_perms ioctl };
+allow automount_t fs_type:dir getattr;
+allow autofs_t self:filesystem associate;
+
+domain_auto_trans(automount_t, fsadm_exec_t, fsadm_t)
+
+# Run mount in the mount_t domain.
+domain_auto_trans(automount_t, mount_exec_t, mount_t)
+allow mount_t autofs_t:dir { search mounton };
+allow mount_t automount_tmp_t:dir mounton;
+
+ifdef(`apmd.te',
+`domain_auto_trans(apmd_t, automount_exec_t, automount_t)
+can_exec(automount_t, bin_t)')
+
+allow userdomain autofs_t:dir r_dir_perms;

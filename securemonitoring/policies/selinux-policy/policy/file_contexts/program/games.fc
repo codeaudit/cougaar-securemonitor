@@ -1,0 +1,5 @@
+#  netscape/mozilla
+/usr/games/.*		system_u:object_r:games_exec_t
+/usr/lib/games/.* --	system_u:object_r:games_exec_t
+/var/games(/.*)?	system_u:object_r:games_data_t
+/usr/bin/micq		system_u:object_r:games_exec_t

@@ -1,0 +1,4 @@
+# rpm
+/var/lib/rpm(/.*)?		system_u:object_r:var_lib_rpm_t
+/bin/rpm 			system_u:object_r:rpm_exec_t
+/var/log/rpmpkgs.*		system_u:object_r:var_log_rpm_t

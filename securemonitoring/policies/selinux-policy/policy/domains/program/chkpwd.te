@@ -1,0 +1,12 @@
+#DESC Chkpwd - PAM password checking programs
+#
+# Domains for the /sbin/.*_chkpwd utilities.
+#
+
+#
+# chkpwd_exec_t is the type of the /sbin/.*_chkpwd executables.
+#
+type chkpwd_exec_t, file_type, sysadmfile, exec_type;
+
+# Everything else is in the chkpwd_domain macro in
+# macros/program/chkpwd_macros.te.

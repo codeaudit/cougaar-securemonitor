@@ -1,0 +1,664 @@
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+############################################
+#
+# Device types
+#
+
+#
+# device_t is the type of /dev.
+#
+type device_t, file_type;
+
+#
+# null_device_t is the type of /dev/null.
+#
+type null_device_t, file_type, mlstrustedobject;
+
+#
+# zero_device_t is the type of /dev/zero.
+#
+type zero_device_t, file_type, mlstrustedobject;
+
+#
+# console_device_t is the type of /dev/console.
+#
+type console_device_t, file_type;
+
+#
+# memory_device_t is the type of /dev/kmem,
+# /dev/mem, and /dev/port.
+#
+type memory_device_t, file_type;
+
+#
+# random_device_t is the type of /dev/urandom
+# and /dev/random.
+#
+type random_device_t, file_type;
+
+#
+# devtty_t is the type of /dev/tty.
+#
+type devtty_t, file_type, mlstrustedobject;
+
+#
+# tty_device_t is the type of /dev/*tty*
+#
+type tty_device_t, file_type;
+
+#
+# fixed_disk_device_t is the type of 
+# /dev/hd* and /dev/sd*.
+#
+type fixed_disk_device_t, file_type;
+
+#
+# removable_device_t is the type of
+# /dev/scd* and /dev/fd*.
+#
+type removable_device_t, file_type;
+
+#
+# clock_device_t is the type of
+# /dev/rtc.
+#
+type clock_device_t, file_type;
+
+#
+# tun_tap_device_t is the type of /dev/net/tun/* and /dev/net/tap/*
+#
+type tun_tap_device_t, file_type;
+
+#
+# misc_device_t is the type of miscellaneous devices.
+# XXX:  FIXME!  Appropriate access to these devices need to be identified.
+#
+type misc_device_t, file_type;
+
+#
+# psaux_t is the type of the /dev/psaux mouse device.
+# This type is deprecated and will be removed.
+#
+type psaux_t, file_type;
+
+#
+# A more general type for mouse devices.
+#
+type mouse_device_t, file_type;
+
+#
+# Not sure what these devices are for, but X wants access to them.
+#
+type agp_device_t, file_type;
+type dri_device_t, file_type;
+
+# Type for sound devices.
+type sound_device_t, file_type;
+
+# Type for /dev/ppp.
+type ppp_device_t, file_type;
+
+# Type for frame buffer /dev/fb/*
+type framebuf_device_t, file_type;
+
+# Type for /dev/.devfsd
+type devfs_control_t, file_type;
+
+# Type for /dev/cpu/mtrr
+type mtrr_device_t, file_type;
+
+
+# Type for /dev/apm_bios
+type apm_bios_t, file_type;
+
+# Type for v4l
+type v4l_device_t, file_type;
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+############################################
+#
+# Devpts types
+#
+
+#
+# ptmx_t is the type for /dev/ptmx.
+#
+type ptmx_t, file_type, sysadmfile;
+
+#
+# devpts_t is the type of the devpts file system and 
+# the type of the root directory of the file system.
+#
+type devpts_t, fs_type, root_dir_type;
+
+
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#######################################
+#
+# General file-related types
+#
+
+#
+# unlabeled_t is the type of unlabeled objects.
+# Eventually, once all objects are labeled and 
+# controlled by the security policy, unlabeled_t 
+# will not be used.
+#
+type unlabeled_t, fs_type, file_type, root_dir_type, sysadmfile;
+
+#
+# fs_t is the default type of an unlabeled
+# file system.  When an unlabeled file system is
+# mounted read-write, the file system is labeled
+# with this type.  Except for the root file system,
+# other types may be specified using the fs_contexts
+# or fs_contexts.mls file.
+#
+type fs_t, fs_type;
+
+#
+# file_t is the default type of an unlabeled
+# file.  When an unlabeled file system is mounted
+# read-write, all files in the file system are labeled
+# with this type.   Except for the root file system,
+# other types may be specified using the fs_contexts
+# or fs_contexts.mls file.
+#
+type file_t, file_type, root_dir_type, sysadmfile;
+
+#
+# root_t is the type for the root directory.
+#
+type root_t, file_type, sysadmfile;
+
+#
+# home_root_t is the type for the directory where user home directories
+# are created
+#
+type home_root_t, file_type, sysadmfile;
+
+#
+# lost_found_t is the type for the lost+found directories.
+#
+type lost_found_t, file_type, sysadmfile;
+
+#
+# boot_t is the type for files in /boot,
+# including the kernel.
+#
+type boot_t, file_type, root_dir_type, sysadmfile;
+# system_map_t is for the system.map files in /boot
+type system_map_t, file_type, sysadmfile;
+
+#
+# boot_runtime_t is the type for /boot/kernel.h,
+# which is automatically generated at boot time.
+# only for red hat
+type boot_runtime_t, file_type, sysadmfile;
+
+#
+# tmp_t is the type of /tmp and /var/tmp.
+#
+type tmp_t, file_type, sysadmfile, tmpfile;
+
+#
+# etc_t is the type of the system etc directories.
+#
+type etc_t, file_type, sysadmfile;
+#
+# shadow_t is the type of the /etc/shadow file
+#
+type shadow_t, file_type;
+allow auth shadow_t:file { getattr read };
+
+#
+# ld_so_cache_t is the type of /etc/ld.so.cache.
+#
+type ld_so_cache_t, file_type, sysadmfile;
+
+#
+# etc_runtime_t is the type of various
+# files in /etc that are automatically
+# generated during initialization.
+#
+type etc_runtime_t, file_type, sysadmfile;
+
+#
+# etc_aliases_t is the type of the aliases database.
+# etc_mail_t is the type of /etc/mail.
+# sendmail needs write access to these files.
+#
+type etc_aliases_t, file_type, sysadmfile;
+type etc_mail_t, file_type, sysadmfile;
+
+# resolv_conf_t is the type of the /etc/resolv.conf file.
+# pump needs write access to this file.
+type resolv_conf_t, file_type, sysadmfile;
+
+#
+# lib_t is the type of files in the system lib directories.
+#
+type lib_t, file_type, sysadmfile;
+
+#
+# shlib_t is the type of shared objects in the system lib
+# directories.
+#
+type shlib_t, file_type, sysadmfile;
+
+#
+# ld_so_t is the type of the system dynamic loaders.
+#
+type ld_so_t, file_type, sysadmfile;
+
+#
+# bin_t is the type of files in the system bin directories.
+#
+type bin_t, file_type, sysadmfile;
+
+#
+# ls_exec_t is the type of the ls program.
+#
+type ls_exec_t, file_type, exec_type, sysadmfile;
+
+#
+# shell_exec_t is the type of user shells such as /bin/bash.
+#
+type shell_exec_t, file_type, exec_type, sysadmfile;
+
+#
+# sbin_t is the type of files in the system sbin directories.
+#
+type sbin_t, file_type, sysadmfile;
+
+#
+# usr_t is the type for /usr.
+#
+type usr_t, file_type, root_dir_type, sysadmfile;
+
+#
+# src_t is the type of files in the system src directories.
+#
+type src_t, file_type, sysadmfile;
+
+#
+# var_t is the type for /var.
+#
+type var_t, file_type, root_dir_type, sysadmfile;
+
+#
+# Types for subdirectories of /var.
+#
+type var_run_t, file_type, sysadmfile;
+type var_log_t, file_type, sysadmfile, logfile;
+type faillog_t, file_type, sysadmfile, logfile;
+type var_lock_t, file_type, sysadmfile, lockfile;
+type var_lib_t, file_type, sysadmfile;
+# for /var/{spool,lib}/texmf index files
+type tetex_data_t, file_type, sysadmfile, tmpfile;
+type var_spool_t, file_type, sysadmfile;
+type var_yp_t, file_type, sysadmfile;
+
+# Type for /var/log/sa.
+type var_log_sa_t, file_type, sysadmfile, logfile;
+
+# Type for /var/log/ksyms.
+type var_log_ksyms_t, file_type, sysadmfile, logfile;
+
+# Type for /var/log/lastlog.
+type lastlog_t, file_type, sysadmfile, logfile;
+
+# Type for /var/lib/nfs.
+type var_lib_nfs_t, file_type, sysadmfile;
+
+#
+# wtmp_t is the type of /var/log/wtmp.
+#
+type wtmp_t, file_type, sysadmfile, logfile;
+
+#
+# catman_t is the type for /var/catman.
+#
+type catman_t, file_type, sysadmfile, tmpfile;
+
+#
+# at_spool_t is the type for /var/spool/at.
+#
+type at_spool_t, file_type, sysadmfile;
+
+#
+# cron_spool_t is the type for /var/spool/cron.
+#
+type cron_spool_t, file_type, sysadmfile;
+
+#
+# print_spool_t is the type for /var/spool/lpd and /var/spool/cups.
+#
+type print_spool_t, file_type, sysadmfile;
+
+#
+# mail_spool_t is the type for /var/spool/mail.
+#
+type mail_spool_t, file_type, sysadmfile;
+
+#
+# mqueue_spool_t is the type for /var/spool/mqueue.
+#
+type mqueue_spool_t, file_type, sysadmfile;
+
+#
+# man_t is the type for the man directories.
+#
+type man_t, file_type, sysadmfile;
+
+#
+# readable_t is a general type for
+# files that are readable by all domains.
+#
+type readable_t, file_type, sysadmfile;
+
+# 
+# Base type for the tests directory.
+# 
+type test_file_t, file_type, sysadmfile;
+
+#
+# poly_t is the type for the polyinstantiated directories.
+#
+type poly_t, file_type, sysadmfile;
+
+#
+# swapfile_t is for swap files
+#
+type swapfile_t, file_type, sysadmfile;
+
+#
+# locale_t is the type for system localization
+# 
+type locale_t, file_type;
+
+#
+# Allow each file type to be associated with 
+# the default file system type.
+#
+allow file_type fs_t:filesystem associate;
+
+# Allow the pty to be associated with the file system.
+allow devpts_t devpts_t:filesystem associate;
+
+type tmpfs_t, file_type, sysadmfile, fs_type, root_dir_type;
+allow { tmpfs_t tmp_t } tmpfs_t:filesystem associate;
+
+type usbdevfs_t, fs_type, root_dir_type, sysadmfile;
+allow usbdevfs_t usbdevfs_t:filesystem associate;
+type usbdevfs_device_t, file_type, sysadmfile;
+allow usbdevfs_device_t usbdevfs_t:filesystem associate;
+
+type sysfs_t alias driverfs_t, fs_type, root_dir_type, sysadmfile;
+allow sysfs_t sysfs_t:filesystem associate;
+
+type iso9660_t, fs_type, root_dir_type, sysadmfile;
+allow iso9660_t iso9660_t:filesystem associate;
+
+type dosfs_t, fs_type, root_dir_type, sysadmfile;
+allow dosfs_t dosfs_t:filesystem associate;
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+# Modified by Reino Wallin <reino@oribium.com>
+# Multi NIC, and IPSEC features
+
+# Modified by Russell Coker
+# Move port types to their respective domains, add ifdefs, other cleanups.
+
+############################################
+#
+# Network types
+#
+
+# 
+# any_socket_t is the default destination
+# socket type for UDP traffic.  Unless a 
+# destination socket type is explicitly specified
+# using sendto_secure/sendmsg_secure, this type
+# is used for the udp_socket sendto permission check.
+#
+type any_socket_t, socket_type;
+role system_r types any_socket_t;
+
+#
+# igmp_packet_t is the type of kernel-generated IGMP packets.
+# icmp_socket_t is the type of the kernel socket used to send ICMP messages.
+# tcp_socket_t is the type of the kernel socket used to send TCP resets.
+# scmp_packet_t is the type for SCMP packets used by the SELOPT packet labeling.
+#
+type igmp_packet_t;
+role system_r types igmp_packet_t;
+type icmp_socket_t, socket_type;
+role system_r types icmp_socket_t;
+type tcp_socket_t, socket_type;
+role system_r types tcp_socket_t;
+type scmp_packet_t;
+role system_r types scmp_packet_t;
+
+#
+# port_t is the default type of INET port numbers.
+# The *_port_t types are used for specific port
+# numbers in net_contexts or net_contexts.mls.
+#
+type port_t, port_type;
+
+#
+# netif_t is the default type of network interfaces.
+# The netif_*_t types are used for specific network
+# interfaces in net_contexts or net_contexts.mls.
+#
+type netif_t, netif_type;
+type netif_eth0_t, netif_type;
+type netif_eth1_t, netif_type;
+type netif_eth2_t, netif_type;
+type netif_lo_t, netif_type;
+type netif_ippp0_t, netif_type;
+
+type netif_ipsec0_t, netif_type;
+type netif_ipsec1_t, netif_type;
+type netif_ipsec2_t, netif_type;
+
+#
+# netmsg_t is the default type of unlabeled received messages.
+# The netmsg_*_t types are used for specific network
+# interfaces in net_contexts or net_contexts.mls.
+#
+type netmsg_t, netmsg_type;
+type netmsg_eth0_t, netmsg_type;
+type netmsg_eth1_t, netmsg_type;
+type netmsg_eth2_t, netmsg_type;
+type netmsg_lo_t, netmsg_type;
+type netmsg_ippp0_t, netmsg_type;
+
+type netmsg_ipsec0_t, netmsg_type;
+type netmsg_ipsec1_t, netmsg_type;
+type netmsg_ipsec2_t, netmsg_type;
+
+#
+# node_t is the default type of network nodes.
+# The node_*_t types are used for specific network
+# nodes in net_contexts or net_contexts.mls.
+#
+type node_t, node_type;
+type node_lo_t, node_type;
+type node_internal_t, node_type;
+
+#
+# Permissions for the kernel-generated IGMP packets.
+#
+allow igmp_packet_t netif_type:netif { rawip_send rawip_recv };
+allow igmp_packet_t node_type:node { rawip_send rawip_recv };
+
+#
+# Permissions for the kernel ICMP socket.
+#
+allow icmp_socket_t netif_type:netif { rawip_send rawip_recv };
+allow icmp_socket_t node_type:node { rawip_send rawip_recv };
+allow icmp_socket_t netmsg_type:rawip_socket recvfrom;
+
+#
+# Permissions for the kernel TCP reset socket.
+#
+allow tcp_socket_t netif_type:netif { tcp_send tcp_recv };
+allow tcp_socket_t netmsg_type:tcp_socket recvfrom;
+allow tcp_socket_t node_type:node { tcp_send tcp_recv };
+
+#
+# Allow network messages to be received.
+#
+allow netmsg_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_eth0_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_eth0_t netif_eth0_t:netif { tcp_recv udp_recv rawip_recv };
+allow netmsg_eth1_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_eth1_t netif_eth1_t:netif { tcp_recv udp_recv rawip_recv };
+allow netmsg_eth2_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_eth2_t netif_eth2_t:netif { tcp_recv udp_recv rawip_recv };
+allow netmsg_lo_t node_lo_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_lo_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_lo_t netif_lo_t:netif { tcp_recv udp_recv rawip_recv };
+allow netmsg_ippp0_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_ippp0_t netif_ippp0_t:netif { tcp_recv udp_recv rawip_recv };
+allow netmsg_ipsec0_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_ipsec0_t netif_ipsec0_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_ipsec1_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_ipsec1_t netif_ipsec1_t:netif { tcp_recv udp_recv rawip_recv };
+allow netmsg_ipsec2_t node_t:node { tcp_recv udp_recv rawip_recv };
+allow netmsg_ipsec2_t netif_ipsec2_t:netif { tcp_recv udp_recv rawip_recv };
+
+#
+# Allow ICMP echo requests to be sent and received, and echo replies to 
+# be received (when packets are labeled)
+#
+ifdef(`ping.te',
+`allow ping_t netif_type:netif { rawip_send rawip_recv };
+allow ping_t node_type:node { rawip_send rawip_recv };
+allow ping_t netmsg_type:rawip_socket { recvfrom };')
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#############################################
+#
+# NFS types
+#
+
+#
+# nfs_t is the default type for NFS file systems 
+# and their files.  
+# The nfs_*_t types are used for specific NFS
+# servers in net_contexts or net_contexts.mls.
+#
+type nfs_t, fs_type, root_dir_type;
+
+#
+# Allow NFS files to be associated with an NFS file system.
+#
+allow nfs_t nfs_t:filesystem associate;
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+############################################
+#
+# Procfs types
+#
+
+#
+# proc_t is the type of /proc.
+# proc_kmsg_t is the type of /proc/kmsg.
+# proc_kcore_t is the type of /proc/kcore.
+#
+type proc_t, fs_type, root_dir_type;
+type proc_kmsg_t;
+type proc_kcore_t;
+
+#
+# sysctl_t is the type of /proc/sys.
+# sysctl_fs_t is the type of /proc/sys/fs.
+# sysctl_kernel_t is the type of /proc/sys/kernel.
+# sysctl_modprobe_t is the type of /proc/sys/kernel/modprobe.
+# sysctl_net_t is the type of /proc/sys/net.
+# sysctl_net_unix_t is the type of /proc/sys/net/unix.
+# sysctl_vm_t is the type of /proc/sys/vm.
+# sysctl_dev_t is the type of /proc/sys/dev.
+#
+# These types are applied to both the entries in
+# /proc/sys and the corresponding sysctl parameters.
+#
+type sysctl_t;
+type sysctl_fs_t;
+type sysctl_kernel_t;
+type sysctl_modprobe_t;
+type sysctl_net_t;
+type sysctl_net_unix_t;
+type sysctl_vm_t;
+type sysctl_dev_t;
+
+
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+############################################
+#
+# Security types
+#
+
+# 
+# security_t is the target type when checking
+# most of the permissions in the security class.
+# The two exceptions are sid_to_context and load_policy.
+# The sid_to_context permission uses the type attribute
+# of the SID parameter, and the load_policy permission
+# uses the type of the policy file.
+#
+type security_t;
+
+#
+# policy_config_t is the type of /ss_policy,
+# the security server policy configuration.
+#
+type policy_config_t, file_type;
+
+#
+# policy_src_t is the type of the policy source
+# files.
+#
+type policy_src_t, file_type;
+
+#
+# default_context_t is the type applied to 
+# /etc/security/default_context
+#
+type default_context_t, file_type, sysadmfile, login_contexts;
+
+#
+# file_labels_t is the type of the persistent
+# label mapping stored in each file system.
+# The mapping files are in the ...security
+# subdirectory at the root of each file system.
+#
+type file_labels_t, file_type, sysadmfile;
+
+#
+# no_access_t is the type for objects that should
+# only be accessed administratively. 
+#
+type no_access_t, file_type, sysadmfile;
+
+

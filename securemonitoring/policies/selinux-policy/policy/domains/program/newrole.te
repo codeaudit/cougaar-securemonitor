@@ -1,0 +1,99 @@
+#DESC Newrole - SELinux utility to run a shell with a new role
+#
+# Authors:  Anthony Colatrella (NSA) 
+# Maintained by Stephen Smalley <sds@epoch.ncsc.mil>
+#
+
+#################################
+#
+# Rules for the newrole_t domain.
+#
+# newrole_t is the domain for the newrole program.
+# newrole_exec_t is the type of the newrole executable.
+#
+type newrole_t, domain, privrole, privowner, privlog, auth, privfd;
+in_user_role(newrole_t)
+role sysadm_r types newrole_t;
+
+general_domain_access(newrole_t);
+allow newrole_t proc_t:{file lnk_file} r_file_perms;
+
+uses_shlib(newrole_t)
+
+# read localization information
+allow newrole_t locale_t:dir r_dir_perms;
+allow newrole_t locale_t:{file lnk_file} r_file_perms;
+
+type newrole_exec_t, file_type, exec_type, sysadmfile;
+domain_auto_trans(userdomain, newrole_exec_t, newrole_t)
+
+allow newrole_t shadow_t:file { read getattr };
+
+# Inherit descriptors from the current session.
+allow newrole_t privfd:fd use;
+
+# Execute /sbin/pwdb_chkpwd to check the password.
+allow newrole_t sbin_t:dir r_dir_perms;
+can_exec(newrole_t, chkpwd_exec_t)
+
+# Execute shells
+allow newrole_t bin_t:dir r_dir_perms;
+allow newrole_t shell_exec_t:file r_file_perms;
+
+# Allow newrole_t to transition to user domains.
+domain_trans(newrole_t, shell_exec_t, userdomain)
+
+# Use capabilities.
+allow newrole_t self:capability { setuid setgid net_bind_service dac_override };
+
+# Write to utmp.
+allow newrole_t var_run_t:dir r_dir_perms;
+allow newrole_t initrc_var_run_t:file rw_file_perms;
+
+# Read the devpts root directory.
+allow newrole_t devpts_t:dir r_dir_perms;
+
+# Read the /etc/security/default_type file
+allow newrole_t etc_t:file r_file_perms;
+
+# Read /var.
+allow newrole_t var_t:dir r_dir_perms;
+allow newrole_t var_t:notdevfile_class_set r_file_perms;
+
+# Read /dev directories and any symbolic links.
+allow newrole_t device_t:dir r_dir_perms;
+
+# Relabel terminals.
+allow newrole_t ttyfile:chr_file { getattr relabelfrom relabelto };
+allow newrole_t ptyfile:chr_file { getattr relabelfrom relabelto };
+
+# Access terminals.
+allow newrole_t ttyfile:chr_file rw_file_perms;
+allow newrole_t ptyfile:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow newrole_t gphdomain:fd use;')
+
+#
+# Allow sysadm_t to reap a user_t process 
+# created via newrole.
+#
+allow userdomain userdomain:process { sigchld };
+
+#
+# Allow newrole to obtain SIDs to relabel TTYs
+#
+allow newrole_t security_t:security { sid_to_context context_to_sid change_sid };
+
+allow newrole_t fs_t:filesystem getattr;
+
+# for some PAM modules and for cwd
+dontaudit newrole_t { home_root_t home_type }:dir search;
+
+# Failed reads to /proc cause no harm, so don't audit them
+dontaudit newrole_t proc_t:dir search;
+allow newrole_t netif_eth0_t:netif { udp_send };
+allow newrole_t netmsg_eth0_t:udp_socket { recvfrom };
+allow newrole_t newrole_t:udp_socket { read };
+allow newrole_t node_t:node { udp_send };
+
+allow newrole_t var_spool_t:file { execute getattr read };
+

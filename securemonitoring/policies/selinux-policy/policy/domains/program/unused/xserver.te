@@ -1,0 +1,36 @@
+#DESC XServer - X Server
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser 
+#
+
+# Type for the executable used to start the X server, e.g. Xwrapper.
+type xserver_exec_t, file_type, sysadmfile, exec_type;
+
+# Type for the X server log file.
+type xserver_var_log_t, file_type, sysadmfile, logfile;
+
+# type for /var/lib/xkb
+type var_lib_xkb_t, file_type, sysadmfile;
+
+type initrc_xserver_t, domain;
+domain_auto_trans(initrc_t, xserver_exec_t, initrc_xserver_t)
+allow initrc_xserver_t init_t:fd use;
+allow initrc_xserver_t init_t:process sigchld;
+allow initrc_xserver_t self:process { signal_perms fork };
+uses_shlib(initrc_xserver_t)
+allow initrc_xserver_t device_t:dir search;
+allow initrc_xserver_t { console_device_t devtty_t }:chr_file { read write };
+can_exec(initrc_xserver_t, bin_t)
+allow initrc_xserver_t bin_t:dir search;
+r_dir_file(initrc_xserver_t, proc_t)
+allow initrc_xserver_t etc_t:lnk_file read;
+allow initrc_xserver_t { etc_t resolv_conf_t etc_runtime_t }:file { getattr read };
+allow initrc_xserver_t self:unix_stream_socket create_socket_perms;
+
+
+role system_r types initrc_xserver_t;
+tmp_domain(initrc_xserver)
+
+# Everything else is in the xserver_domain macro in
+# macros/program/xserver_macros.te.
+

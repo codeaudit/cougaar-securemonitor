@@ -1,0 +1,10 @@
+#DESC Netscape - Web browser
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser 
+#
+
+# Type for the netscape, mozilla or other browser executables.
+type netscape_exec_t, file_type, sysadmfile, exec_type;
+
+# Everything else is in the netscape_domain macro in
+# macros/program/netscape_macros.te.

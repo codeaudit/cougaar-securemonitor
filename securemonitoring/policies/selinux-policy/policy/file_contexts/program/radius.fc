@@ -1,0 +1,11 @@
+# radius
+/etc/raddb(/.*)?                system_u:object_r:etc_radiusd_t
+/usr/sbin/radiusd               system_u:object_r:radiusd_exec_t
+/var/log/radiusd-freeradius(/.*)?       system_u:object_r:var_log_radiusd_t
+/var/log/radius\.log.*		system_u:object_r:var_log_radiusd_t
+/var/log/radacct(/.*)?		system_u:object_r:var_log_radiusd_t
+/var/log/radutmp		system_u:object_r:var_log_radiusd_t
+/var/log/radwtmp.*		system_u:object_r:var_log_radiusd_t
+/etc/cron\.(daily|monthly)/radiusd system_u:object_r:radiusd_exec_t
+/etc/cron\.(daily|weekly|monthly)/freeradius system_u:object_r:radiusd_exec_t
+/var/run/radiusd\.pid		system_u:object_r:var_run_radiusd_t

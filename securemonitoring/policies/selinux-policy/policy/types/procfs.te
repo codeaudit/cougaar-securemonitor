@@ -1,0 +1,41 @@
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+############################################
+#
+# Procfs types
+#
+
+#
+# proc_t is the type of /proc.
+# proc_kmsg_t is the type of /proc/kmsg.
+# proc_kcore_t is the type of /proc/kcore.
+#
+type proc_t, fs_type, root_dir_type;
+type proc_kmsg_t;
+type proc_kcore_t;
+
+#
+# sysctl_t is the type of /proc/sys.
+# sysctl_fs_t is the type of /proc/sys/fs.
+# sysctl_kernel_t is the type of /proc/sys/kernel.
+# sysctl_modprobe_t is the type of /proc/sys/kernel/modprobe.
+# sysctl_net_t is the type of /proc/sys/net.
+# sysctl_net_unix_t is the type of /proc/sys/net/unix.
+# sysctl_vm_t is the type of /proc/sys/vm.
+# sysctl_dev_t is the type of /proc/sys/dev.
+#
+# These types are applied to both the entries in
+# /proc/sys and the corresponding sysctl parameters.
+#
+type sysctl_t;
+type sysctl_fs_t;
+type sysctl_kernel_t;
+type sysctl_modprobe_t;
+type sysctl_net_t;
+type sysctl_net_unix_t;
+type sysctl_vm_t;
+type sysctl_dev_t;
+
+

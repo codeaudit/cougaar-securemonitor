@@ -1,0 +1,60 @@
+#DESC Groupadd - Manage system groups
+#
+# Authors:  David Caplan, dac@tresys.com
+#	    (Based on useradd.te by Chris Vance <cvance@tislabs.com>)
+#
+
+#################################
+#
+# Rules for the groupadd_t domain.
+#
+# groupadd_t is the domain of the groupadd/mod/del programs when
+# executed through the sgroupadd/mod/del wrapper.
+type groupadd_t, domain, privlog, auth, privowner;
+role sysadm_r types groupadd_t;
+
+general_domain_access(groupadd_t)
+uses_shlib(groupadd_t)
+
+type groupadd_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(sysadm_t, groupadd_exec_t, groupadd_t )
+
+# Use capabilities.
+# need more if users can run gpasswd
+allow groupadd_t groupadd_t:capability { dac_override };
+
+# Allow access to context for shadow file
+allow groupadd_t security_t:security { context_to_sid };
+
+# Inherit and use descriptors from login.
+allow groupadd_t privfd:fd use;
+
+# Execute /usr/sbin/{groupadd,groupdel,groupmod}, /usr/bin/gpasswd.
+allow groupadd_t { bin_t sbin_t }:dir r_dir_perms;
+can_exec(groupadd_t, { sbin_t bin_t })
+
+# Update /etc/shadow and /etc/passwd
+file_type_auto_trans(groupadd_t, etc_t, shadow_t)
+allow groupadd_t etc_t:file create_file_perms;
+
+allow groupadd_t { etc_t shadow_t }:file { relabelfrom relabelto };
+
+# some apps ask for these accesses, but seems to work regardless
+dontaudit groupadd_t initrc_var_run_t:file { write };
+dontaudit groupadd_t { var_run_t device_t var_t }:dir { search };
+
+# Access terminals.
+allow groupadd_t ttyfile:chr_file rw_file_perms;
+allow groupadd_t ptyfile:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow groupadd_t gphdomain:fd use;')
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,57 @@
+#DESC Cougaar
+#
+# File: cougaar.te
+# Author(s):
+#
+
+role cougaar_r types cougaar_t;
+#every_domain(cougaar_t)
+#uses_java(cougaar_t);
+#type cougaar_exec_t 
+#allow cougaar_r:{file lnk_file} { create ioctl read getattr lock write setattr append };
+allow cougaar_t cougaar_t:dir { create rmdir add_name remove_name write};
+allow cougaar_t cougaar_t:file { append execute_no_trans rename setattr };
+allow cougaar_t file_t:dir { search };
+allow cougaar_t fs_t:filesystem { associate };
+#allow cougaar_t sysadm_tty_device_t:chr_file { getattr };
+allow cougaar_t tmp_t:file { setattr unlink write };
+allow cougaar_t tty_device_t:chr_file { getattr };
+allow cougaar_t user_devpts_t:chr_file { ioctl };
+allow cougaar_t user_home_dir_t:dir { remove_name };
+allow cougaar_t user_home_dir_t:file { read rename unlink write };
+allow cougaar_t user_home_t:dir { add_name getattr read remove_name write };
+allow cougaar_t user_home_t:file { append create getattr unlink write };
+allow cougaar_t cougaar_t:dir { add_name remove_name write };
+allow cougaar_t cougaar_t:file { create execute unlink write };
+allow cougaar_t initrc_var_run_t:file { lock };
+allow cougaar_t locale_t:dir { search };
+allow cougaar_t locale_t:file { getattr read };
+allow cougaar_t random_device_t:chr_file { getattr read };
+allow cougaar_t resolv_conf_t:file { getattr read };
+allow cougaar_t sysctl_kernel_t:dir { search };
+allow cougaar_t sysctl_kernel_t:file { read };
+allow cougaar_t user_devpts_t:chr_file { read write };
+allow cougaar_t user_home_dir_t:dir { add_name getattr read search write };
+allow cougaar_t user_home_dir_t:file { create getattr setattr };
+allow cougaar_t user_home_t:dir { search };
+allow cougaar_t user_home_t:file { read };
+allow cougaar_t var_spool_t:file { execute };
+allow cougaar_t var_yp_t:dir { search };
+allow cougaar_t var_yp_t:file { read };
+
+allow cougaar_t acme_t:process { sigkill };
+allow cougaar_t nfs_t:dir { getattr read search };
+allow cougaar_t nfs_t:file { getattr ioctl read };
+allow cougaar_t nfs_t:lnk_file { read };
+allow cougaar_xauth_t nfs_t:dir { add_name remove_name search write };
+allow cougaar_xauth_t nfs_t:file { create getattr link read unlink write };
+allow cougaar_xauth_t sshd_t:unix_stream_socket { read write };
+
+
+
+
+
+
+
+
+

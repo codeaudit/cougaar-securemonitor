@@ -1,0 +1,41 @@
+#
+# Macros for sendmail domains.
+#
+
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser 
+#           Russell Coker <russell@coker.com.au>
+#
+
+#
+# sendmail_user_domain(domain_prefix)
+#
+# Define a derived domain for the sendmail program when executed by
+# a user domain to send outgoing mail.  These domains are separate and
+# independent of the domain used for the sendmail daemon process.
+#
+undefine(`sendmail_user_domain')
+define(`sendmail_user_domain', `
+
+# Use capabilities
+allow $1_mail_t self:capability net_bind_service;
+
+# Type for temporary files.
+type $1_mail_tmp_t, file_type, sysadmfile, tmpfile;
+# Use this type when creating files in /tmp.
+file_type_auto_trans($1_mail_t, tmp_t, $1_mail_tmp_t)
+
+# Update /etc/mail/statistics.
+allow $1_mail_t etc_mail_t:file rw_file_perms;
+
+# Write to /var/spool/mail and /var/spool/mqueue.
+allow $1_mail_t mail_spool_t:dir rw_dir_perms;
+allow $1_mail_t mail_spool_t:file create_file_perms;
+allow $1_mail_t mqueue_spool_t:dir rw_dir_perms;
+allow $1_mail_t mqueue_spool_t:file create_file_perms;
+
+# Write to /var/log/sendmail.st
+file_type_auto_trans($1_mail_t, var_log_t, sendmail_var_log_t)
+
+')
+

@@ -1,0 +1,46 @@
+#DESC Gpm - General Purpose Mouse driver
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the gpm_t domain.
+#
+# gpm_t is the domain of the console mouse server.
+# gpm_exec_t is the type of the console mouse server program.
+# gpmctl_t is the type of the Unix domain socket created
+# by the console mouse server.
+#
+type gpm_t, domain, privlog;
+role system_r types gpm_t;
+every_domain(gpm_t)
+type gpm_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, gpm_exec_t, gpm_t)
+
+type gpmctl_t, file_type, sysadmfile;
+
+type gpm_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(gpm_t, tmp_t, gpm_tmp_t)
+type gpm_var_run_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans(gpm_t, var_run_t, gpm_var_run_t)
+
+# Use capabilities.
+allow gpm_t gpm_t:capability { setuid dac_override sys_admin sys_tty_config };
+
+# Inherit and use descriptors from init.
+allow gpm_t init_t:fd use;
+
+# Create and bind to /dev/gpmctl.
+file_type_auto_trans(gpm_t, device_t, gpmctl_t)
+allow gpm_t gpmctl_t:unix_stream_socket name_bind;
+
+# Access /dev/psaux.
+allow gpm_t psaux_t:chr_file rw_file_perms;
+
+# Read and write ttys.
+allow gpm_t tty_device_t:chr_file rw_file_perms;
+
+# Access the mouse.
+allow gpm_t mouse_device_t:chr_file rw_file_perms;
+

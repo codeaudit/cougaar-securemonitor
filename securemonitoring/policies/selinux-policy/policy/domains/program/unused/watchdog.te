@@ -1,0 +1,28 @@
+#DESC Watchdog - Software watchdog daemon
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the watchdog_t domain.
+#
+
+daemon_domain(watchdog)
+type watchdog_device_t, file_type;
+
+log_domain(watchdog)
+
+allow watchdog_t { etc_t }:file r_file_perms;
+allow watchdog_t etc_t:lnk_file read;
+allow watchdog_t self:unix_dgram_socket create_socket_perms;
+
+dontaudit watchdog_t { sysadm_tty_device_t sysadm_devpts_t }:chr_file { read write };
+
+allow watchdog_t proc_t:file r_file_perms;
+
+allow watchdog_t self:capability { ipc_lock sys_nice };
+
+allow watchdog_t watchdog_device_t:file rw_file_perms;
+
+allow watchdog_t var_log_t:dir search;

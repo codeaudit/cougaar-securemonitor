@@ -1,0 +1,36 @@
+#DESC Pump - DHCP client
+#
+# Authors:  Wayne Salamon (NAI Labs) <wsalamon@tislabs.com>
+#
+
+#################################
+#
+# Rules for the pump_t domain.
+#
+# pump_t is the domain for the pump, the DHCP/BOOTP network configurator 
+# daemon started by the /etc/sysconfig/network-scripts rc scripts.
+# pump_exec_t is the type of the pump executable.
+#
+type pump_t, domain, privlog;
+role system_r types pump_t;
+every_domain(pump_t)
+type pump_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, pump_exec_t, pump_t)
+
+type pump_var_run_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans(pump_t, var_run_t, pump_var_run_t)
+
+# Inherit and use descriptors from init.
+allow pump_t init_t:fd use;
+
+# Use the network.
+can_network(pump_t)
+
+# Use capabilities
+allow pump_t pump_t:capability { net_admin net_bind_service net_raw };
+
+# Allow read/write to /etc/resolv.conf
+allow pump_t resolv_conf_t:file rw_file_perms;
+
+# Allow pump_t to use packet sockets
+allow pump_t pump_t:packet_socket create_socket_perms;

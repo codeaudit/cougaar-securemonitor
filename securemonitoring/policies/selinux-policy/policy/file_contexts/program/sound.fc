@@ -1,0 +1,7 @@
+# sound
+/bin/aumix-minimal              system_u:object_r:sound_exec_t
+/dev/mixer.*                    system_u:object_r:sound_device_t
+/dev/dsp.*                      system_u:object_r:sound_device_t
+/dev/audio.*                    system_u:object_r:sound_device_t
+/dev/midi.*                     system_u:object_r:sound_device_t
+/etc/\.aumixrc                  system_u:object_r:sound_file_t

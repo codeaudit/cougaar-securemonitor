@@ -1,0 +1,41 @@
+#DESC Portmap - Maintain RPC program number map
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+
+
+#################################
+#
+# Rules for the portmap_t domain.
+#
+type portmap_t, domain, privlog;
+role system_r types portmap_t;
+every_domain(portmap_t)
+type portmap_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, portmap_exec_t, portmap_t)
+
+type portmap_port_t, port_type;
+
+type portmap_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(portmap_t, tmp_t, portmap_tmp_t)
+
+# Inherit and use descriptors from init.
+allow portmap_t init_t:fd use;
+
+allow portmap_t portmap_port_t:{ udp_socket tcp_socket } name_bind;
+
+# Send to ypbind, initrc, rpc.statd, xinetd.
+ifdef(`ypbind.te',
+`can_udp_send(portmap_t, ypbind_t)')
+can_udp_send(portmap_t, { initrc_t init_t })
+can_udp_send(init_t, portmap_t)
+ifdef(`rpcd.te',
+`can_udp_send(portmap_t, rpcd_t)')
+ifdef(`inetd.te',
+`can_udp_send(portmap_t, inetd_t)')
+ifdef(`lpd.te',
+`can_udp_send(portmap_t, lpd_t)')
+
+# Use capabilities
+allow portmap_t portmap_t:capability { net_bind_service setuid setgid };

@@ -1,0 +1,33 @@
+#DESC XFS - X Font Server
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the xfs_t domain.
+#
+# xfs_t is the domain of the X font server.
+# xfs_exec_t is the type of the xfs executable.
+#
+type xfs_t, domain, privlog;
+role system_r types xfs_t;
+every_domain(xfs_t)
+type xfs_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, xfs_exec_t, xfs_t)
+
+type xfs_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(xfs_t, tmp_t, xfs_tmp_t)
+
+type xfs_var_run_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans(xfs_t, var_run_t, xfs_var_run_t)
+
+# Use capabilities.
+allow xfs_t xfs_t:capability { setgid setuid };
+
+# Inherit and use descriptors from init.
+allow xfs_t init_t:fd use;
+
+# Bind to /tmp/.font-unix/fs-1.
+allow xfs_t xfs_tmp_t:unix_stream_socket name_bind;
+

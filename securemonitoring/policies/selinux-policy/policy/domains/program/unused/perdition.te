@@ -1,0 +1,34 @@
+#DESC Perdition POP and IMAP proxy
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the perdition_t domain.
+#
+daemon_domain(perdition)
+
+ifdef(`courier.te', `', `
+type pop_port_t, port_type;
+')
+allow perdition_t pop_port_t:tcp_socket name_bind;
+
+type etc_perdition_t, file_type, sysadmfile;
+
+# Use the network.
+can_network(perdition_t)
+allow perdition_t self:unix_stream_socket create_socket_perms;
+allow perdition_t self:unix_dgram_socket create_socket_perms;
+
+# allow any domain to connect to the proxy
+can_tcp_connect(domain, perdition_t)
+
+# Use capabilities
+allow perdition_t self:capability { setgid setuid net_bind_service };
+
+# read config files
+allow perdition_t etc_perdition_t:dir r_dir_perms;
+allow perdition_t { etc_t etc_perdition_t resolv_conf_t }:file r_file_perms;
+allow perdition_t etc_t:lnk_file read;
+

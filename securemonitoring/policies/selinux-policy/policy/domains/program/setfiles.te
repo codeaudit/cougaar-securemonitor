@@ -1,0 +1,52 @@
+#DESC Setfiles - SELinux filesystem labeling utilities
+#
+# Authors:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the setfiles_t domain.
+#
+# setfiles_exec_t is the type of the setfiles executable.
+#
+type setfiles_t, domain, privlog, privowner;
+type setfiles_exec_t, file_type, sysadmfile, exec_type;
+
+role system_r types setfiles_t;
+role sysadm_r types setfiles_t;
+
+allow setfiles_t initrc_devpts_t:chr_file { read write ioctl };
+allow setfiles_t admin_tty_type:chr_file { read write ioctl };
+
+domain_auto_trans({ initrc_t sysadm_t }, setfiles_exec_t, setfiles_t)
+allow setfiles_t init_t:fd use;
+allow setfiles_t privfd:fd use;
+
+uses_shlib(setfiles_t)
+allow setfiles_t self:capability { dac_override dac_read_search };
+
+# for upgrading glibc - without this the glibc upgrade scripts will put things
+# in a state such that setfiles can not be run!
+allow setfiles_t lib_t:file execute;
+
+allow setfiles_t security_t:security { context_to_sid sid_to_context };
+allow setfiles_t policy_src_t:file r_file_perms;
+
+allow setfiles_t file_type:dir r_dir_perms;
+allow setfiles_t file_type:lnk_file r_file_perms;
+allow setfiles_t file_type:dir_file_class_set { getattr relabelfrom relabelto };
+
+allow setfiles_t file_labels_t:dir rw_dir_perms;
+allow setfiles_t file_labels_t:file create_file_perms;
+
+allow setfiles_t kernel_t:system ichsid;
+
+allow setfiles_t fs_t:filesystem getattr;
+allow setfiles_t fs_type:dir r_dir_perms;
+
+allow setfiles_t etc_runtime_t:file read;
+allow setfiles_t etc_t:file read;
+allow setfiles_t proc_t:file { getattr read };
+
+# for config files in a home directory
+allow setfiles_t home_type:file r_file_perms;

@@ -1,0 +1,52 @@
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+############################################
+#
+# Security types
+#
+
+# 
+# security_t is the target type when checking
+# most of the permissions in the security class.
+# The two exceptions are sid_to_context and load_policy.
+# The sid_to_context permission uses the type attribute
+# of the SID parameter, and the load_policy permission
+# uses the type of the policy file.
+#
+type security_t;
+
+#
+# policy_config_t is the type of /ss_policy,
+# the security server policy configuration.
+#
+type policy_config_t, file_type;
+
+#
+# policy_src_t is the type of the policy source
+# files.
+#
+type policy_src_t, file_type;
+
+#
+# default_context_t is the type applied to 
+# /etc/security/default_context
+#
+type default_context_t, file_type, sysadmfile, login_contexts;
+
+#
+# file_labels_t is the type of the persistent
+# label mapping stored in each file system.
+# The mapping files are in the ...security
+# subdirectory at the root of each file system.
+#
+type file_labels_t, file_type, sysadmfile;
+
+#
+# no_access_t is the type for objects that should
+# only be accessed administratively. 
+#
+type no_access_t, file_type, sysadmfile;
+
+

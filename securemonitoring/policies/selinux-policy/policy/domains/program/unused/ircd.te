@@ -1,0 +1,40 @@
+#DESC Ircd - IRC server
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the ircd_t domain.
+#
+# ircd_exec_t is the type of the slapd executable.
+#
+daemon_domain(ircd)
+
+type ircd_port_t, port_type;
+allow ircd_t ircd_port_t:tcp_socket name_bind;
+
+type etc_ircd_t, file_type, sysadmfile;
+
+log_domain(ircd)
+
+type var_lib_ircd_t, sysadmfile, file_type;
+file_type_auto_trans(ircd_t, var_lib_t, var_lib_ircd_t)
+
+# Use the network.
+can_network(ircd_t)
+#allow ircd_t self:fifo_file { read write };
+allow ircd_t self:unix_stream_socket create_socket_perms;
+allow ircd_t self:unix_dgram_socket create_socket_perms;
+
+allow ircd_t devtty_t:chr_file rw_file_perms;
+
+allow ircd_t sbin_t:dir search;
+
+allow ircd_t proc_t:file { getattr read };
+
+# read config files
+allow ircd_t { etc_t resolv_conf_t etc_runtime_t }:file { getattr read };
+allow ircd_t etc_t:lnk_file read;
+r_dir_file(ircd_t, etc_ircd_t)
+

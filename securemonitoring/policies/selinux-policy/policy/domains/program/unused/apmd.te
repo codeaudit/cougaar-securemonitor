@@ -1,0 +1,50 @@
+#DESC Apmd - Automatic Power Management daemon
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the apmd_t domain.
+#
+daemon_domain(apmd)
+every_domain(apmd_t)
+
+type apm_t, domain, privlog;
+type apm_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(sysadm_t, apm_exec_t, apm_t)
+uses_shlib(apm_t)
+allow apm_t { newrole_t }:fd use;
+allow apm_t self:capability sys_admin;
+allow apm_t proc_t:dir search;
+allow apm_t proc_t:file { read getattr };
+allow apm_t fs_t:filesystem getattr;
+allow apm_t apm_bios_t:chr_file rw_file_perms;
+role sysadm_r types apm_t;
+role system_r types apm_t;
+
+# Use capabilities.
+allow apmd_t self:capability { sys_admin sys_time };
+
+# controlling an orderly resume of PCMCIA requires creating device
+# nodes 254,{0,1,2} for some reason.
+allow apmd_t self:capability { mknod };
+
+# Access /dev/apm_bios.
+allow apmd_t apm_bios_t:chr_file rw_file_perms;
+
+# Run helper programs.
+can_exec_any(apmd_t)
+
+# apmd calls hwclock.sh on suspend and resume
+allow apmd_t clock_device_t:chr_file r_file_perms;
+allow apmd_t adjtime_t:file rw_file_perms;
+
+
+# to quiet fuser and ps
+# setuid for fuser, dac* for ps
+dontaudit apmd_t self:capability { setuid dac_override dac_read_search };
+dontaudit apmd_t domain:{ socket_class_set } getattr;
+dontaudit apmd_t { file_type fs_type }:dir_file_class_set getattr;
+dontaudit apmd_t home_type:dir { search getattr };
+dontaudit apmd_t domain:key_socket getattr;

@@ -1,0 +1,98 @@
+#
+# Macros for xauth domains.
+#
+
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#
+# xauth_domain(domain_prefix)
+#
+# Define a derived domain for the xauth program when executed
+# by a user domain.
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/xauth.te. 
+#
+undefine(`xauth_domain')
+ifdef(`xauth.te', `
+define(`xauth_domain',`
+# Derived domain based on the calling user domain and the program.
+type $1_xauth_t, domain;
+type $1_home_xauth_t, file_type, sysadmfile;
+
+allow $1_t $1_home_xauth_t:file { relabelfrom relabelto create_file_perms };
+
+# Transition from the user domain to this domain.
+domain_auto_trans($1_t, xauth_exec_t, $1_xauth_t)
+ifdef(`ssh.te', `
+domain_auto_trans($1_ssh_t, xauth_exec_t, $1_xauth_t)
+allow $1_xauth_t sshd_t:fifo_file { getattr read };
+dontaudit $1_xauth_t $1_ssh_t:tcp_socket { read write };
+allow $1_xauth_t sshd_t:process sigchld;
+')
+
+ifdef(`su.te', `
+domain_auto_trans($1_su_t, xauth_exec_t, $1_xauth_t)
+')
+
+# The user role is authorized for this domain.
+role $1_r types $1_xauth_t;
+
+# Inherit and use descriptors from gnome-pty-helper.
+ifdef(`gnome-pty-helper.te', `
+allow $1_xauth_t $1_gph_t:fd use;
+')
+
+allow $1_xauth_t privfd:fd use;
+
+# allow ps to show xauth
+allow $1_t $1_xauth_t:dir { search getattr read };
+allow $1_t $1_xauth_t:{ file lnk_file } { read getattr };
+allow $1_t $1_xauth_t:process signal;
+
+uses_shlib($1_xauth_t)
+
+# allow DNS lookups...
+can_network($1_xauth_t)
+ifdef(`named.te', `
+can_udp_send($1_xauth_t, named_t)
+can_udp_send(named_t, $1_xauth_t)
+')
+
+#allow $1_xauth_t devpts_t:dir { getattr read search };
+#allow $1_xauth_t device_t:dir search;
+#allow $1_xauth_t devtty_t:chr_file rw_file_perms;
+allow $1_xauth_t self:unix_stream_socket create_stream_socket_perms;
+allow $1_xauth_t { etc_t resolv_conf_t }:file { getattr read };
+allow $1_xauth_t fs_t:filesystem getattr;
+
+#allow $1_xauth_t proc_t:dir search;
+#allow $1_xauth_t { self proc_t }:lnk_file read;
+#allow $1_xauth_t self:dir search;
+#dontaudit $1_xauth_t var_run_t:dir search;
+
+# Write to the user domain tty.
+allow $1_xauth_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_xauth_t $1_devpts_t:chr_file rw_file_perms;
+
+# allow utmp access
+#allow $1_xauth_t initrc_var_run_t:file read;
+#dontaudit $1_xauth_t initrc_var_run_t:file lock;
+
+# Scan /var/run.
+allow $1_xauth_t var_t:dir search;
+allow $1_xauth_t var_run_t:dir search; 
+
+# this is what we are here for
+allow $1_xauth_t home_root_t:dir search;
+file_type_auto_trans($1_xauth_t, $1_home_dir_t, $1_home_xauth_t, file)
+
+')
+
+', `
+
+define(`xauth_domain',`')
+
+')

@@ -1,0 +1,34 @@
+#DESC Quota - File system quota management utilities
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the quota_t domain.
+#
+daemon_base_domain(quota)
+
+type quota_flag_t, file_type, sysadmfile;
+type quota_db_t, file_type, sysadmfile;
+
+rw_dir_create_file(initrc_t, quota_flag_t)
+
+allow quota_t fs_t:filesystem { getattr quotaget quotamod };
+allow quota_t { home_root_t var_t usr_t src_t }:dir getattr;
+allow quota_t self:capability sys_admin;
+allow quota_t file_t:file quotaon;
+
+# for /quota.*
+allow quota_t quota_db_t:file { read write };
+dontaudit unpriv_userdomain quota_db_t:file getattr;
+
+# Read /etc/mtab.
+allow quota_t etc_runtime_t:file { read getattr };
+
+allow quota_t device_t:dir r_dir_perms;
+allow quota_t fixed_disk_device_t:blk_file getattr;
+allow quota_t boot_t:dir r_dir_perms;
+allow quota_t sysctl_t:dir search;
+
+allow quota_t initrc_devpts_t:chr_file rw_file_perms;

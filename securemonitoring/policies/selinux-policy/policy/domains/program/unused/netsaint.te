@@ -1,0 +1,80 @@
+#DESC Net Saint - network monitoring server
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the netsaint_t domain.
+#
+# netsaint_exec_t is the type of the netsaint executable.
+#
+daemon_domain(netsaint)
+
+type etc_netsaint_t, file_type, sysadmfile;
+type netsaint_db_t, file_type, sysadmfile;
+
+log_domain(netsaint)
+
+# Use the network.
+allow netsaint_t self:fifo_file rw_file_perms;
+allow netsaint_t self:unix_stream_socket create_socket_perms;
+allow netsaint_t self:unix_dgram_socket create_socket_perms;
+
+# Use capabilities
+allow netsaint_t self:capability { setgid setuid };
+allow netsaint_t self:process setpgid;
+
+allow netsaint_t { bin_t sbin_t }:dir search;
+allow netsaint_t bin_t:lnk_file read;
+can_exec(netsaint_t, { shell_exec_t bin_t })
+
+allow netsaint_t proc_t:file { getattr read };
+
+# read config files
+allow netsaint_t { etc_t resolv_conf_t etc_runtime_t }:file { getattr read };
+allow netsaint_t etc_t:lnk_file read;
+
+allow netsaint_t etc_t:dir r_dir_perms;
+r_dir_file(netsaint_t, etc_netsaint_t)
+
+# for ps
+r_dir_file(netsaint_t, domain)
+allow netsaint_t boot_t:dir search;
+allow netsaint_t system_map_t:file { getattr read };
+
+# for who
+allow netsaint_t initrc_var_run_t:file { getattr read lock };
+
+system_domain(netsaint_cgi)
+allow netsaint_cgi_t device_t:dir search;
+r_dir_file(netsaint_cgi_t, etc_netsaint_t)
+allow netsaint_cgi_t var_log_t:dir search;
+r_dir_file(netsaint_cgi_t, netsaint_log_t)
+allow netsaint_cgi_t self:process { fork signal_perms };
+allow netsaint_cgi_t self:fifo_file rw_file_perms;
+allow netsaint_cgi_t bin_t:dir search;
+can_exec(netsaint_cgi_t, bin_t)
+# for ps
+allow netsaint_cgi_t { etc_runtime_t etc_t }:file { getattr read };
+r_dir_file(netsaint_cgi_t, { proc_t self netsaint_t })
+allow netsaint_cgi_t boot_t:dir search;
+allow netsaint_cgi_t system_map_t:file { getattr read };
+dontaudit netsaint_cgi_t domain:dir getattr;
+allow netsaint_cgi_t self:unix_stream_socket create_socket_perms;
+
+ifdef(`apache.te', `
+r_dir_file(httpd_t, etc_netsaint_t)
+domain_auto_trans(httpd_t, netsaint_cgi_exec_t, netsaint_cgi_t)
+allow netsaint_cgi_t httpd_log_files_t:file append;
+')
+
+ifdef(`mta.te', `
+domain_auto_trans(initrc_t, sendmail_exec_t, system_mail_t)
+')
+
+ifdef(`ping.te', `
+domain_auto_trans_read(netsaint_t, ping_exec_t, ping_t)
+dontaudit ping_t etc_netsaint_t:file read;
+dontaudit ping_t netsaint_log_t:fifo_file read;
+')

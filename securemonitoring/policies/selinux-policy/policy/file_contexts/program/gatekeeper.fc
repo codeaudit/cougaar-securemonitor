@@ -1,0 +1,6 @@
+# gatekeeper
+/etc/gatekeeper\.ini		system_u:object_r:etc_gatekeeper_t
+/usr/sbin/gk			system_u:object_r:gatekeeper_exec_t
+/usr/sbin/gnugk			system_u:object_r:gatekeeper_exec_t
+/var/run/gk\.pid		system_u:object_r:var_run_gatekeeper_t
+/var/log/gnugk(/.*)?		system_u:object_r:var_log_gatekeeper_t

@@ -1,0 +1,92 @@
+#DESC Selopt - SELinux ip labeling utilities
+#
+#################################
+#
+# Rules for the SELOPT packet labeling domains.
+#
+# Domain for the scmpd mapping daemon
+type scmpd_t, domain, privlog;
+role system_r types scmpd_t;
+every_domain(scmpd_t)
+
+# Type for the scmpd executable
+type scmpd_exec_t, file_type, sysadmfile, exec_type;
+
+# Domain for the utilites to run in
+type selopt_t, domain, privlog;
+role system_r types selopt_t;
+role sysadm_r types selopt_t;
+every_domain(selopt_t)
+
+# 
+# Type for the utility executables
+type selopt_exec_t, file_type, sysadmfile, exec_type;
+
+#
+# Domain transition rules for the scmpd program.
+#
+domain_auto_trans(sysadm_t, scmpd_exec_t, scmpd_t)
+domain_auto_trans(initrc_t, scmpd_exec_t, scmpd_t)
+
+#
+# Domain transition rules for the utilities.
+#
+domain_auto_trans(sysadm_t, selopt_exec_t, selopt_t)
+
+# Inherit and use descriptors from init.
+allow scmpd_t init_t:fd use;
+
+#
+# Allow the domains to create a NETLINK socket
+#
+allow scmpd_t scmpd_t:netlink_socket create_socket_perms;
+allow selopt_t selopt_t:netlink_socket create_socket_perms;
+
+# Use the network interfaces.
+can_network(scmpd_t)
+can_network(selopt_t)
+
+# Allow scmpd to receive SCMP packets
+allow scmpd_t scmp_packet_t:udp_socket recvfrom;
+
+#
+# Other permissions for the utilities.
+allow selopt_t tty_device_t:chr_file rw_file_perms;
+allow selopt_t sysadm_tty_device_t:chr_file rw_file_perms;
+allow selopt_t sysadm_devpts_t:chr_file rw_file_perms;
+allow selopt_t self:capability { net_admin };
+
+# 
+# Other permissions for the scmpd daemon.
+allow scmpd_t self:capability { net_admin };
+
+# Allow the daemon access to the TTY when run by hand as sysadm_r.
+#allow scmpd_t sysadm_tty_device_t:chr_file rw_file_perms;
+
+#
+# System permissions for testing purposes; not really related to domains herein
+# Some of these permissions are coverend by the can_network() macro, but are
+# duplicated here to provide permissions needed when that macro call is removed
+# for every domain.
+#
+
+# Permit RPC statd to receive packets.
+#allow rpcd_t netif_type:netif { udp_recv };
+#allow rpcd_t node_type:node { udp_recv };
+
+# Permit RPC protmapper to receive packets.
+#allow portmap_t netif_type:netif { udp_recv };
+#allow portmap_t node_type:node { udp_recv };
+
+# Permit receiving SSH traffic from sysadm role.
+#allow sysadm_ssh_t netif_type:netif { tcp_recv };
+#allow sysadm_ssh_t node_type:node { tcp_recv };
+
+# Permit normal SSH traffic to be received.
+#allow sshd_t netif_type:netif { tcp_recv };
+#allow sshd_t node_type:node { tcp_recv };
+
+# Procmail needs the next two
+#allow user_mail_domain netif_type:netif { udp_recv };
+#allow user_mail_domain node_type:node { udp_recv };
+

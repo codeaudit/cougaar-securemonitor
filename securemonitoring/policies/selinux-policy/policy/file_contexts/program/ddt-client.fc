@@ -1,0 +1,6 @@
+# slapd - ldap server
+/usr/sbin/ddtcd			system_u:object_r:ddt_client_exec_t
+/var/run/ddtcd\.pid		system_u:object_r:var_run_ddt_client_t
+/etc/ddtcd\.conf		system_u:object_r:etc_ddt_client_t
+/var/lib/ddt-client(/.*)?	system_u:object_r:var_lib_ddt_client_t
+/var/log/ddtcd\.log.*		system_u:object_r:var_log_ddt_client_t

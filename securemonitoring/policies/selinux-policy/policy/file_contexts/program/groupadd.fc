@@ -1,0 +1,10 @@
+# groupadd
+/usr/local/selinux/bin/sgroupadd	system_u:object_r:groupadd_exec_t
+/usr/local/selinux/bin/sgroupdel	system_u:object_r:groupadd_exec_t
+/usr/local/selinux/bin/sgroupmod	system_u:object_r:groupadd_exec_t
+/usr/local/selinux/bin/sgpasswd		system_u:object_r:groupadd_exec_t
+/usr/bin/sgroupmod		system_u:object_r:groupadd_exec_t
+/usr/bin/sgroupadd               system_u:object_r:groupadd_exec_t
+/usr/bin/sgroupdel               system_u:object_r:groupadd_exec_t
+/usr/bin/sgpasswd               system_u:object_r:groupadd_exec_t
+

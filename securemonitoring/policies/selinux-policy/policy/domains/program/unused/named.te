@@ -1,0 +1,130 @@
+#DESC BIND - Name server
+#
+# Authors:  Yuichi Nakamura <ynakam@ori.hitachi-sk.co.jp>,
+#           Russell Coker
+# 
+#
+
+#################################
+#
+# Rules for the named_t domain.
+#
+type named_port_t, port_type;
+type rndc_port_t, port_type;
+
+daemon_domain(named)
+# ndc_t is the domain for the ndc program
+type ndc_t, domain, privlog;
+role sysadm_r types ndc_t;
+
+can_exec(named_t, named_exec_t)
+allow named_t sbin_t:dir search;
+
+allow named_t self:process setsched;
+
+# A type for configuration files of named.
+type named_conf_t, file_type, sysadmfile;
+type rndc_conf_t, file_type, sysadmfile;
+
+# for primary zone files
+type named_zone_t, file_type, sysadmfile;
+
+# for secondary zone files
+type named_cache_t, file_type, sysadmfile;
+
+# Use capabilities. Surplus capabilities may be allowed.
+allow named_t named_t:capability { setuid setgid net_bind_service chown fowner dac_override sys_nice };
+
+allow named_t etc_t:{ file lnk_file } { getattr read };
+allow named_t etc_runtime_t:{ file lnk_file } { getattr read };
+allow named_t resolv_conf_t:file { getattr read };
+
+#Named can use network
+can_network(named_t)
+# allow UDP transfer to/from any program
+can_udp_send(domain, named_t)
+can_udp_send(named_t, domain)
+can_tcp_connect(domain, named_t)
+
+# Bind to the named port.
+allow named_t named_port_t:udp_socket name_bind;
+allow named_t { named_port_t rndc_port_t }:tcp_socket name_bind;
+
+#read configuration files
+r_dir_file(named_t, named_conf_t)
+
+#read zone files - change this to rw_dir_create_file() to
+# enable domain auto updates.
+r_dir_file(named_t, named_zone_t)
+
+#write cache for secondary zones
+rw_dir_create_file(named_t, named_cache_t)
+
+allow named_t self:unix_stream_socket create_stream_socket_perms;
+allow named_t self:unix_dgram_socket create_socket_perms;
+
+# Read sysctl kernel variables.
+allow named_t sysctl_t:dir r_dir_perms;
+allow named_t sysctl_kernel_t:dir r_dir_perms;
+allow named_t sysctl_kernel_t:file r_file_perms;
+
+# Read /proc/cpuinfo.
+allow named_t proc_t:dir r_dir_perms;
+allow named_t proc_t:file r_file_perms;
+
+# Read /dev/random.
+allow named_t device_t:dir r_dir_perms;
+allow named_t random_device_t:chr_file r_file_perms;
+
+# Use a pipe created by self.
+allow named_t self:fifo_file rw_file_perms;
+
+# Set own capabilities.
+allow named_t self:process setcap;
+
+#A type for /usr/sbin/ndc
+type ndc_exec_t, file_type,sysadmfile, exec_type;
+domain_auto_trans(sysadm_t, ndc_exec_t, ndc_t)
+uses_shlib(ndc_t)
+can_network(ndc_t)
+can_tcp_connect(ndc_t, named_t)
+allow { named_t ndc_t initrc_t } rndc_conf_t:file { getattr read };
+
+allow ndc_t etc_t:dir r_dir_perms;
+allow ndc_t self:unix_stream_socket create_stream_socket_perms;
+allow ndc_t self:unix_stream_socket connect;
+allow ndc_t self:capability dac_override;
+allow ndc_t var_run_named_t:sock_file rw_file_perms;
+allow ndc_t named_t:unix_stream_socket connectto;
+allow ndc_t privfd:fd use;
+# seems to need read as well for some reason
+allow ndc_t admin_tty_type:chr_file { getattr read write };
+allow ndc_t fs_t:filesystem getattr;
+
+# Read sysctl kernel variables.
+allow ndc_t sysctl_t:dir r_dir_perms;
+allow ndc_t sysctl_kernel_t:dir r_dir_perms;
+allow ndc_t sysctl_kernel_t:file r_file_perms;
+
+allow ndc_t self:process { fork signal_perms };
+allow ndc_t self:fifo_file { read write getattr ioctl };
+allow ndc_t named_zone_t:dir search;
+
+# for chmod in start script
+dontaudit initrc_t var_run_named_t:dir setattr;
+
+# for ndc_t to be used for restart shell scripts
+ifdef(`ndc_shell_script', `
+allow ndc_t crond_t:fd use;
+allow ndc_t crond_t:fifo_file { read write ioctl };
+allow ndc_t crond_t:process sigchld;
+allow ndc_t devtty_t:chr_file { read write ioctl };
+allow ndc_t etc_runtime_t:file { getattr read };
+allow ndc_t proc_t:dir search;
+allow ndc_t proc_t:file { getattr read };
+can_exec(ndc_t, { bin_t sbin_t shell_exec_t })
+allow ndc_t var_run_named_t:file getattr;
+allow ndc_t named_zone_t:dir { read getattr };
+allow ndc_t named_zone_t:file getattr;
+dontaudit ndc_t sysadm_home_t:dir { getattr search read };
+')

@@ -1,0 +1,47 @@
+#
+# Macros for chkpwd domains.
+#
+
+#
+# chkpwd_domain(domain_prefix)
+#
+# Define a derived domain for the *_chkpwd program when executed
+# by a user domain.
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/su.te. 
+#
+undefine(`chkpwd_domain')
+ifdef(`chkpwd.te', `
+define(`chkpwd_domain',`
+# Derived domain based on the calling user domain and the program.
+type $1_chkpwd_t, domain, privlog, auth;
+
+# Transition from the user domain to this domain.
+domain_auto_trans($1_t, chkpwd_exec_t, $1_chkpwd_t)
+
+# The user role is authorized for this domain.
+role $1_r types $1_chkpwd_t;
+
+# This domain is granted permissions common to most domains (includes can_net)
+every_domain($1_chkpwd_t)
+
+# Use capabilities.
+allow $1_chkpwd_t self:capability setuid;
+
+# Inherit and use descriptors from gnome-pty-helper.
+ifdef(`gnome-pty-helper.te',`allow $1_chkpwd_t $1_gph_t:fd use;')
+
+# Inherit and use descriptors from newrole.
+ifdef(`newrole.te', `allow $1_chkpwd_t newrole_t:fd use;')
+
+# Write to the user domain tty.
+allow $1_chkpwd_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_chkpwd_t $1_devpts_t:chr_file rw_file_perms;
+')
+
+', `
+
+define(`chkpwd_domain',`')
+
+')

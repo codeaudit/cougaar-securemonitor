@@ -1,0 +1,3 @@
+# newrole
+/usr/local/selinux/bin/newrole		system_u:object_r:newrole_exec_t
+/usr/bin/newrole			system_u:object_r:newrole_exec_t

@@ -1,0 +1,4 @@
+# backup
+#/usr/local/bin/backup-script	system_u:object_r:backup_exec_t
+#/var/backup			system_u:object_r:backup_store_t
+/var/backups(/.*)?		system_u:object_r:backup_store_t

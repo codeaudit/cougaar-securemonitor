@@ -1,0 +1,68 @@
+#DESC NTPD - Time synchronisation daemon
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the ntpd_t domain.
+#
+daemon_domain(ntpd)
+type var_lib_ntp_t, file_type, sysadmfile;
+type var_log_ntp_t, file_type, sysadmfile, logfile;
+type etc_ntp_t, file_type, sysadmfile;
+type ntp_port_t, port_type;
+
+file_type_auto_trans(ntpd_t, var_log_t, var_log_ntp_t)
+
+allow ntpd_t var_lib_t:dir r_dir_perms;
+allow ntpd_t usr_t:file r_file_perms;
+allow ntpd_t { var_lib_ntp_t var_log_ntp_t }:dir rw_dir_perms;
+allow ntpd_t { var_lib_ntp_t var_log_ntp_t }:file create_file_perms;
+
+allow ntpd_t self:capability { sys_time net_bind_service ipc_lock };
+dontaudit ntpd_t self:capability fsetid;
+dontaudit ntpd_t domain:lnk_file read;
+
+# for some reason it creates a file in /tmp
+tmp_domain(ntpd)
+
+allow ntpd_t etc_t:dir r_dir_perms;
+allow ntpd_t etc_t:lnk_file r_file_perms;
+allow ntpd_t resolv_conf_t:file { read getattr };
+allow ntpd_t etc_ntp_t:file rw_file_perms;
+
+# Use the network.
+can_network(ntpd_t)
+allow ntpd_t ntp_port_t:udp_socket name_bind;
+allow ntpd_t domain:packet_socket recvfrom;
+allow ntpd_t self:unix_dgram_socket create_socket_perms;
+allow ntpd_t self:unix_stream_socket create_socket_perms;
+
+# for cron jobs
+# system_crond_t is not right, cron is not doing what it should
+ifdef(`crond.te', `
+domain_auto_trans(system_crond_t, ntpd_exec_t, ntpd_t)
+can_exec(ntpd_t, etc_t)
+allow ntpd_t crond_t:fd use;
+allow ntpd_t crond_t:fifo_file rw_file_perms;
+allow ntpd_t self:fifo_file { read write getattr };
+allow ntpd_t etc_runtime_t:file r_file_perms;
+can_exec(ntpd_t, { bin_t shell_exec_t sbin_t ls_exec_t logrotate_exec_t ntpd_exec_t })
+allow ntpd_t { sbin_t bin_t }:dir search;
+allow ntpd_t bin_t:lnk_file read;
+allow ntpd_t sysctl_kernel_t:dir search;
+allow ntpd_t sysctl_kernel_t:file read;
+allow ntpd_t proc_t:file r_file_perms;
+allow ntpd_t crond_t:process sigchld;
+allow ntpd_t sysadm_home_dir_t:dir r_dir_perms;
+')
+
+# quiet start-stop-daemon
+dontaudit ntpd_t domain:dir search;
+
+allow ntpd_t devtty_t:chr_file rw_file_perms;
+
+can_udp_send(ntpd_t, sysadm_t)
+can_udp_send(sysadm_t, ntpd_t)
+can_udp_send(ntpd_t, ntpd_t)

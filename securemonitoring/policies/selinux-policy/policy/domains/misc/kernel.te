@@ -1,0 +1,73 @@
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the kernel_t domain.
+#
+
+#
+# kernel_t is the domain of kernel threads.
+# It is also the target type when checking permissions in the system class.
+# 
+type kernel_t, domain;
+role system_r types kernel_t;
+general_domain_access(kernel_t)
+general_proc_read_access(kernel_t)
+base_file_read_access(kernel_t)
+uses_shlib(kernel_t)
+
+# Use capabilities.
+allow kernel_t self:capability *;
+
+# Run init in the init_t domain.
+domain_auto_trans_read(kernel_t, init_exec_t, init_t)
+
+# Share state with the init process.
+allow kernel_t init_t:process share;
+
+# Mount and unmount file systems.
+allow kernel_t fs_type:filesystem mount_fs_perms;
+
+# Search the persistent label mapping.
+allow kernel_t file_labels_t:dir search;
+
+# Send signal to any process.
+allow kernel_t domain:process signal;
+
+# Access the console.
+allow kernel_t device_t:dir search;
+allow kernel_t console_device_t:chr_file rw_file_perms;
+
+# Access the initrd filesystem.
+allow kernel_t file_t:chr_file rw_file_perms;
+can_exec(kernel_t, file_t)
+ifdef(`chroot.te', `
+can_exec(kernel_t, chroot_exec_t)
+')
+allow kernel_t self:capability sys_chroot;
+
+allow kernel_t file_t:dir mounton;
+allow kernel_t file_t:dir rw_dir_perms;
+allow kernel_t file_t:blk_file create_file_perms;
+allow kernel_t { sysctl_t sysctl_kernel_t }:file { setattr rw_file_perms };
+
+# Lookup the policy.
+allow kernel_t policy_config_t:dir r_dir_perms;
+
+# Reload the policy from the real root.
+allow kernel_t security_t:security load_policy;
+
+ifdef(`modutil.te', `
+# Run insmod (for kernel module loader).
+domain_auto_trans_read(kernel_t,insmod_exec_t,insmod_t)
+allow kernel_t insmod_exec_t:lnk_file read;
+')
+
+# /proc/sys/kernel/modprobe is set to /bin/true if not using modules.
+can_exec(kernel_t, bin_t)
+
+# added to run society with acme 
+allow kernel_t mount_t:udp_socket { write };
+

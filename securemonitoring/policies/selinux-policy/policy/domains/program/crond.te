@@ -1,0 +1,258 @@
+#DESC Crond - Crond daemon
+#
+# Domains for the top-level crond daemon process and
+# for system cron jobs.  The domains for user cron jobs
+# are in macros/program/crond_macros.te.
+#
+
+#
+# Authors:  Jonathan Crowley (MITRE) <jonathan@mitre.org>,
+#	    Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser
+#
+# Domain for crond.  It needs auth to check for locked accounts.
+
+daemon_domain(crond, `, privrole, privmail, auth, privfd')
+
+# This domain is granted permissions common to most domains (including can_net)
+general_domain_access(crond_t)
+
+# Type for the anacron executable.
+type anacron_exec_t, file_type, sysadmfile, exec_type;
+
+# Type for temporary files.
+tmp_domain(crond)
+
+# Domain for system cron jobs.
+type system_crond_t, domain, privlog, privmail;
+
+# Read and write console and ttys.
+allow system_crond_t devtty_t:chr_file rw_file_perms;
+
+# Read system information files in /proc.
+allow system_crond_t proc_t:dir r_dir_perms;
+allow system_crond_t proc_t:file r_file_perms;
+
+ifdef(`mta.te', `
+allow mta_user_agent system_crond_t:fd use;
+')
+
+# to stop killall type operations from filling our logs
+dontaudit system_crond_t domain:dir search;
+
+# read files in /etc (anacrontab)  execute /etc/cron.hourly/*, etc.
+allow system_crond_t etc_t:file read;
+allow system_crond_t etc_runtime_t:file read;
+
+# read localization information
+allow crond_t locale_t:dir r_dir_perms;
+allow crond_t locale_t:{file lnk_file} r_file_perms;
+allow system_crond_t locale_t:dir r_dir_perms;
+allow system_crond_t locale_t:{file lnk_file} r_file_perms;
+
+# Type for log files.
+type cron_log_t, file_type, sysadmfile, logfile;
+# Use this type when creating files in /var/log.
+file_type_auto_trans(crond_t, var_log_t, cron_log_t)
+
+# Use capabilities.
+allow crond_t crond_t:capability { setgid setuid net_bind_service };
+
+# Check entrypoint permission on crontab files.
+allow crond_t security_t:security compute_av;
+
+# for finding binaries and /bin/sh
+allow crond_t { bin_t sbin_t }:dir search;
+allow crond_t bin_t:lnk_file read;
+
+# Read from /var/spool/cron.
+allow crond_t var_lib_t:dir search;
+allow crond_t var_spool_t:dir r_dir_perms;
+allow crond_t cron_spool_t:dir r_dir_perms;
+allow crond_t cron_spool_t:file r_file_perms;
+
+# Read system crontabs
+allow crond_t system_crond_script_t:file r_file_perms;
+allow crond_t system_crond_script_t:dir r_dir_perms;
+
+# Read /etc/security/default_contexts.
+allow crond_t default_context_t:file r_file_perms;
+
+allow crond_t etc_t:file { getattr read };
+allow crond_t etc_t:lnk_file read;
+
+# crond tries to search /root.  Not sure why.
+allow crond_t sysadm_home_dir_t:dir r_dir_perms;
+
+# to search /home
+allow crond_t home_root_t:dir { getattr search };
+allow crond_t user_home_dir_type:dir r_dir_perms;
+
+# Run a shell.
+can_exec(crond_t, shell_exec_t)
+
+ifdef(`rpm.te',
+`# Run the rpm program in the rpm_t domain. Allow creation of RPM log files
+# via redirection of standard out.
+domain_auto_trans(crond_t, rpm_exec_t, rpm_t)
+allow crond_t var_log_rpm_t: file create_file_perms;
+
+domain_auto_trans(system_crond_t, rpm_exec_t, rpm_t)
+allow system_crond_t var_log_rpm_t: file create_file_perms;')
+
+# This system_r role is authorized for this domain.
+role system_r types system_crond_t;
+
+uses_shlib(system_crond_t);
+general_domain_access(system_crond_t);
+allow system_crond_t var_log_t:file r_file_perms;
+
+# Type for system crontab files.
+type system_crond_script_t, file_type, sysadmfile;
+
+# Permit crond_t to transition to this domain.
+# The transition is requested explicitly by the modified crond 
+# via execve_secure.  There is no way to set up an automatic
+# transition, since crontabs are configuration files, not executables.
+domain_trans(crond_t, shell_exec_t, system_crond_t)
+
+# Transition to this domain for anacron as well.
+# Still need to study anacron.
+domain_auto_trans(initrc_t, anacron_exec_t, system_crond_t)
+
+# Access log files
+file_type_auto_trans(system_crond_t, var_log_t, cron_log_t)
+
+# Inherit and use descriptors from init.
+allow system_crond_t init_t:fd use;
+
+# Inherit and use descriptors from initrc.
+allow system_crond_t initrc_t:fd use;
+
+# Write to a socket from initrc.
+allow system_crond_t initrc_t:udp_socket rw_socket_perms;
+
+# Use capabilities.
+allow system_crond_t system_crond_t:capability { setgid setuid dac_override fowner net_bind_service fsetid };
+
+# Read the system crontabs.
+allow system_crond_t system_crond_script_t:file r_file_perms;
+
+# 
+# Since crontab files are not directly executed,
+# crond must ensure that the crontab file has
+# a type that is appropriate for the domain of
+# the system cron job.  It performs an entrypoint
+# permission check for this purpose.
+#
+allow system_crond_t system_crond_script_t:file entrypoint;
+ifdef(`fcron.te', `
+allow system_crond_t sysadm_cron_spool_t:file entrypoint;
+')
+
+# Run helper programs in the system_crond_t domain.
+allow system_crond_t { bin_t sbin_t }:dir r_dir_perms;
+allow system_crond_t { bin_t sbin_t }:lnk_file read;
+can_exec(system_crond_t, etc_t)
+can_exec(system_crond_t, bin_t)
+can_exec(system_crond_t, sbin_t)
+can_exec(system_crond_t, exec_type)
+
+
+# Read from /var/spool/cron.
+allow system_crond_t cron_spool_t:dir r_dir_perms;
+allow system_crond_t cron_spool_t:file r_file_perms;
+
+# Write to /var/lib/slocate.db.
+allow system_crond_t var_lib_t:dir rw_dir_perms;
+allow system_crond_t var_lib_t:file create_file_perms;
+
+# Update whatis files.
+allow system_crond_t catman_t:dir rw_dir_perms;
+allow system_crond_t catman_t:file create_file_perms;
+
+# Write /var/lock/makewhatis.lock.
+allow system_crond_t var_lock_t:dir rw_dir_perms;
+allow system_crond_t var_lock_t:file create_file_perms;
+
+# Modutils are now combined, so we can no longer distinguish them.
+# Let crond run the insmod executable in the insmod_t domain.
+ifdef(`modutil.te', `
+system_crond_entry(insmod_exec_t, insmod_t)
+')
+
+# for if /var/mail is a symlink
+allow crond_t mail_spool_t:lnk_file read;
+
+# Run logrotate in the logrotate_t domain.
+ifdef(`logrotate.te', `
+system_crond_entry(logrotate_exec_t, logrotate_t)
+')
+
+ifdef(`mta.te', `
+r_dir_file(system_mail_t, crond_tmp_t)
+')
+
+# Stat any file and search any directory for find.
+allow system_crond_t file_type:file_class_set getattr;
+allow system_crond_t file_type:dir { read search getattr };
+
+# Create temporary files.
+type system_crond_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(system_crond_t, { tmp_t crond_tmp_t }, system_crond_tmp_t)
+
+# /sbin/runlevel ask for w access to utmp, but will operate
+# correctly without it.  Do not audit write denials to utmp.
+dontaudit system_crond_t initrc_var_run_t:file { read write };
+
+# Access accounting summary files.
+allow system_crond_t var_log_sa_t:file create_file_perms;
+allow system_crond_t var_log_sa_t:dir rw_dir_perms;
+
+# Access other spool directories like
+# /var/spool/anacron and /var/spool/slrnpull.
+allow system_crond_t var_spool_t:file create_file_perms;
+allow system_crond_t var_spool_t:dir rw_dir_perms;
+
+# Do not audit attempts to search unlabeled directories (e.g. slocate).
+dontaudit system_crond_t unlabeled_t:dir r_dir_perms;
+dontaudit system_crond_t unlabeled_t:file r_file_perms;
+
+# Determine the set of legal user SIDs that can be reached.
+allow crond_t security_t:security { sid_to_context context_to_sid get_user_sids };
+
+
+# please verify later time added to make it work in enforcement mode Mike 
+allow crond_t any_socket_t:udp_socket { sendto };
+allow crond_t crond_t:tcp_socket { bind connect create read write };
+allow crond_t crond_t:udp_socket { bind create read setopt write };
+allow crond_t netif_eth0_t:netif { tcp_send udp_send };
+allow crond_t netmsg_eth0_t:tcp_socket { connectto recvfrom };
+allow crond_t netmsg_eth0_t:udp_socket { recvfrom };
+allow crond_t node_t:node { tcp_send udp_send };
+allow crond_t port_t:tcp_socket { name_bind };
+allow crond_t port_t:udp_socket { name_bind };
+allow crond_t var_yp_t:dir { search };
+allow crond_t var_yp_t:file { read };
+allow system_crond_t devpts_t:dir { getattr };
+allow system_crond_t devpts_t:filesystem { getattr };
+allow system_crond_t etc_t:lnk_file { read };
+allow system_crond_t fs_t:filesystem { getattr };
+allow system_crond_t initrc_var_run_t:file { lock };
+allow system_crond_t lib_t:file { execute execute_no_trans ioctl read };
+allow system_crond_t proc_t:filesystem { getattr };
+allow system_crond_t proc_t:lnk_file { read };
+allow system_crond_t sysctl_kernel_t:dir { search };
+allow system_crond_t sysctl_kernel_t:file { getattr read };
+allow system_crond_t sysctl_t:dir { search };
+allow system_crond_t sysctl_t:file { getattr read };
+allow system_crond_t usr_t:file { read };
+allow crond_t var_spool_t:file { execute getattr read };
+allow system_crond_t nfs_t:dir { getattr };
+
+
+
+
+
+
+
+

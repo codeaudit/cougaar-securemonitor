@@ -1,0 +1,3207 @@
+#DESC Admin - Domains for administrators.
+#
+#################################
+
+# sysadm_t is the system administrator domain.
+type sysadm_t, domain, privlog, privowner, admin, userdomain, privhome;
+allow privhome home_root_t:dir search;
+
+# system_r is authorized for sysadm_t for single-user mode.
+role system_r types sysadm_t; 
+
+# sysadm_r is authorized for sysadm_t for the initial login domain.
+role sysadm_r types sysadm_t;
+
+# sysadm_t is granted the permissions common to most domains.
+every_domain(sysadm_t)
+
+# sysadm_t is also granted permissions specific to administrator domains.
+admin_domain(sysadm)
+
+# Audit grantings of avc_toggle to the administrator domains.
+# Due to its sensitivity, we always audit this permission.
+auditallow admin kernel_t:system avc_toggle;
+
+
+define(`admin_tty_type', `{ sysadm_tty_device_t sysadm_devpts_t }')
+
+allow sysadm_t var_spool_t:file { execute };
+#allow sysadm_t sysadm_home_dir_t:dir { add_name read remove_name write };
+#allow sysadm_t sysadm_home_dir_t:file { create getattr link read unlink write };
+
+allow sysadm_t usr_t:file { execute };
+
+allow sysadm_t sysadm_t:packet_socket { create bind getopt ioctl read setopt };
+
+
+
+
+
+
+
+
+#DESC Httpd admin -  Domain for httpd administrators
+########################################
+# httpd_admin domain macro and rules for 
+# httpd_admin_t
+########################################
+
+# Uses some types defined in apache.te, so conditionally defined this macro.
+# The intent is to remove this file in the future.
+#
+ifdef(`apache.te', `
+
+include(user_macros.te)
+
+define(`httpd_admin_domain',`
+
+################################
+# Allow httpd_admin_t to do everything user_t can do
+#################################
+
+user_domain($1)
+
+######################################
+# Allow httpd_admin_t to edit the server config files
+######################################
+allow $1_t httpd_config_t:file create_file_perms;
+allow $1_t httpd_config_t:dir rw_dir_perms;
+allow $1_t httpd_config_t:lnk_file link_file_perms;
+allow $1_t httpd_config_t:security { sid_to_context };
+
+######################################################
+# Allow the httpd_admin_t to view or edit the web server log files
+#######################################################
+allow $1_t httpd_log_files_t:file create_file_perms;
+allow $1_t httpd_log_files_t:dir rw_dir_perms ;
+allow $1_t httpd_log_files_t:security { sid_to_context };
+allow $1_t httpd_log_files_t:lnk_file link_file_perms;
+
+##################################################
+# Allow the httpd_admin_t to view files in /etc/httpd/modules
+# directory.  This is where the module libraries for 
+# Apache are kept
+##################################################
+allow $1_t httpd_modules_t:dir r_dir_perms;
+allow $1_t httpd_modules_t:file r_file_perms;
+
+####################################################
+# Allow the httpd_admin_t to do the following to httpd
+# executable and process if you want the httpd admin role to run the binary
+#######################################################
+#allow $1_t httpd_exec_t:file rx_file_perms;
+#allow $1_t httpd_t:security { sid_to_context };
+#allow $1_t httpd_t:process{ sigkill sigstop signal transition};
+
+###########################################################################
+# Allow the httpd admin to edit or create content, scripts, and 
+# htaccess files
+##########################################################################
+allow $1_t httpd_sys_content_t:file create_file_perms;
+allow $1_t httpd_user_content_t:file create_file_perms;
+allow $1_t httpd_sys_content_t:dir rw_dir_perms;
+allow $1_t httpd_user_content_t:dir rw_dir_perms;
+allow $1_t httpd_sys_content_t:lnk_file {create};
+allow $1_t httpd_user_content_t:lnk_file {create};
+
+allow $1_t httpd_sys_script_t:file create_file_perms;
+allow $1_t httpd_sys_script_t:dir create_dir_perms;
+allow $1_t httpd_sys_script_t:lnk_file {create};
+
+allow $1_t httpd_sys_htaccess_t:file create_file_perms;
+allow $1_t httpd_sys_htaccess_t:lnk_file {create};
+
+allow $1_t httpd_sys_script_r_t:file create_file_perms;
+allow $1_t httpd_sys_script_r_t:lnk_file {create};
+allow $1_t httpd_sys_script_r_t:dir create_dir_perms;
+
+allow $1_t httpd_user_script_r_t:file create_file_perms;
+allow $1_t httpd_user_script_r_t:lnk_file {create};
+allow $1_t httpd_user_script_r_t:dir create_dir_perms;
+
+allow $1_t httpd_sys_script_rw_t:file rw_file_perms;
+allow $1_t httpd_sys_script_rw_t:lnk_file {create};
+allow $1_t httpd_sys_script_rw_t:dir rw_dir_perms;
+
+allow $1_t httpd_user_script_rw_t:file rw_file_perms;
+allow $1_t httpd_user_script_rw_t:lnk_file {create};
+allow $1_t httpd_user_script_rw_t:dir rw_dir_perms;
+
+allow $1_t httpd_sys_script_a_t:file ra_file_perms;
+allow $1_t httpd_sys_script_a_t:lnk_file {create};
+allow $1_t httpd_sys_script_a_t:dir ra_dir_perms;
+
+allow $1_t httpd_user_script_a_t:file ra_file_perms;
+allow $1_t httpd_user_script_a_t:lnk_file {create};
+allow $1_t httpd_user_script_a_t:dir ra_dir_perms;
+
+####################################
+# Allow a domain change to httpd_admin_t via the newrole command
+#####################################
+allow $1_t newrole_t:fd use;
+allow $1_t newrole_t:process {sigchld};
+can_exec($1_t, shell_exec_t)
+allow $1_t shell_exec_t:file {entrypoint};
+allow newrole_t $1_t:process {transition};
+
+#############################################################################
+# Allow the httpd admin to use chcon to change contexts  on scripts, web pages,
+# and htaccess files. 
+###########################################################################
+allow $1_t httpd_sys_script_t:dir  {relabelto};
+allow $1_t httpd_sys_script_a_t:dir  {relabelto};
+allow $1_t httpd_sys_script_r_t:dir  {relabelto};
+allow $1_t httpd_sys_script_rw_t:dir  {relabelto};
+
+allow $1_t httpd_user_script_t:dir  {relabelto};
+allow $1_t httpd_user_script_a_t:dir  {relabelto};
+allow $1_t httpd_user_script_r_t:dir  {relabelto};
+allow $1_t httpd_user_script_rw_t:dir  {relabelto};
+
+allow $1_t httpd_sys_script_a_t:file  {relabelto};
+allow $1_t httpd_sys_script_r_t:file  {relabelto};
+allow $1_t httpd_sys_script_rw_t:file  {relabelto};
+
+allow $1_t httpd_user_script_r_t:file  {relabelto};
+allow $1_t httpd_user_script_rw_t:file  {relabelto};
+allow $1_t httpd_user_script_a_t:file  {relabelto};
+
+allow $1_t httpd_sys_content_t:dir {relabelto};
+allow $1_t httpd_user_content_t:dir {relabelto};
+
+allow $1_t httpd_sys_content_t:file {relabelto};
+allow $1_t httpd_sys_htaccess_t:file {relabelto};
+allow $1_t httpd_user_content_t:file {relabelto};
+allow $1_t httpd_user_htaccess_t:file {relabelto};
+
+')
+
+
+# httpd_admin_t has access to all of the httpd files, such as
+# the configuration files and the log files.  They also 
+# have access to system content and/or user content
+#
+type httpd_admin_t, domain;
+role httpd_admin_r types httpd_admin_t;
+every_domain(httpd_admin_t)
+
+httpd_admin_domain(httpd_admin)
+
+')
+#DESC User - Domains for ordinary users.
+#
+#################################
+#full_user_role(java)
+#allow system_r java_r;
+#allow sysadm_r java_r;
+
+full_user_role(user)
+# a role for staff that allows seeing all domains and control over the user_t
+# domain
+#full_user_role(staff)
+#allow staff_t user_t:process signal_perms;
+#r_dir_file(staff_t, domain)
+#file_type_auto_trans(staff_t, user_home_dir_t, user_home_t)
+
+# read localization information
+allow user_t locale_t:dir r_dir_perms;
+allow user_t locale_t:{file lnk_file} r_file_perms;
+
+# if adding new user roles make sure you edit the in_user_role macro in
+# macros/user_macros.te to match
+
+# lots of user programs accidentally search /root, and also the admin often
+# logs in as UID=0 domain=user_t...
+dontaudit unpriv_userdomain sysadm_home_dir_t:dir { getattr search };
+
+# system_r is authorized for user_t as a fallback for unmodified daemons.
+role system_r types user_t;
+
+# change from role $1_r to $2_r and relabel tty appropriately
+define(`role_tty_type_change', `
+allow $1_r $2_r;
+type_change $2_t $1_devpts_t:chr_file $2_devpts_t;
+type_change $2_t $1_tty_device_t:chr_file $2_tty_device_t;
+')
+
+ifdef(`newrole.te', `
+#
+# Allow the user roles to transition
+# into each other.
+role_tty_type_change(sysadm, user)
+role_tty_type_change(user, sysadm)
+#role_tty_type_change(staff, sysadm)
+#role_tty_type_change(sysadm, staff)
+')
+
+# "ps aux" and "ls -l /dev/pts" make too much noise without this
+dontaudit unpriv_userdomain ptyfile:chr_file getattr;
+
+
+
+full_user_role(cougaar)
+allow system_r cougaar_r;
+allow sysadm_r cougaar_r;
+allow user_r cougaar_r;
+
+allow user_t var_log_t:dir { getattr read };
+allow user_t var_spool_t:file { execute };
+allow user_t sysadm_home_dir_t:dir { add_name read remove_name write };
+allow user_t sysadm_home_dir_t:file { create getattr link read unlink write };
+allow user_t user_t:capability { sys_tty_config kill };
+
+# added to run society with acme
+allow user_t sysadm_home_dir_t:file { setattr };
+allow user_xauth_t sshd_t:unix_stream_socket { read write };
+allow user_xauth_t sysadm_home_dir_t:dir { add_name remove_name search write };
+allow user_xauth_t sysadm_home_dir_t:file { create getattr link read unlink write };
+
+
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the kernel_t domain.
+#
+
+#
+# kernel_t is the domain of kernel threads.
+# It is also the target type when checking permissions in the system class.
+# 
+type kernel_t, domain;
+role system_r types kernel_t;
+general_domain_access(kernel_t)
+general_proc_read_access(kernel_t)
+base_file_read_access(kernel_t)
+uses_shlib(kernel_t)
+
+# Use capabilities.
+allow kernel_t self:capability *;
+
+# Run init in the init_t domain.
+domain_auto_trans_read(kernel_t, init_exec_t, init_t)
+
+# Share state with the init process.
+allow kernel_t init_t:process share;
+
+# Mount and unmount file systems.
+allow kernel_t fs_type:filesystem mount_fs_perms;
+
+# Search the persistent label mapping.
+allow kernel_t file_labels_t:dir search;
+
+# Send signal to any process.
+allow kernel_t domain:process signal;
+
+# Access the console.
+allow kernel_t device_t:dir search;
+allow kernel_t console_device_t:chr_file rw_file_perms;
+
+# Access the initrd filesystem.
+allow kernel_t file_t:chr_file rw_file_perms;
+can_exec(kernel_t, file_t)
+ifdef(`chroot.te', `
+can_exec(kernel_t, chroot_exec_t)
+')
+allow kernel_t self:capability sys_chroot;
+
+allow kernel_t file_t:dir mounton;
+allow kernel_t file_t:dir rw_dir_perms;
+allow kernel_t file_t:blk_file create_file_perms;
+allow kernel_t { sysctl_t sysctl_kernel_t }:file { setattr rw_file_perms };
+
+# Lookup the policy.
+allow kernel_t policy_config_t:dir r_dir_perms;
+
+# Reload the policy from the real root.
+allow kernel_t security_t:security load_policy;
+
+ifdef(`modutil.te', `
+# Run insmod (for kernel module loader).
+domain_auto_trans_read(kernel_t,insmod_exec_t,insmod_t)
+allow kernel_t insmod_exec_t:lnk_file read;
+')
+
+# /proc/sys/kernel/modprobe is set to /bin/true if not using modules.
+can_exec(kernel_t, bin_t)
+
+# added to run society with acme 
+allow kernel_t mount_t:udp_socket { write };
+
+#################################
+#
+# Rules for the acme_t domain.
+#
+# acme_t is the domain for the ruby and acme env of cougaar .
+# ping_exec_t is the type of the corresponding program.
+#
+type acme_t, domain;
+role sysadm_r types acme_t;
+role system_r types acme_t;
+every_domain(acme_t)
+type acme_exec_t, file_type, exec_type;
+
+# Transition into this domain when you run this program.
+domain_auto_trans(sysadm_t, acme_exec_t, acme_t)
+domain_auto_trans(initrc_t, acme_exec_t, acme_t)
+domain_auto_trans(cougaar_t, acme_exec_t, acme_t)
+
+# Let acme create raw socket.
+allow acme_t self:tcp_socket { create bind setopt getopt write read };
+allow acme_t any_socket_t:tcp_socket sendto;
+
+# Let  acme receive ICMP replies.
+allow acme_t { self tcp_socket_t }:tcp_socket recvfrom;
+
+# Use capabilities.
+allow acme_t acme_t:capability { net_raw setuid };
+
+#allow role cougaar_r types acme_t;
+
+# added to run society under acme
+allow acme_t acme_exec_t:file { execute_no_trans };
+allow acme_t acme_t:capability { net_bind_service setgid };
+allow acme_t acme_t:tcp_socket { acceptfrom connectto };
+allow acme_t bin_t:file { execute execute_no_trans };
+allow acme_t crond_t:dir { search };
+allow acme_t crond_t:file { getattr read };
+allow acme_t devlog_t:sock_file { write };
+allow acme_t dhcpc_t:dir { search };
+allow acme_t dhcpc_t:file { getattr read };
+allow acme_t file_t:dir { getattr search };
+allow acme_t getty_t:dir { search };
+allow acme_t getty_t:file { getattr read };
+allow acme_t init_t:dir { search };
+allow acme_t init_t:file { getattr read };
+allow acme_t initrc_tmp_t:dir { getattr };
+allow acme_t initrc_tmp_t:file { getattr };
+allow acme_t initrc_t:dir { search };
+allow acme_t initrc_t:file { getattr read };
+allow acme_t initrc_t:udp_socket { recvfrom };
+allow acme_t initrc_var_run_t:file { write };
+allow acme_t kernel_t:dir { search };
+allow acme_t kernel_t:file { getattr read };
+allow acme_t klogd_t:dir { search };
+allow acme_t klogd_t:file { getattr read };
+allow acme_t lib_t:file { execute };
+allow acme_t mount_t:dir { search };
+allow acme_t mount_t:file { getattr read };
+allow acme_t newrole_t:dir { search };
+allow acme_t newrole_t:file { getattr read };
+allow acme_t nfs_t:dir { add_name create getattr read remove_name search write };
+allow acme_t nfs_t:file { append create getattr ioctl link lock read rename setattr unlink write };
+allow acme_t nfs_t:lnk_file { getattr read };
+allow acme_t shell_exec_t:file { execute execute_no_trans };
+allow acme_t sshd_tmp_t:dir { getattr };
+allow acme_t sshd_t:dir { search };
+allow acme_t sshd_t:file { getattr read };
+allow acme_t su_exec_t:file { execute execute_no_trans };
+allow acme_t sysadm_home_dir_t:dir { add_name getattr remove_name search write };
+allow acme_t sysadm_home_dir_t:file { create getattr link read unlink write };
+allow acme_t sysadm_home_t:dir { search };
+allow acme_t sysadm_home_t:file { getattr ioctl read };
+allow acme_t sysadm_t:dir { search };
+allow acme_t sysadm_t:file { getattr read };
+allow acme_t syslogd_t:dir { search };
+allow acme_t syslogd_t:file { getattr read };
+allow acme_t syslogd_t:unix_dgram_socket { sendto };
+allow acme_t tmp_t:dir { add_name remove_name write };
+allow acme_t tmp_t:file { append create rename setattr unlink write };
+allow acme_t user_t:dir { search };
+allow acme_t user_t:file { getattr read };
+allow acme_t usr_t:file { append setattr write };
+allow acme_t var_spool_t:file { execute };
+allow acme_t xauth_exec_t:file { execute execute_no_trans };
+allow acme_t acme_t:tcp_socket { acceptfrom connectto };
+allow acme_t devlog_t:sock_file { write };
+allow acme_t file_t:dir { getattr search };
+allow acme_t initrc_tmp_t:dir { getattr };
+allow acme_t initrc_tmp_t:file { getattr };
+allow acme_t initrc_t:udp_socket { recvfrom };
+allow acme_t lib_t:file { execute };
+allow acme_t nfs_t:dir { add_name create getattr read remove_name search write };
+allow acme_t nfs_t:file { append getattr ioctl link lock read rename setattr unlink write };
+allow acme_t nfs_t:lnk_file { getattr read };
+allow acme_t sshd_tmp_t:dir { getattr };
+allow acme_t tmp_t:dir { add_name remove_name write };
+allow acme_t tmp_t:file { create rename setattr unlink write };
+allow acme_t usr_t:file { append };
+allow acme_t system_crond_t:dir { search };
+allow acme_t system_crond_t:file { getattr read };
+allow acme_t acme_t:capability { kill };
+allow acme_t crond_t:dir { getattr };
+allow acme_t dhcpc_t:dir { getattr };
+allow acme_t getty_t:dir { getattr };
+allow acme_t init_t:dir { getattr };
+allow acme_t initrc_t:dir { getattr };
+allow acme_t kernel_t:dir { getattr };
+allow acme_t klogd_t:dir { getattr };
+allow acme_t mount_t:dir { getattr };
+allow acme_t newrole_t:dir { getattr };
+allow acme_t sshd_t:dir { getattr };
+allow acme_t sysadm_t:dir { getattr };
+allow acme_t syslogd_t:dir { getattr };
+allow acme_t user_t:dir { getattr };
+allow acme_t usr_t:dir { add_name write };
+allow acme_t usr_t:file { create };
+
+
+
+
+
+
+
+
+#DESC Checkpolicy - SELinux policy compliler
+#
+# Authors:  Frank Mayer, mayerf@tresys.com
+#
+
+###########################
+# 
+# checkpolicy_t is the domain type for checkpolicy
+# checkpolicy_exec_t if file type for the executable
+
+type checkpolicy_t, domain;
+role sysadm_r types checkpolicy_t;
+
+type checkpolicy_exec_t, file_type, exec_type, sysadmfile;
+
+##########################
+# 
+# Rules
+
+domain_auto_trans(sysadm_t, checkpolicy_exec_t, checkpolicy_t)
+
+# able to create and modify binary policy files
+allow checkpolicy_t policy_config_t:dir rw_dir_perms;
+allow checkpolicy_t policy_config_t:notdevfile_class_set create_file_perms;
+
+###########################
+# constrain what checkpolicy can use as source files
+#
+
+# only allow read of policy source files
+allow checkpolicy_t policy_src_t:dir r_dir_perms;
+allow checkpolicy_t policy_src_t:notdevfile_class_set r_file_perms;
+
+# allow test policies to be created in src directories
+file_type_auto_trans(checkpolicy_t, policy_src_t, policy_config_t)
+
+# directory search permissions for path to source and binary policy files
+allow checkpolicy_t root_t:dir search;
+allow checkpolicy_t etc_t:dir search;
+
+# Read the devpts root directory.  
+allow checkpolicy_t devpts_t:dir r_dir_perms;
+ifdef(`sshd.te',
+`allow checkpolicy_t sshd_devpts_t:dir r_dir_perms;')
+
+# Other access
+allow checkpolicy_t admin_tty_type:chr_file { read write ioctl getattr };
+uses_shlib(checkpolicy_t)
+allow checkpolicy_t self:capability dac_override;
+
+allow checkpolicy_t sysadm_tmp_t:file { getattr write } ;
+
+##########################
+# Allow users to execute checkpolicy without a domain transition
+# so it can be used without privilege to write real binary policy file
+can_exec(user_t, checkpolicy_exec_t)
+
+allow checkpolicy_t privfd:fd use;
+
+# Added to run society under acme 
+allow checkpolicy_t sysadm_home_t:dir { search };
+allow checkpolicy_t sysadm_home_t:file { getattr ioctl read setattr write };
+
+
+
+#DESC Chkpwd - PAM password checking programs
+#
+# Domains for the /sbin/.*_chkpwd utilities.
+#
+
+#
+# chkpwd_exec_t is the type of the /sbin/.*_chkpwd executables.
+#
+type chkpwd_exec_t, file_type, sysadmfile, exec_type;
+
+# Everything else is in the chkpwd_domain macro in
+# macros/program/chkpwd_macros.te.
+#DESC Cougaar
+#
+# File: cougaar.te
+# Author(s):
+#
+
+role cougaar_r types cougaar_t;
+#every_domain(cougaar_t)
+#uses_java(cougaar_t);
+#type cougaar_exec_t 
+#allow cougaar_r:{file lnk_file} { create ioctl read getattr lock write setattr append };
+allow cougaar_t cougaar_t:dir { create rmdir add_name remove_name write};
+allow cougaar_t cougaar_t:file { append execute_no_trans rename setattr };
+allow cougaar_t file_t:dir { search };
+allow cougaar_t fs_t:filesystem { associate };
+#allow cougaar_t sysadm_tty_device_t:chr_file { getattr };
+allow cougaar_t tmp_t:file { setattr unlink write };
+allow cougaar_t tty_device_t:chr_file { getattr };
+allow cougaar_t user_devpts_t:chr_file { ioctl };
+allow cougaar_t user_home_dir_t:dir { remove_name };
+allow cougaar_t user_home_dir_t:file { read rename unlink write };
+allow cougaar_t user_home_t:dir { add_name getattr read remove_name write };
+allow cougaar_t user_home_t:file { append create getattr unlink write };
+allow cougaar_t cougaar_t:dir { add_name remove_name write };
+allow cougaar_t cougaar_t:file { create execute unlink write };
+allow cougaar_t initrc_var_run_t:file { lock };
+allow cougaar_t locale_t:dir { search };
+allow cougaar_t locale_t:file { getattr read };
+allow cougaar_t random_device_t:chr_file { getattr read };
+allow cougaar_t resolv_conf_t:file { getattr read };
+allow cougaar_t sysctl_kernel_t:dir { search };
+allow cougaar_t sysctl_kernel_t:file { read };
+allow cougaar_t user_devpts_t:chr_file { read write };
+allow cougaar_t user_home_dir_t:dir { add_name getattr read search write };
+allow cougaar_t user_home_dir_t:file { create getattr setattr };
+allow cougaar_t user_home_t:dir { search };
+allow cougaar_t user_home_t:file { read };
+allow cougaar_t var_spool_t:file { execute };
+allow cougaar_t var_yp_t:dir { search };
+allow cougaar_t var_yp_t:file { read };
+
+allow cougaar_t acme_t:process { sigkill };
+allow cougaar_t nfs_t:dir { getattr read search };
+allow cougaar_t nfs_t:file { getattr ioctl read };
+allow cougaar_t nfs_t:lnk_file { read };
+allow cougaar_xauth_t nfs_t:dir { add_name remove_name search write };
+allow cougaar_xauth_t nfs_t:file { create getattr link read unlink write };
+allow cougaar_xauth_t sshd_t:unix_stream_socket { read write };
+
+
+
+
+
+
+
+
+
+#DESC Crond - Crond daemon
+#
+# Domains for the top-level crond daemon process and
+# for system cron jobs.  The domains for user cron jobs
+# are in macros/program/crond_macros.te.
+#
+
+#
+# Authors:  Jonathan Crowley (MITRE) <jonathan@mitre.org>,
+#	    Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser
+#
+# Domain for crond.  It needs auth to check for locked accounts.
+
+daemon_domain(crond, `, privrole, privmail, auth, privfd')
+
+# This domain is granted permissions common to most domains (including can_net)
+general_domain_access(crond_t)
+
+# Type for the anacron executable.
+type anacron_exec_t, file_type, sysadmfile, exec_type;
+
+# Type for temporary files.
+tmp_domain(crond)
+
+# Domain for system cron jobs.
+type system_crond_t, domain, privlog, privmail;
+
+# Read and write console and ttys.
+allow system_crond_t devtty_t:chr_file rw_file_perms;
+
+# Read system information files in /proc.
+allow system_crond_t proc_t:dir r_dir_perms;
+allow system_crond_t proc_t:file r_file_perms;
+
+ifdef(`mta.te', `
+allow mta_user_agent system_crond_t:fd use;
+')
+
+# to stop killall type operations from filling our logs
+dontaudit system_crond_t domain:dir search;
+
+# read files in /etc (anacrontab)  execute /etc/cron.hourly/*, etc.
+allow system_crond_t etc_t:file read;
+allow system_crond_t etc_runtime_t:file read;
+
+# read localization information
+allow crond_t locale_t:dir r_dir_perms;
+allow crond_t locale_t:{file lnk_file} r_file_perms;
+allow system_crond_t locale_t:dir r_dir_perms;
+allow system_crond_t locale_t:{file lnk_file} r_file_perms;
+
+# Type for log files.
+type cron_log_t, file_type, sysadmfile, logfile;
+# Use this type when creating files in /var/log.
+file_type_auto_trans(crond_t, var_log_t, cron_log_t)
+
+# Use capabilities.
+allow crond_t crond_t:capability { setgid setuid net_bind_service };
+
+# Check entrypoint permission on crontab files.
+allow crond_t security_t:security compute_av;
+
+# for finding binaries and /bin/sh
+allow crond_t { bin_t sbin_t }:dir search;
+allow crond_t bin_t:lnk_file read;
+
+# Read from /var/spool/cron.
+allow crond_t var_lib_t:dir search;
+allow crond_t var_spool_t:dir r_dir_perms;
+allow crond_t cron_spool_t:dir r_dir_perms;
+allow crond_t cron_spool_t:file r_file_perms;
+
+# Read system crontabs
+allow crond_t system_crond_script_t:file r_file_perms;
+allow crond_t system_crond_script_t:dir r_dir_perms;
+
+# Read /etc/security/default_contexts.
+allow crond_t default_context_t:file r_file_perms;
+
+allow crond_t etc_t:file { getattr read };
+allow crond_t etc_t:lnk_file read;
+
+# crond tries to search /root.  Not sure why.
+allow crond_t sysadm_home_dir_t:dir r_dir_perms;
+
+# to search /home
+allow crond_t home_root_t:dir { getattr search };
+allow crond_t user_home_dir_type:dir r_dir_perms;
+
+# Run a shell.
+can_exec(crond_t, shell_exec_t)
+
+ifdef(`rpm.te',
+`# Run the rpm program in the rpm_t domain. Allow creation of RPM log files
+# via redirection of standard out.
+domain_auto_trans(crond_t, rpm_exec_t, rpm_t)
+allow crond_t var_log_rpm_t: file create_file_perms;
+
+domain_auto_trans(system_crond_t, rpm_exec_t, rpm_t)
+allow system_crond_t var_log_rpm_t: file create_file_perms;')
+
+# This system_r role is authorized for this domain.
+role system_r types system_crond_t;
+
+uses_shlib(system_crond_t);
+general_domain_access(system_crond_t);
+allow system_crond_t var_log_t:file r_file_perms;
+
+# Type for system crontab files.
+type system_crond_script_t, file_type, sysadmfile;
+
+# Permit crond_t to transition to this domain.
+# The transition is requested explicitly by the modified crond 
+# via execve_secure.  There is no way to set up an automatic
+# transition, since crontabs are configuration files, not executables.
+domain_trans(crond_t, shell_exec_t, system_crond_t)
+
+# Transition to this domain for anacron as well.
+# Still need to study anacron.
+domain_auto_trans(initrc_t, anacron_exec_t, system_crond_t)
+
+# Access log files
+file_type_auto_trans(system_crond_t, var_log_t, cron_log_t)
+
+# Inherit and use descriptors from init.
+allow system_crond_t init_t:fd use;
+
+# Inherit and use descriptors from initrc.
+allow system_crond_t initrc_t:fd use;
+
+# Write to a socket from initrc.
+allow system_crond_t initrc_t:udp_socket rw_socket_perms;
+
+# Use capabilities.
+allow system_crond_t system_crond_t:capability { setgid setuid dac_override fowner net_bind_service fsetid };
+
+# Read the system crontabs.
+allow system_crond_t system_crond_script_t:file r_file_perms;
+
+# 
+# Since crontab files are not directly executed,
+# crond must ensure that the crontab file has
+# a type that is appropriate for the domain of
+# the system cron job.  It performs an entrypoint
+# permission check for this purpose.
+#
+allow system_crond_t system_crond_script_t:file entrypoint;
+ifdef(`fcron.te', `
+allow system_crond_t sysadm_cron_spool_t:file entrypoint;
+')
+
+# Run helper programs in the system_crond_t domain.
+allow system_crond_t { bin_t sbin_t }:dir r_dir_perms;
+allow system_crond_t { bin_t sbin_t }:lnk_file read;
+can_exec(system_crond_t, etc_t)
+can_exec(system_crond_t, bin_t)
+can_exec(system_crond_t, sbin_t)
+can_exec(system_crond_t, exec_type)
+
+
+# Read from /var/spool/cron.
+allow system_crond_t cron_spool_t:dir r_dir_perms;
+allow system_crond_t cron_spool_t:file r_file_perms;
+
+# Write to /var/lib/slocate.db.
+allow system_crond_t var_lib_t:dir rw_dir_perms;
+allow system_crond_t var_lib_t:file create_file_perms;
+
+# Update whatis files.
+allow system_crond_t catman_t:dir rw_dir_perms;
+allow system_crond_t catman_t:file create_file_perms;
+
+# Write /var/lock/makewhatis.lock.
+allow system_crond_t var_lock_t:dir rw_dir_perms;
+allow system_crond_t var_lock_t:file create_file_perms;
+
+# Modutils are now combined, so we can no longer distinguish them.
+# Let crond run the insmod executable in the insmod_t domain.
+ifdef(`modutil.te', `
+system_crond_entry(insmod_exec_t, insmod_t)
+')
+
+# for if /var/mail is a symlink
+allow crond_t mail_spool_t:lnk_file read;
+
+# Run logrotate in the logrotate_t domain.
+ifdef(`logrotate.te', `
+system_crond_entry(logrotate_exec_t, logrotate_t)
+')
+
+ifdef(`mta.te', `
+r_dir_file(system_mail_t, crond_tmp_t)
+')
+
+# Stat any file and search any directory for find.
+allow system_crond_t file_type:file_class_set getattr;
+allow system_crond_t file_type:dir { read search getattr };
+
+# Create temporary files.
+type system_crond_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(system_crond_t, { tmp_t crond_tmp_t }, system_crond_tmp_t)
+
+# /sbin/runlevel ask for w access to utmp, but will operate
+# correctly without it.  Do not audit write denials to utmp.
+dontaudit system_crond_t initrc_var_run_t:file { read write };
+
+# Access accounting summary files.
+allow system_crond_t var_log_sa_t:file create_file_perms;
+allow system_crond_t var_log_sa_t:dir rw_dir_perms;
+
+# Access other spool directories like
+# /var/spool/anacron and /var/spool/slrnpull.
+allow system_crond_t var_spool_t:file create_file_perms;
+allow system_crond_t var_spool_t:dir rw_dir_perms;
+
+# Do not audit attempts to search unlabeled directories (e.g. slocate).
+dontaudit system_crond_t unlabeled_t:dir r_dir_perms;
+dontaudit system_crond_t unlabeled_t:file r_file_perms;
+
+# Determine the set of legal user SIDs that can be reached.
+allow crond_t security_t:security { sid_to_context context_to_sid get_user_sids };
+
+
+# please verify later time added to make it work in enforcement mode Mike 
+allow crond_t any_socket_t:udp_socket { sendto };
+allow crond_t crond_t:tcp_socket { bind connect create read write };
+allow crond_t crond_t:udp_socket { bind create read setopt write };
+allow crond_t netif_eth0_t:netif { tcp_send udp_send };
+allow crond_t netmsg_eth0_t:tcp_socket { connectto recvfrom };
+allow crond_t netmsg_eth0_t:udp_socket { recvfrom };
+allow crond_t node_t:node { tcp_send udp_send };
+allow crond_t port_t:tcp_socket { name_bind };
+allow crond_t port_t:udp_socket { name_bind };
+allow crond_t var_yp_t:dir { search };
+allow crond_t var_yp_t:file { read };
+allow system_crond_t devpts_t:dir { getattr };
+allow system_crond_t devpts_t:filesystem { getattr };
+allow system_crond_t etc_t:lnk_file { read };
+allow system_crond_t fs_t:filesystem { getattr };
+allow system_crond_t initrc_var_run_t:file { lock };
+allow system_crond_t lib_t:file { execute execute_no_trans ioctl read };
+allow system_crond_t proc_t:filesystem { getattr };
+allow system_crond_t proc_t:lnk_file { read };
+allow system_crond_t sysctl_kernel_t:dir { search };
+allow system_crond_t sysctl_kernel_t:file { getattr read };
+allow system_crond_t sysctl_t:dir { search };
+allow system_crond_t sysctl_t:file { getattr read };
+allow system_crond_t usr_t:file { read };
+allow crond_t var_spool_t:file { execute getattr read };
+allow system_crond_t nfs_t:dir { getattr };
+
+
+
+
+
+
+
+
+#DESC Crontab - Crontab manipulation programs
+#
+# Domains for the crontab program.
+#
+
+# Type for the crontab executable.
+type crontab_exec_t, file_type, sysadmfile, exec_type;
+
+# Everything else is in the crontab_domain macro in
+# macros/program/crontab_macros.te.
+#DESC DHCPC - DHCP client
+#
+# Authors:  Wayne Salamon (NAI Labs) <wsalamon@tislabs.com>
+#
+
+#################################
+#
+# Rules for the dhcpc_t domain.
+#
+# dhcpc_t is the domain for the client side of DHCP. dhcpcd, the DHCP 
+# network configurator daemon started by /etc/sysconfig/network-scripts 
+# rc scripts, runs in this domain.
+# dhcpc_exec_t is the type of the dhcpcd executable.
+# The dhcpc_t can be used for other DHCPC related files as well.
+#
+type dhcpc_t, domain, privlog;
+role system_r types dhcpc_t;
+every_domain(dhcpc_t)
+type dhcpc_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, dhcpc_exec_t, dhcpc_t)
+
+ifdef(`cardmgr.te', `
+domain_auto_trans(cardmgr_t, dhcpc_exec_t, dhcpc_t)
+allow cardmgr_t dhcpc_t:process signal_perms;
+')
+
+# for the dhcp client to run ping to check IP addresses
+ifdef(`ping.te', `
+domain_auto_trans(dhcpc_t, ping_exec_t, ping_t)
+# because dhcpc is buggy and leaves file handles open...
+dontaudit ping_t dhcpc_state_t:file read;
+dontaudit ping_t dhcpc_t:packet_socket { read write };
+dontaudit ping_t dhcpc_t:udp_socket { read write };
+')
+
+# Type for files created during execution of dhcpcd.
+type var_run_dhcpc_t, file_type, sysadmfile, pidfile;
+ifdef(`dhcpd.te', `',
+`type dhcp_state_t, file_type, sysadmfile;')
+type dhcpc_state_t, file_type, sysadmfile;
+type etc_dhcpc_t, file_type, sysadmfile;
+file_type_auto_trans(dhcpc_t, var_run_t, var_run_dhcpc_t)
+
+# Inherit and use descriptors from init.
+allow dhcpc_t init_t:fd use;
+
+# Use capabilities
+allow dhcpc_t self:capability { net_admin net_raw net_bind_service };
+
+# Allow read/write to /etc/resolv.conf. Note that any files in /etc 
+# created by dhcpcd will be labelled resolv_conf_t. As of RH 7.2, no
+# other files are accessed in the /etc dir, only in /etc/dhcpc dir.
+file_type_auto_trans(dhcpc_t, etc_t, resolv_conf_t)
+
+# Allow access to the dhcpc file types
+allow dhcpc_t etc_dhcpc_t:file rw_file_perms;
+allow dhcpc_t etc_dhcpc_t:dir rw_dir_perms;
+can_exec(dhcpc_t, { dhcpc_exec_t etc_dhcpc_t sbin_t })
+domain_auto_trans(dhcpc_t, ifconfig_exec_t, ifconfig_t)
+# because dhclient is buggy and does not close file handles
+dontaudit ifconfig_t dhcpc_t:{ packet_socket udp_socket } { read write };
+dontaudit ifconfig_t dhcpc_state_t:file { read write };
+
+# Allow dhcpc_t to use packet sockets
+allow dhcpc_t self:packet_socket create_socket_perms;
+allow dhcpc_t self:packet_socket recvfrom;
+allow dhcpc_t netmsg_eth0_t:packet_socket { recvfrom };
+allow dhcpc_t icmp_socket_t:packet_socket { recvfrom };
+file_type_auto_trans(dhcpc_t, dhcp_state_t, dhcpc_state_t)
+
+can_exec(dhcpc_t, { bin_t shell_exec_t })
+# need to modify later  
+allow dhcpc_t crond_t:packet_socket { recvfrom };
+allow dhcpc_t sysadm_t:packet_socket { recvfrom };
+allow dhcpc_t tcp_socket_t:packet_socket { recvfrom };
+allow dhcpc_t user_t:packet_socket { recvfrom };
+allow dhcpc_t cougaar_t:packet_socket { recvfrom };
+allow dhcpc_t initrc_t:packet_socket { recvfrom };
+allow dhcpc_t sshd_t:packet_socket { recvfrom };
+allow dhcpc_t mount_t:packet_socket { recvfrom };
+allow dhcpc_t newrole_t:packet_socket { recvfrom };
+allow dhcpc_t initrc_exec_t:file { execute };
+allow dhcpc_t local_login_t:packet_socket { recvfrom };
+allow dhcpc_t syslogd_t:packet_socket { recvfrom };
+allow dhcpc_t var_spool_t:file { execute };
+
+allow dhcpc_t dhcpc_t:capability { sys_admin };
+
+# added to run society under acme
+allow dhcpc_t acme_t:packet_socket { recvfrom };
+allow dhcpc_t sysadm_su_t:packet_socket { recvfrom };
+
+
+#DESC Fsadm - Disk and file system administration
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the fsadm_t domain.
+#
+# fsadm_t is the domain for disk and file system
+# administration.
+# fsadm_exec_t is the type of the corresponding programs.
+#
+type fsadm_t, domain, privlog;
+role system_r types fsadm_t;
+role sysadm_r types fsadm_t;
+
+general_domain_access(fsadm_t)
+
+# Read system information files in /proc.
+allow fsadm_t proc_t:dir r_dir_perms;
+allow fsadm_t proc_t:notdevfile_class_set r_file_perms;
+
+# Read system variables in /proc/sys
+allow fsadm_t sysctl_kernel_t:file r_file_perms;
+allow fsadm_t sysctl_kernel_t:dir r_dir_perms;
+
+base_file_read_access(fsadm_t)
+
+# Read /etc.
+allow fsadm_t etc_t:dir r_dir_perms;
+allow fsadm_t etc_t:notdevfile_class_set r_file_perms;
+
+# Read module-related files.
+allow fsadm_t modules_conf_t:{ file lnk_file } r_file_perms;
+
+# Read /dev directories and any symbolic links.
+allow fsadm_t device_t:dir r_dir_perms;
+allow fsadm_t device_t:lnk_file r_file_perms;
+
+uses_shlib(fsadm_t)
+
+type fsadm_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, fsadm_exec_t, fsadm_t)
+domain_auto_trans(sysadm_t, fsadm_exec_t, fsadm_t)
+
+type fsadm_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(fsadm_t, tmp_t, fsadm_tmp_t)
+
+# remount file system to apply changes
+allow fsadm_t fs_t:filesystem remount;
+
+# Use capabilities.  ipc_lock is for losetup
+allow fsadm_t self:capability { ipc_lock sys_rawio sys_admin };
+
+# Write to /etc/mtab.
+file_type_auto_trans(fsadm_t, etc_t, etc_runtime_t, file)
+
+# Inherit and use descriptors from init.
+allow fsadm_t init_t:fd use;
+
+# Run other fs admin programs in the fsadm_t domain.
+can_exec(fsadm_t, fsadm_exec_t)
+
+# Access disk devices.
+allow fsadm_t fixed_disk_device_t:devfile_class_set rw_file_perms;
+allow fsadm_t removable_device_t:devfile_class_set rw_file_perms;
+
+# Access lost+found.
+allow fsadm_t lost_found_t:dir create_dir_perms;
+allow fsadm_t lost_found_t:notdevfile_class_set create_file_perms;
+
+# Recreate /mnt/cdrom. 
+allow fsadm_t file_t:dir { search read getattr rmdir create };
+
+# Recreate /dev/cdrom.
+allow fsadm_t device_t:dir rw_dir_perms;
+allow fsadm_t device_t:lnk_file { unlink create };
+
+# Enable swapping to devices and files
+allow fsadm_t swapfile_t:file { getattr swapon };
+allow fsadm_t fixed_disk_device_t:blk_file { getattr swapon };
+
+# XXX Why does updfstab run insmod?
+domain_auto_trans(fsadm_t, insmod_exec_t, insmod_t)
+
+# Allow console log change (updfstab)
+allow fsadm_t kernel_t:system syslog_console;
+
+# Access terminals.
+allow fsadm_t admin_tty_type:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow fsadm_t sysadm_gph_t:fd use;')
+
+# read localization information
+allow fsadm_t locale_t:dir r_dir_perms;
+allow fsadm_t locale_t:{file lnk_file} r_file_perms;
+
+# Added by us
+allow fsadm_t insmod_exec_t:file { read };
+allow fsadm_t insmod_exec_t:lnk_file { read };
+
+#DESC Getty - Manage ttys
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the getty_t domain.
+#
+daemon_domain(getty, `, mlstrustedwriter, privfd')
+
+type etc_getty_t, file_type, sysadmfile;
+r_dir_file(getty_t, etc_getty_t)
+
+allow getty_t console_device_t:chr_file setattr;
+
+tmp_domain(getty)
+log_domain(getty)
+
+allow getty_t { etc_t etc_runtime_t }:file { getattr read };
+allow getty_t etc_t:lnk_file read;
+allow getty_t self:process { getpgid getsession };
+allow getty_t self:unix_dgram_socket create_socket_perms;
+allow getty_t self:unix_stream_socket create_socket_perms;
+
+# for ldap and other authentication services
+allow getty_t resolv_conf_t:file { getattr read };
+
+# to allow w to display everyone...
+#allow userdomain ttyfile:chr_file getattr;
+
+# Use capabilities.
+allow getty_t getty_t:capability { dac_override chown sys_tty_config };
+
+# fbgetty needs fsetid for some reason
+allow getty_t getty_t:capability fsetid;
+
+# Run getty in its own domain.
+domain_auto_trans(init_t, getty_exec_t, getty_t)
+
+# Inherit and use descriptors from init.
+allow getty_t init_t:fd use;
+
+# Run login in local_login_t domain.
+allow getty_t bin_t:dir search;
+domain_auto_trans_read(getty_t, login_exec_t, local_login_t)
+
+# Write to /var/run/utmp.
+allow getty_t initrc_var_run_t:file rw_file_perms;
+
+# Write to /var/log/wtmp.
+allow getty_t wtmp_t:file rw_file_perms;
+
+# Chown, chmod, read and write ttys.
+allow getty_t tty_device_t:chr_file { setattr rw_file_perms };
+allow getty_t ttyfile:chr_file { setattr rw_file_perms };
+
+
+rw_dir_create_file(getty_t, var_lock_t)
+#DESC Groupadd - Manage system groups
+#
+# Authors:  David Caplan, dac@tresys.com
+#	    (Based on useradd.te by Chris Vance <cvance@tislabs.com>)
+#
+
+#################################
+#
+# Rules for the groupadd_t domain.
+#
+# groupadd_t is the domain of the groupadd/mod/del programs when
+# executed through the sgroupadd/mod/del wrapper.
+type groupadd_t, domain, privlog, auth, privowner;
+role sysadm_r types groupadd_t;
+
+general_domain_access(groupadd_t)
+uses_shlib(groupadd_t)
+
+type groupadd_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(sysadm_t, groupadd_exec_t, groupadd_t )
+
+# Use capabilities.
+# need more if users can run gpasswd
+allow groupadd_t groupadd_t:capability { dac_override };
+
+# Allow access to context for shadow file
+allow groupadd_t security_t:security { context_to_sid };
+
+# Inherit and use descriptors from login.
+allow groupadd_t privfd:fd use;
+
+# Execute /usr/sbin/{groupadd,groupdel,groupmod}, /usr/bin/gpasswd.
+allow groupadd_t { bin_t sbin_t }:dir r_dir_perms;
+can_exec(groupadd_t, { sbin_t bin_t })
+
+# Update /etc/shadow and /etc/passwd
+file_type_auto_trans(groupadd_t, etc_t, shadow_t)
+allow groupadd_t etc_t:file create_file_perms;
+
+allow groupadd_t { etc_t shadow_t }:file { relabelfrom relabelto };
+
+# some apps ask for these accesses, but seems to work regardless
+dontaudit groupadd_t initrc_var_run_t:file { write };
+dontaudit groupadd_t { var_run_t device_t var_t }:dir { search };
+
+# Access terminals.
+allow groupadd_t ttyfile:chr_file rw_file_perms;
+allow groupadd_t ptyfile:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow groupadd_t gphdomain:fd use;')
+
+
+
+
+
+
+
+
+
+
+
+#DESC Ifconfig - Configure network interfaces
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the ifconfig_t domain.
+#
+# ifconfig_t is the domain for the ifconfig program.
+# ifconfig_exec_t is the type of the corresponding program.
+#
+type ifconfig_t, domain, privlog;
+type ifconfig_exec_t, file_type, sysadmfile, exec_type;
+
+role system_r types ifconfig_t;
+role sysadm_r types ifconfig_t;
+
+uses_shlib(ifconfig_t)
+general_domain_access(ifconfig_t)
+
+domain_auto_trans(initrc_t, ifconfig_exec_t, ifconfig_t)
+domain_auto_trans(sysadm_t, ifconfig_exec_t, ifconfig_t)
+
+# Use capabilities.
+allow ifconfig_t ifconfig_t:capability { sys_module net_admin };
+
+# Inherit and use descriptors from init.
+allow ifconfig_t init_t:fd use;
+
+# Execute insmod.
+domain_auto_trans(ifconfig_t, insmod_exec_t, insmod_t)
+
+ifdef(`pump.te',
+`# Use pipe to connect to pump
+allow ifconfig_t pump_t:fd use;')
+
+# Access /proc
+allow ifconfig_t proc_t:dir r_dir_perms;
+allow ifconfig_t proc_t:file r_file_perms;
+
+allow ifconfig_t privfd:fd use;
+
+# Create UDP sockets, necessary when called from dhcpc
+allow ifconfig_t self:udp_socket create_socket_perms;
+
+# Access terminals.
+allow ifconfig_t { initrc_devpts_t admin_tty_type }:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow ifconfig_t sysadm_gph_t:fd use;')
+
+allow ifconfig_t tun_tap_device_t:chr_file { read write };
+
+# ifconfig attempts to create to search some sysctl entries.
+# Don't audit those attempts; comment out these rules if it is desired to
+# see the denials.
+dontaudit ifconfig_t sysctl_t:dir search;
+
+
+# Added by us
+allow ifconfig_t locale_t:dir { search };
+allow ifconfig_t locale_t:file { getattr read };
+allow ifconfig_t sysctl_net_t:dir { search };
+
+#DESC Initrc - System initialization scripts
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the initrc_t domain.
+#
+# initrc_t is the domain of the init rc scripts.
+# initrc_exec_t is the type of the init program.
+#
+ifdef(`sendmail.te', `
+# do not use privmail for sendmail as it creates a type transition conflict
+type initrc_t, domain, privlog, privowner;
+', `
+type initrc_t, domain, privlog, privowner, privmail;
+')
+role system_r types initrc_t;
+uses_shlib(initrc_t);
+type initrc_exec_t, file_type, sysadmfile, exec_type;
+
+# read files in /etc/init.d
+allow initrc_t etc_t:lnk_file r_file_perms;
+
+# read localization information
+allow initrc_t locale_t:dir r_dir_perms;
+allow initrc_t locale_t:{file lnk_file} r_file_perms;
+
+# Read system information files in /proc.
+allow initrc_t proc_t:dir r_dir_perms;
+allow initrc_t proc_t:{ file lnk_file } r_file_perms;
+
+# Allow IPC with self
+allow initrc_t self:unix_dgram_socket create_socket_perms;
+allow initrc_t self:unix_stream_socket create_socket_perms;
+allow initrc_t self:fifo_file rw_file_perms;
+
+# Read the root directory of a usbdevfs filesystem, and
+# the devices and drivers files.  Permit stating of the
+# device nodes, but nothing else.
+allow initrc_t usbdevfs_t:dir r_dir_perms;
+allow initrc_t usbdevfs_t:{ file lnk_file } r_file_perms;
+allow initrc_t usbdevfs_device_t:file getattr;
+
+# allow initrc to fork and renice itself
+allow initrc_t self:process { fork sigchld setsched };
+
+# Can create ptys for open_init_pty
+can_create_pty(initrc)
+
+type initrc_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(initrc_t, tmp_t, initrc_tmp_t)
+
+type initrc_var_run_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans(initrc_t, var_run_t, initrc_var_run_t)
+allow initrc_t var_run_t:{ file sock_file lnk_file } unlink;
+
+allow initrc_t framebuf_device_t:chr_file r_file_perms;
+
+# Use capabilities.
+allow initrc_t initrc_t:capability ~sys_module;
+
+# Use system operations.
+allow initrc_t kernel_t:system *;
+
+# Audit grantings of the avc_toggle permission to initrc_t.
+# The initrc_t domain is granted this permission for 
+# people who want to use a development kernel and toggle
+# into enforcing mode from an /etc/rc.d script.
+# Due to its sensitivity, we always audit it.
+auditallow initrc_t kernel_t:system avc_toggle;
+
+# Set values in /proc/sys.
+can_sysctl(initrc_t)
+
+# Run helper programs in the initrc_t domain.
+allow initrc_t {bin_t sbin_t }:dir r_dir_perms;
+allow initrc_t {bin_t sbin_t }:lnk_file read;
+can_exec(initrc_t, etc_t)
+can_exec(initrc_t, lib_t)
+can_exec(initrc_t, bin_t)
+can_exec(initrc_t, sbin_t)
+can_exec(initrc_t, exec_type)
+
+
+# Read conf.modules.
+allow initrc_t modules_conf_t:file r_file_perms;
+
+# Run other rc scripts in the initrc_t domain.
+can_exec(initrc_t, initrc_exec_t)
+
+# Run init (telinit) in the initrc_t domain.
+can_exec(initrc_t, init_exec_t)
+
+# Communicate with the init process.
+allow initrc_t initctl_t:fifo_file rw_file_perms;
+
+# Send messages to portmap and ypbind.
+ifdef(`portmap.te', `can_udp_send(initrc_t, portmap_t)')
+ifdef(`ypbind.te', `can_udp_send(initrc_t, ypbind_t)')
+
+# Search persistent label mappings.
+allow initrc_t file_labels_t:dir r_dir_perms;
+allow initrc_t file_labels_t:file stat_file_perms;
+
+# Read /proc/PID directories for all domains.
+allow initrc_t domain:notdevfile_class_set r_file_perms;
+allow initrc_t domain:dir r_dir_perms;
+
+# Mount and unmount file systems.
+allow initrc_t fs_type:filesystem mount_fs_perms;
+allow initrc_t file_t:dir { read search getattr mounton };
+
+# Create runtime files in /etc, e.g. /etc/mtab, /etc/HOSTNAME.
+file_type_auto_trans(initrc_t, etc_t, etc_runtime_t, file)
+
+# Update /etc/ld.so.cache.
+allow initrc_t ld_so_cache_t:file rw_file_perms;
+
+ifdef(`sendmail.te', `
+# Update /etc/mail.
+allow initrc_t etc_mail_t:file { setattr rw_file_perms };
+')
+
+ifdef(`xfs.te',
+`# Unlink the xfs socket.
+allow initrc_t xfs_tmp_t:dir rw_dir_perms;
+allow initrc_t xfs_tmp_t:dir rmdir;
+allow initrc_t xfs_tmp_t:sock_file { read getattr unlink };')
+
+# Update /var/log/wtmp and /var/log/dmesg.
+allow initrc_t wtmp_t:file { setattr rw_file_perms };
+allow initrc_t var_log_t:file { setattr rw_file_perms };
+allow initrc_t lastlog_t:file { setattr rw_file_perms };
+
+# remove old locks
+allow initrc_t lockfile:dir rw_dir_perms;
+allow initrc_t lockfile:file { getattr unlink };
+
+# Access /var/lib/random-seed.
+allow initrc_t var_lib_t:file rw_file_perms;
+allow initrc_t var_lib_t:file unlink;
+
+# Create lock file.
+allow initrc_t var_lock_t:dir create_dir_perms;
+allow initrc_t var_lock_t:file create_file_perms;
+
+# Set the clock.
+allow initrc_t clock_device_t:devfile_class_set rw_file_perms;
+
+# Kill all processes.
+allow initrc_t domain:process signal_perms;
+
+# Read and unlink /var/run/*.pid files.
+allow initrc_t pidfile:file { getattr read unlink };
+
+# Write to /dev/urandom.
+allow initrc_t random_device_t:chr_file rw_file_perms;
+
+# Access /dev/psaux (for kudzu).
+allow initrc_t psaux_t:chr_file rw_file_perms;
+
+# Set device ownerships/modes.
+allow initrc_t framebuf_device_t:lnk_file read;
+allow initrc_t framebuf_device_t:devfile_class_set setattr;
+allow initrc_t misc_device_t:devfile_class_set setattr;
+allow initrc_t device_t:devfile_class_set setattr;
+allow initrc_t fixed_disk_device_t:devfile_class_set setattr;
+allow initrc_t removable_device_t:devfile_class_set setattr;
+
+# Stat any file.
+allow initrc_t file_type:file_class_set getattr;
+allow initrc_t file_type:dir { search getattr };
+
+# Read and write console and ttys.
+allow initrc_t devtty_t:chr_file rw_file_perms;
+allow initrc_t console_device_t:chr_file rw_file_perms;
+allow initrc_t tty_device_t:chr_file rw_file_perms;
+allow initrc_t ttyfile:chr_file rw_file_perms;
+allow initrc_t ptyfile:chr_file rw_file_perms;
+
+# Reset tty labels.
+allow initrc_t ttyfile:chr_file relabelfrom;
+allow initrc_t tty_device_t:chr_file relabelto;
+
+# Create and read /boot/kernel.h.
+# Redhat systems typically create this file at boot time.
+allow initrc_t boot_t:lnk_file r_file_perms;
+file_type_auto_trans(initrc_t, boot_t, boot_runtime_t)
+
+# Delete and re-create /boot/System.map.
+allow initrc_t boot_t:dir { read getattr write remove_name add_name };
+allow initrc_t boot_t:lnk_file { read unlink create };
+allow initrc_t system_map_t:{ file lnk_file } r_file_perms;
+
+# Unlink /halt.
+allow initrc_t root_t:dir { search write remove_name };
+allow initrc_t root_t:file { unlink write };
+
+ifdef(`gpm.te', `allow initrc_t gpmctl_t:sock_file setattr;')
+
+allow initrc_t var_spool_t:file rw_file_perms;
+
+ifdef(`pump.te', `allow initrc_t pump_var_run_t:sock_file unlink;')
+
+#
+# quota control
+#
+allow initrc_t fs_type:filesystem { quotamod quotaget };
+
+# Access the mouse (for kudzu).
+allow initrc_t mouse_device_t:chr_file rw_file_perms;
+
+# Allow access to the sysadm TTYs. Note that this will give access to the 
+# TTYs to any process in the initrc_t domain. Therefore, daemons and such
+# started from init should be placed in their own domain.
+allow initrc_t admin_tty_type:chr_file rw_file_perms;
+
+# Access sound device and files.
+allow initrc_t sound_device_t:chr_file { setattr ioctl read write };
+ifdef(`sound.te', `allow initrc_t sound_file_t:file { setattr write };')
+
+ifdef(`rpm.te',
+`# Access /var/lib/rpm.
+allow initrc_t var_lib_rpm_t:dir rw_dir_perms;
+allow initrc_t var_lib_rpm_t:file create_file_perms;')
+
+# Update /var/log/ksyms.*.
+file_type_auto_trans(initrc_t, var_log_t, var_log_ksyms_t)
+
+ifdef(`apmd.te',
+`# Access /dev/apm_bios.
+allow initrc_t apm_bios_t:chr_file { setattr getattr };')
+
+# Access /dev/fd0 (for kudzu). Need a separate domain for kudzu?
+allow initrc_t removable_device_t:blk_file rw_file_perms;
+
+ifdef(`lpd.te',
+`# Read printconf files.
+allow initrc_t printconf_t:dir r_dir_perms;
+allow initrc_t printconf_t:file r_file_perms;')
+
+# Create and delete /.autofsck
+allow initrc_t root_t:dir { search write add_name };
+allow initrc_t root_t:file { create setattr unlink getattr };
+allow initrc_t file_t:file { unlink getattr };
+
+# Read user home directories.
+allow initrc_t { home_root_t home_type }:dir r_dir_perms;
+allow initrc_t home_type:file r_file_perms;
+
+# for system start scripts
+allow initrc_t pidfile:dir rw_dir_perms;
+allow initrc_t pidfile:sock_file unlink;
+allow initrc_t tmpfile:sock_file unlink;
+rw_dir_create_file(initrc_t, var_lib_t)
+
+# allow start scripts to clean /tmp
+allow initrc_t tmpfile:dir { rw_dir_perms rmdir };
+allow initrc_t tmpfile:notdevfile_class_set { getattr unlink };
+
+#################################
+#
+# Rules for the run_init_t domain.
+#
+run_program(sysadm_t, sysadm_r, init, initrc_exec_t, initrc_t)
+
+# added for now 
+allow initrc_t any_socket_t:udp_socket { sendto };
+allow initrc_t netif_eth0_t:netif { udp_recv };
+allow initrc_t node_t:node { udp_recv };
+allow initrc_t port_t:udp_socket { name_bind };
+allow initrc_t var_spool_t:dir { read };
+allow initrc_t var_yp_t:file { read setattr write };
+allow initrc_t device_t:dir { add_name write };
+allow initrc_t device_t:lnk_file { read };
+allow initrc_t device_t:sock_file { create setattr };
+allow initrc_t initrc_t:process { setcap setpgid };
+allow initrc_t initrc_t:rawip_socket { create getopt };
+allow initrc_t initrc_t:tcp_socket { accept acceptfrom bind connect connectto create getattr listen read recvfrom setopt write };
+allow initrc_t initrc_t:unix_stream_socket { listen };
+allow initrc_t lib_t:lnk_file { read };
+allow initrc_t mount_t:udp_socket { recvfrom };
+allow initrc_t netif_eth0_t:netif { tcp_send udp_send };
+allow initrc_t netif_lo_t:netif { tcp_recv tcp_send udp_recv udp_send };
+allow initrc_t netmsg_eth0_t:tcp_socket { connectto recvfrom };
+allow initrc_t netmsg_eth0_t:udp_socket { recvfrom };
+allow initrc_t node_lo_t:node { tcp_recv tcp_send udp_recv udp_send };
+allow initrc_t node_t:node { tcp_send udp_send };
+allow initrc_t var_t:dir { read };
+allow initrc_t var_t:file { read };
+allow initrc_t var_t:lnk_file { read };
+allow initrc_t var_yp_t:dir { add_name read write };
+allow initrc_t var_yp_t:file { create };
+allow initrc_t etc_t:file { unlink };
+allow initrc_t initrc_t:udp_socket { bind create ioctl recvfrom setopt };
+allow initrc_t etc_t:file { setattr write };
+allow initrc_t initrc_t:udp_socket { connect getattr read write };
+allow initrc_t modules_dep_t:file { read };
+allow initrc_t port_t:tcp_socket { name_bind };
+allow initrc_t resolv_conf_t:file { read };
+allow initrc_t usr_t:file { read };
+allow initrc_t var_lib_nfs_t:dir { read write };
+allow initrc_t var_lib_nfs_t:file { read write };
+
+allow initrc_t apm_bios_t:chr_file { setattr };
+allow initrc_t device_t:chr_file { write };
+allow initrc_t device_t:dir { read };
+allow initrc_t v4l_device_t:chr_file { setattr };
+allow initrc_t var_run_dhcpc_t:file { write };
+allow initrc_t var_spool_t:file { execute };
+
+# added for buffer overflow exploit test
+allow initrc_t newrole_t:fd { use };
+allow initrc_t security_t:security { sid_to_context };
+allow initrc_t usr_t:dir { add_name remove_name write };
+allow initrc_t usr_t:file { create execute execute_no_trans unlink write setattr };
+
+# added to run society using acme
+allow initrc_t acme_t:udp_socket { recvfrom };
+allow initrc_t var_lib_nfs_t:dir { add_name };
+allow initrc_t var_lib_nfs_t:file { create };
+allow initrc_t tmp_t:file { setattr write };
+allow initrc_t tmp_t:sock_file { write };
+#DESC Init - Process initialization
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the init_t domain.
+#
+# init_t is the domain of the init process.
+# init_exec_t is the type of the init program.
+# initctl_t is the type of the named pipe created 
+# by init during initialization.  This pipe is used
+# to communicate with init.
+# sulogin_exec_t is the type of sulogin.
+#
+type init_t, domain, privlog, mlstrustedreader, mlstrustedwriter;
+role system_r types init_t;
+uses_shlib(init_t);
+type init_exec_t, file_type, sysadmfile, exec_type;
+type initctl_t, file_type, sysadmfile;
+type sulogin_exec_t, file_type, exec_type, sysadmfile;
+
+# Use capabilities.
+allow init_t init_t:capability ~sys_module;
+
+# Run /etc/rc.sysinit, /etc/rc, /etc/rc.local in the initrc_t domain.
+domain_auto_trans(init_t, initrc_exec_t, initrc_t)
+
+# Run the shell or sulogin in the sysadm_t domain for single-user mode.
+domain_auto_trans(init_t, shell_exec_t, sysadm_t)
+domain_auto_trans(init_t, sulogin_exec_t, sysadm_t)
+
+# Run /sbin/update in the init_t domain.
+can_exec(init_t, sbin_t)
+
+# Run init.
+can_exec(init_t, init_exec_t)
+
+# Run chroot from initrd scripts.
+ifdef(`chroot.te', `
+can_exec(init_t, chroot_exec_t)
+')
+
+# Create /dev/initctl.
+file_type_auto_trans(init_t, device_t, initctl_t, fifo_file)
+
+# Create ioctl.save.
+file_type_auto_trans(init_t, etc_t, etc_runtime_t, file)
+
+# Update /etc/ld.so.cache
+allow init_t ld_so_cache_t:file rw_file_perms;
+
+# Allow access to log files
+allow init_t var_t:dir search;
+allow init_t var_log_t:dir search;
+
+# read /etc/localtime
+allow init_t locale_t:dir r_dir_perms;
+allow init_t locale_t:{file lnk_file} r_file_perms;
+
+# Create unix sockets
+allow init_t self:unix_dgram_socket create_socket_perms;
+allow init_t self:unix_stream_socket create_socket_perms;
+
+# Permissions required for system startup
+allow init_t bin_t:dir { read getattr lock search ioctl };
+allow init_t bin_t:{ file lnk_file sock_file fifo_file } { read getattr lock ioctl };
+allow init_t exec_type:{ file lnk_file } { read getattr lock ioctl };
+allow init_t sbin_t:dir { read getattr lock search ioctl };
+allow init_t sbin_t:{ file lnk_file sock_file fifo_file } { read getattr lock ioctl };
+
+# allow init to fork
+allow init_t self:process { fork sigchld };
+
+# Modify utmp.
+allow init_t var_run_t:file rw_file_perms;
+allow init_t initrc_var_run_t:file rw_file_perms;
+
+# For /var/run/shutdown.pid.
+type init_var_run_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans(init_t, var_run_t, init_var_run_t)
+
+# Shutdown permissions
+allow init_t proc_t:dir r_dir_perms;
+allow init_t proc_t:lnk_file r_file_perms;
+allow init_t self:dir r_dir_perms;
+allow init_t self:lnk_file r_file_perms;
+allow init_t devpts_t:dir r_file_perms;
+
+# Modify wtmp.
+allow init_t wtmp_t:file rw_file_perms;
+
+# Kill all processes.
+allow init_t domain:process signal_perms;
+
+# Allow all processes to send SIGCHLD to init.
+allow domain init_t:process { sigchld signull };
+
+# If you load a new policy that removes active domains, processes can
+# get stuck if you don't allow unlabeled policies to signal init
+# If you load an incompatible policy, you should probably reboot,
+# since you may have compromised system security.
+# allow unlabeled_t init_t:process sigchld;
+
+# Read and write the console and ttys.
+allow init_t console_device_t:chr_file rw_file_perms;
+allow init_t tty_device_t:chr_file rw_file_perms;
+allow init_t ttyfile:chr_file rw_file_perms;
+allow init_t ptyfile:chr_file rw_file_perms;
+
+# Flush the system buffers (/sbin/update)
+allow init_t kernel_t:system bdflush;
+
+# Run system executables.
+can_exec(init_t,bin_t)
+
+# Run /etc/X11/prefdm.
+can_exec(init_t,etc_t)
+
+# for initrd pivot_root seems to access this
+dontaudit init_t file_labels_t:dir { search };
+
+# added to run society unde acme
+allow init_t var_log_ksyms_t:file { append lock write };
+
+#DESC Klogd - Kernel log daemon
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the klogd_t domain.
+#
+type klogd_t, domain, privlog, privmem;
+role system_r types klogd_t;
+uses_shlib(klogd_t)
+type klogd_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, klogd_exec_t, klogd_t)
+allow klogd_t self:process { fork signal };
+
+type klogd_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(klogd_t, tmp_t, klogd_tmp_t)
+allow klogd_t var_t:dir r_dir_perms;
+type klogd_var_run_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans(klogd_t, var_run_t, klogd_var_run_t)
+allow klogd_t proc_t:dir r_dir_perms;
+allow klogd_t proc_t:lnk_file r_file_perms;
+allow klogd_t self:dir r_dir_perms;
+allow klogd_t self:lnk_file r_file_perms;
+
+# read /etc/nsswitch.conf
+allow klogd_t etc_t:file r_file_perms;
+
+# read localization information
+allow klogd_t locale_t:dir r_dir_perms;
+allow klogd_t locale_t:{file lnk_file} r_file_perms;
+
+# Create unix sockets
+allow klogd_t self:unix_dgram_socket create_socket_perms;
+
+# Use the sys_admin and sys_rawio capabilities.
+allow klogd_t klogd_t:capability { sys_admin sys_rawio };
+
+# Inherit and use descriptors from init.
+allow klogd_t init_t:fd use;
+
+# Read /proc/kmsg and /dev/mem.
+allow klogd_t device_t:dir r_dir_perms;
+allow klogd_t proc_kmsg_t:file r_file_perms;
+allow klogd_t memory_device_t:chr_file r_file_perms;
+
+# Write to the console.
+allow klogd_t { initrc_devpts_t console_device_t }:chr_file rw_file_perms;
+
+# Control syslog and console logging
+allow klogd_t kernel_t:system { syslog_mod syslog_console };
+
+# Read /boot/System.map*
+allow klogd_t system_map_t:file r_file_perms;
+allow klogd_t boot_t:dir r_dir_perms;
+allow klogd_t boot_t:{ file lnk_file } r_file_perms;
+#DESC Ldconfig - Configure dynamic linker bindings
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the ldconfig_t domain.
+#
+type ldconfig_t, domain, privlog;
+type ldconfig_exec_t, file_type, sysadmfile, exec_type;
+
+role sysadm_r types ldconfig_t;
+role system_r types ldconfig_t;
+
+domain_auto_trans({ sysadm_t initrc_t ifdef(`dpkg.te', `dpkg_t') }, ldconfig_exec_t, ldconfig_t)
+dontaudit ldconfig_t device_t:dir search;
+allow ldconfig_t { initrc_devpts_t admin_tty_type }:chr_file rw_file_perms;
+allow ldconfig_t privfd:fd use;
+
+uses_shlib(ldconfig_t)
+
+file_type_auto_trans(ldconfig_t, etc_t, ld_so_cache_t)
+file_type_auto_trans(ldconfig_t, lib_t, shlib_t)
+# allow removing mis-labelled links
+allow ldconfig_t lib_t:lnk_file unlink;
+
+allow ldconfig_t userdomain:fd use;
+allow ldconfig_t etc_t:file { getattr read };
+allow ldconfig_t etc_t:lnk_file read;
+
+allow ldconfig_t fs_t:filesystem getattr;
+#DESC LoadPolicy - SELinux policy loading utilities
+#
+# Authors:  Frank Mayer, mayerf@tresys.com
+#
+
+###########################
+# load_policy_t is the domain type for load_policy 
+# load_policy_exec_t is the file type for the executable
+
+
+type load_policy_t, domain;
+role sysadm_r types load_policy_t;
+
+type load_policy_exec_t, file_type, exec_type, sysadmfile;
+
+##########################
+# 
+# Rules
+
+domain_auto_trans(sysadm_t, load_policy_exec_t, load_policy_t)
+ifdef(`dpkg.te', `
+role system_r types load_policy_t;
+domain_auto_trans(dpkg_t, load_policy_exec_t, load_policy_t)
+')
+
+# Reload the policy configuration (sysadm_t no longer has this ability)
+allow load_policy_t security_t:security load_policy;
+
+
+###########################
+# constrain from where load_policy can load a policy, specifically 
+# policy_config_t files 
+#
+
+# only allow read of policy config files
+allow load_policy_t policy_config_t:dir r_dir_perms;
+allow load_policy_t policy_config_t:notdevfile_class_set r_file_perms;
+
+# directory search permissions for path to binary policy files
+allow load_policy_t root_t:dir search;
+allow load_policy_t etc_t:dir search;
+
+# Read the devpts root directory (needed?)  
+allow load_policy_t devpts_t:dir r_dir_perms;
+
+# Other access
+allow load_policy_t { initrc_devpts_t admin_tty_type }:chr_file { read write ioctl getattr };
+uses_shlib(load_policy_t)
+allow load_policy_t self:capability dac_override;
+
+allow load_policy_t { initrc_t privfd }:fd use;
+
+allow load_policy_t fs_t:filesystem getattr;
+
+allow load_policy_t sysadm_tmp_t:file { getattr write } ;
+
+#DESC Login - Local/remote login utilities
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+# Macroised by Russell Coker <russell@coker.com.au>
+#
+
+#################################
+# 
+# Rules for the local_login_t domain
+# and the remote_login_t domain.
+#
+
+# $1 is the name of the domain (local or remote)
+# I added "mlstrustedreader, mlstrustedwriter, mlstrustedobject" to
+# remote_login_t, not sure if this is right
+define(`login_domain', `
+type $1_login_t, domain, privuser, privrole, privlog, auth, privowner, mlstrustedreader, mlstrustedwriter, mlstrustedobject, privfd;
+role system_r types $1_login_t;
+
+general_domain_access($1_login_t);
+
+# Read system information files in /proc.
+allow $1_login_t proc_t:dir r_dir_perms;
+allow $1_login_t proc_t:notdevfile_class_set r_file_perms;
+
+base_file_read_access($1_login_t)
+
+# Read directories and files with the readable_t type.
+# This type is a general type for "world"-readable files.
+allow $1_login_t readable_t:dir r_dir_perms;
+allow $1_login_t readable_t:notdevfile_class_set r_file_perms;
+
+# Read /var, /var/spool, /var/log.
+allow $1_login_t var_t:dir r_dir_perms;
+allow $1_login_t var_t:notdevfile_class_set r_file_perms;
+allow $1_login_t var_spool_t:dir r_dir_perms;
+allow $1_login_t var_spool_t:notdevfile_class_set r_file_perms;
+allow $1_login_t var_log_t:dir r_dir_perms;
+allow $1_login_t var_log_t:{ file lnk_file } r_file_perms;
+
+# Read /etc.
+allow $1_login_t etc_t:dir r_dir_perms;
+allow $1_login_t etc_t:notdevfile_class_set r_file_perms;
+allow $1_login_t etc_runtime_t:{ file lnk_file } r_file_perms;
+
+# Read executable types.
+allow $1_login_t exec_type:{ file lnk_file } r_file_perms;
+
+# Read /dev directories and any symbolic links.
+allow $1_login_t device_t:dir r_dir_perms;
+allow $1_login_t device_t:lnk_file r_file_perms;
+
+uses_shlib($1_login_t);
+allow $1_login_t security_t:security {sid_to_context context_to_sid };
+
+tmp_domain($1_login)
+
+# Use capabilities
+allow $1_login_t self:capability { setuid setgid chown fowner fsetid net_bind_service sys_tty_config dac_override sys_nice sys_resource };
+
+# Run shells in user_t by default.
+domain_auto_trans($1_login_t, shell_exec_t, user_t)
+
+# Permit login to search the user home directories.
+allow $1_login_t home_root_t:dir search;
+allow $1_login_t home_dir_type:dir search;
+
+# Write to /var/run/utmp.
+allow $1_login_t initrc_var_run_t:file rw_file_perms;
+
+# Write to /var/log/wtmp.
+allow $1_login_t wtmp_t:file rw_file_perms;
+
+# Write to /var/log/lastlog.
+allow $1_login_t lastlog_t:file rw_file_perms;
+
+# Write to /var/log/btmp
+allow $1_login_t faillog_t:file { append read write };
+
+# Search for mail spool file.
+allow $1_login_t mail_spool_t:dir r_dir_perms;
+allow $1_login_t mail_spool_t:file getattr;
+allow $1_login_t mail_spool_t:lnk_file read;
+
+# Determine the set of legal user SIDs that can be reached.
+allow $1_login_t security_t:security get_user_sids;
+
+# Obtain the SID to use for relabeling terminals.
+allow $1_login_t security_t:security change_sid;
+
+# allow read access to default_contexts in /etc/security
+allow $1_login_t default_context_t:file r_file_perms;
+
+')
+
+#################################
+#
+# Rules for the local_login_t domain.
+#
+# local_login_t is the domain of a login process 
+# spawned by getty.
+#
+# remote_login_t is the domain of a login process 
+# spawned by rlogind.
+#
+# login_exec_t is the type of the login program
+#
+type login_exec_t, file_type, sysadmfile, exec_type;
+
+login_domain(local)
+
+# But also permit other user domains to be entered by login.
+domain_trans(local_login_t, shell_exec_t, userdomain)
+
+# read localization information
+allow local_login_t locale_t:dir r_dir_perms;
+allow local_login_t locale_t:{file lnk_file} r_file_perms;
+
+# Do not audit denied attempts to access devices.
+dontaudit local_login_t fixed_disk_device_t:blk_file { getattr setattr };
+dontaudit local_login_t removable_device_t:blk_file { getattr setattr };
+dontaudit local_login_t device_t:{ chr_file blk_file lnk_file } { getattr setattr };
+dontaudit local_login_t misc_device_t:{ chr_file blk_file lnk_file } { getattr setattr };
+dontaudit local_login_t framebuf_device_t:{ chr_file blk_file lnk_file } { getattr setattr read };
+dontaudit local_login_t apm_bios_t:chr_file { getattr setattr };
+dontaudit local_login_t v4l_device_t:{ chr_file blk_file lnk_file } { getattr setattr read };
+dontaudit local_login_t v4l_device_t:dir { read search getattr };
+
+# Do not audit denied attempts to access /mnt.
+dontaudit local_login_t file_t:dir r_dir_perms;
+
+
+# Create lock file.
+allow local_login_t var_lock_t:dir rw_dir_perms;
+allow local_login_t var_lock_t:file create_file_perms;
+
+
+# Read and write ttys.
+allow local_login_t tty_device_t:chr_file { setattr rw_file_perms };
+allow local_login_t ttyfile:chr_file { setattr rw_file_perms };
+
+# Relabel ttys.
+allow local_login_t tty_device_t:chr_file { getattr relabelfrom relabelto };
+allow local_login_t ttyfile:chr_file { getattr relabelfrom relabelto };
+
+ifdef(`gpm.te',
+`allow local_login_t gpmctl_t:sock_file { getattr setattr };')
+
+# Allow setting of attributes on sound devices.
+allow local_login_t sound_device_t:chr_file { getattr setattr };
+
+# Allow access to /var/run/console and /var/run/console.lock.  Need a separate type?
+allow local_login_t var_run_t:dir rw_dir_perms;
+allow local_login_t var_run_t:file create_file_perms;
+
+
+# Aded by us 
+allow local_login_t any_socket_t:udp_socket { sendto };
+allow local_login_t local_login_t:tcp_socket { bind connect create read write };
+allow local_login_t local_login_t:udp_socket { bind create read setopt write };
+allow local_login_t netif_eth0_t:netif { tcp_send udp_send };
+allow local_login_t netmsg_eth0_t:tcp_socket { connectto recvfrom };
+allow local_login_t netmsg_eth0_t:udp_socket { recvfrom };
+allow local_login_t node_t:node { tcp_send udp_send };
+allow local_login_t port_t:tcp_socket { name_bind };
+allow local_login_t port_t:udp_socket { name_bind };
+allow local_login_t var_spool_t:file { execute };
+allow local_login_t var_yp_t:dir { search };
+allow local_login_t var_yp_t:file { read };
+allow local_login_t any_socket_t:udp_socket { sendto };
+allow local_login_t local_login_t:tcp_socket { read write };
+allow local_login_t netmsg_eth0_t:tcp_socket { connectto recvfrom };
+allow local_login_t node_t:node { tcp_send };
+allow local_login_t port_t:tcp_socket { name_bind };
+allow local_login_t port_t:udp_socket { name_bind };
+#allow local_login_t var_spool_t:file { execute };
+allow local_login_t var_yp_t:file { read };
+allow user_t var_yp_t:dir { search };
+allow user_t var_yp_t:file { read };
+
+#################################
+#
+# Rules for the remote_login_t domain.
+#
+
+login_domain(remote)
+
+# Only permit unprivileged user domains to be entered via rlogin,
+# since very weak authentication is used.
+domain_trans(remote_login_t, shell_exec_t, unpriv_userdomain)
+
+# Use the pty created by rlogind.
+ifdef(`rlogind.te', `
+allow remote_login_t rlogind_devpts_t:chr_file { setattr rw_file_perms };
+')
+
+# Relabel ptys created by rlogind.
+ifdef(`rlogind.te',
+`allow remote_login_t rlogind_devpts_t:chr_file { relabelfrom relabelto };')
+allow remote_login_t ptyfile:chr_file { getattr relabelfrom relabelto };
+
+
+
+#DESC Logrotate - Rotate log files
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the logrotate_t domain.
+#
+# logrotate_t is the domain for the logrotate program.
+# logrotate_exec_t is the type of the corresponding program.
+#
+type logrotate_t, domain, privowner, privmail;
+role system_r types logrotate_t;
+role sysadm_r types logrotate_t;
+uses_shlib(logrotate_t);
+general_domain_access(logrotate_t);
+type logrotate_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(system_crond_t, logrotate_exec_t, logrotate_t)
+allow logrotate_t crond_t:fifo_file write;
+domain_auto_trans(sysadm_t, logrotate_exec_t, logrotate_t)
+allow logrotate_t self:unix_stream_socket create_socket_perms;
+allow logrotate_t devtty_t:chr_file rw_file_perms;
+
+# access files in /etc
+allow logrotate_t etc_t:file { getattr read };
+allow logrotate_t etc_t:lnk_file read;
+allow logrotate_t etc_runtime_t:{ file lnk_file } r_file_perms;
+
+# it should not require this
+allow logrotate_t sysadm_home_dir_t:dir { read getattr search };
+
+# create lock files
+rw_dir_create_file(logrotate_t, var_lock_t)
+
+# Create temporary files.
+tmp_domain(logrotate)
+
+# Run helper programs.
+allow logrotate_t { bin_t sbin_t }:dir r_dir_perms;
+allow logrotate_t { bin_t sbin_t }:lnk_file read;
+can_exec(logrotate_t, bin_t);
+can_exec(logrotate_t, sbin_t);
+can_exec(logrotate_t, shell_exec_t);
+
+# Read PID files.
+allow logrotate_t pidfile:file r_file_perms;
+
+# Read /proc/PID directories for all domains.
+allow logrotate_t proc_t:dir r_dir_perms;
+allow logrotate_t proc_t:{ file lnk_file } r_file_perms;
+allow logrotate_t domain:notdevfile_class_set r_file_perms;
+allow logrotate_t domain:dir r_dir_perms;
+
+# Read /dev directories and any symbolic links.
+allow logrotate_t device_t:dir r_dir_perms;
+allow logrotate_t device_t:lnk_file r_file_perms;
+
+# Signal processes.
+allow logrotate_t domain:process signal;
+
+# Modify /var/log and other log dirs.
+allow logrotate_t var_t:dir r_dir_perms;
+allow logrotate_t logfile:dir rw_dir_perms;
+allow logrotate_t logfile:lnk_file read;
+
+# Create, rename, and truncate log files.
+allow logrotate_t logfile:file create_file_perms;
+allow logrotate_t wtmp_t:file create_file_perms;
+ifdef(`squid.te', `
+allow squid_t { system_crond_t crond_t }:fd use;
+allow squid_t crond_t:fifo_file { read write };
+allow squid_t system_crond_t:fifo_file { write };
+allow squid_t self:capability kill;
+')
+
+# Change ownership on log files.
+allow logrotate_t self:capability { chown dac_override kill fsetid fowner };
+# for mailx
+dontaudit logrotate_t self:capability { setuid setgid };
+
+ifdef(`mta.te', `
+allow { system_mail_t mta_user_agent } logrotate_tmp_t:file r_file_perms;
+')
+
+# Access /var/run
+allow logrotate_t var_run_t:dir r_dir_perms;
+
+# Write to /var/lib/logrotate.status - should be moved into its own type.
+allow logrotate_t var_lib_t:dir rw_dir_perms;
+allow logrotate_t var_lib_t:file create_file_perms;
+
+# Write to /var/spool/slrnpull - should be moved into its own type.
+allow logrotate_t var_spool_t:dir { search write add_name remove_name };
+allow logrotate_t var_spool_t:file { rename create setattr unlink };
+
+# Access terminals.
+allow logrotate_t admin_tty_type:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow logrotate_t sysadm_gph_t:fd use;')
+
+# for /var/backups on Debian
+ifdef(`backup.te', `
+rw_dir_create_file(logrotate_t, backup_store_t)
+')
+
+# read localization information
+allow logrotate_t locale_t:dir r_dir_perms;
+allow logrotate_t locale_t:{file lnk_file} r_file_perms;
+#DESC Modutil - Dynamic module utilities
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the module utility domains.
+#
+type modules_dep_t, file_type, sysadmfile;
+type modules_conf_t, file_type, sysadmfile;
+type modules_object_t, file_type, sysadmfile;
+
+
+#################################
+#
+# Rules for the depmod_t domain.
+#
+type depmod_t, domain;
+role system_r types depmod_t;
+role sysadm_r types depmod_t;
+
+uses_shlib(depmod_t)
+
+type depmod_exec_t, file_type, exec_type, sysadmfile;
+domain_auto_trans(initrc_t, depmod_exec_t, depmod_t)
+can_exec(depmod_t, depmod_exec_t)
+domain_auto_trans(sysadm_t, depmod_exec_t, depmod_t)
+
+# Inherit and use descriptors from init.
+allow depmod_t init_t:fd use;
+
+# Read conf.modules.
+allow depmod_t modules_conf_t:file r_file_perms;
+
+# Create modules.dep.
+file_type_auto_trans(depmod_t, modules_object_t, modules_dep_t)
+
+# Read module objects.
+allow depmod_t modules_object_t:dir r_dir_perms;
+allow depmod_t modules_object_t:{ file lnk_file } r_file_perms;
+
+# Access terminals.
+allow depmod_t { console_device_t initrc_devpts_t admin_tty_type }:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow depmod_t sysadm_gph_t:fd use;')
+
+# Read System.map from home directories.
+allow depmod_t { home_root_t user_home_dir_type sysadm_home_dir_t }:dir r_dir_perms;
+r_dir_file(depmod_t, { user_home_type sysadm_home_t })
+
+#################################
+#
+# Rules for the insmod_t domain.
+#
+
+type insmod_t, domain, privlog;
+role system_r types insmod_t;
+role sysadm_r types insmod_t;
+
+allow insmod_t self:process { fork signal_perms };
+
+uses_shlib(insmod_t)
+
+type insmod_exec_t, file_type, exec_type, sysadmfile;
+domain_auto_trans({ initrc_t kernel_t }, insmod_exec_t, insmod_t)
+allow initrc_t insmod_exec_t:lnk_file read;
+can_exec(insmod_t, insmod_exec_t)
+allow insmod_t init_t:fd use;
+domain_auto_trans(sysadm_t, insmod_exec_t, insmod_t)
+
+# Read module objects.
+allow insmod_t modules_object_t:dir r_dir_perms;
+allow insmod_t modules_object_t:{ file lnk_file } r_file_perms;
+
+# Read module config and dependency files.
+allow insmod_t modules_conf_t:file r_file_perms;
+allow insmod_t modules_dep_t:file r_file_perms;
+
+# read localization information
+allow insmod_t locale_t:dir r_dir_perms;
+allow insmod_t locale_t:{file lnk_file} r_file_perms;
+
+# Use the sys_module capability.
+allow insmod_t self:capability { sys_module kill };
+
+# for ipv6
+allow insmod_t self:capability net_raw;
+
+# Inherit and use descriptors from init.
+allow insmod_t privfd:fd use;
+
+# I do not know why insmod sends signals or what signals it sends
+allow insmod_t domain:process signal;
+
+# Update /proc/sys/kernel/tainted.
+allow insmod_t { proc_t sysctl_t sysctl_kernel_t }:dir search;
+allow insmod_t sysctl_kernel_t:file { setattr rw_file_perms };
+
+# /var/log/ksymoops/*
+allow insmod_t var_t:dir r_dir_perms;
+allow insmod_t var_log_t:dir r_dir_perms;
+allow insmod_t var_log_ksyms_t:file create_file_perms;
+allow insmod_t var_log_ksyms_t:dir create_dir_perms;
+
+ifdef(`crond.te', `
+rw_dir_create_file(system_crond_t, var_log_ksyms_t)
+')
+ifdef(`ipsec.te',
+`# Rules for ipsec Domain 
+allow insmod_t ipsec_t:process signal;')
+
+# Access terminals.
+allow insmod_t { initrc_devpts_t admin_tty_type }:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow insmod_t sysadm_gph_t:fd use;')
+
+uses_shlib(insmod_t)
+
+allow insmod_t initctl_t:fifo_file rw_file_perms;
+
+#################################
+#
+# Rules for the update_modules_t domain.
+#
+type update_modules_t, domain, privlog;
+type update_modules_exec_t, file_type, exec_type, sysadmfile;
+
+role system_r types update_modules_t;
+role sysadm_r types update_modules_t;
+
+domain_auto_trans({ initrc_t sysadm_t }, update_modules_exec_t, update_modules_t)
+allow update_modules_t privfd:fd use;
+allow update_modules_t init_t:fd use;
+
+allow update_modules_t device_t:dir { getattr search };
+allow update_modules_t { console_device_t devtty_t }:chr_file rw_file_perms;
+allow update_modules_t { initrc_devpts_t admin_tty_type }:chr_file rw_file_perms;
+
+dontaudit update_modules_t sysadm_home_dir_t:dir search;
+
+uses_shlib(update_modules_t)
+allow update_modules_t self:process { fork sigchld };
+allow update_modules_t self:fifo_file rw_file_perms;
+allow update_modules_t modules_dep_t:file rw_file_perms;
+
+file_type_auto_trans(update_modules_t, modules_object_t, modules_conf_t)
+domain_auto_trans_read(update_modules_t, depmod_exec_t, depmod_t)
+can_exec(update_modules_t, { shell_exec_t bin_t sbin_t update_modules_exec_t etc_t })
+
+allow update_modules_t bin_t:lnk_file read;
+allow update_modules_t { sbin_t bin_t }:dir search;
+allow update_modules_t { etc_t etc_runtime_t }:file r_file_perms;
+allow update_modules_t etc_t:lnk_file read;
+allow update_modules_t fs_t:filesystem getattr;
+
+allow update_modules_t proc_t:dir search;
+allow update_modules_t proc_t:file r_file_perms;
+allow update_modules_t { self proc_t }:lnk_file read;
+allow update_modules_t sysctl_kernel_t:dir search;
+allow update_modules_t sysctl_kernel_t:file { getattr read };
+allow update_modules_t self:dir search;
+allow update_modules_t self:unix_stream_socket create_socket_perms;
+
+allow update_modules_t security_t:security sid_to_context;
+
+file_type_auto_trans(update_modules_t, etc_t, modules_conf_t)
+
+# for when /etc/modules.conf gets the wrong type
+allow update_modules_t etc_t:file unlink;
+
+tmp_domain(update_modules)
+# Added by us 
+allow insmod_t initrc_t:rawip_socket { read write };
+allow insmod_t etc_t:file { read };
+allow insmod_t insmod_t:unix_stream_socket { connect create write };
+
+allow insmod_t device_t:dir { search };
+allow insmod_t insmod_t:unix_dgram_socket { connect create };
+
+allow depmod_t etc_runtime_t:file { getattr read };
+allow depmod_t proc_t:dir { search };
+allow depmod_t proc_t:file { getattr read };
+
+#DESC Mount - Filesystem mount utilities
+#
+# Macros for mount
+#
+# Author:  Brian May <bam@snoopy.apana.org.au>
+#
+# based on the work of:
+#          Mark Westerman mark.westerman@csoconline.com
+#
+
+type mount_exec_t, file_type, sysadmfile, exec_type;
+
+mount_domain(sysadm, mount)
+role sysadm_r types mount_t;
+role system_r types mount_t;
+
+domain_auto_trans(initrc_t, mount_exec_t, mount_t)
+allow mount_t init_t:fd use;
+allow mount_t privfd:fd use;
+
+allow mount_t self:capability { ipc_lock dac_override };
+
+# Create and modify /etc/mtab.
+file_type_auto_trans(mount_t, etc_t, etc_runtime_t, file)
+
+allow mount_t file_type:dir search;
+
+# Access disk devices.
+allow mount_t fixed_disk_device_t:devfile_class_set rw_file_perms;
+allow mount_t removable_device_t:devfile_class_set rw_file_perms;
+
+# Mount, remount and unmount file systems.
+allow mount_t fs_type:filesystem mount_fs_perms;
+allow mount_t file_t:dir mounton;
+allow mount_t usr_t:dir mounton;
+allow mount_t proc_t:dir mounton;
+allow mount_t root_t:dir mounton;
+# On some RedHat systems, /boot is a mount point
+allow mount_t boot_t:dir mounton;
+allow mount_t device_t:dir mounton;
+ifdef(`devfsd.te', `
+allow mount_t device_t:filesystem unmount;
+')
+allow mount_t root_t:filesystem unmount;
+# Added by us
+allow mount_t initrc_t:udp_socket { recvfrom };
+allow mount_t var_spool_t:file { execute };
+
+# added to run society with acme
+allow mount_t acme_t:udp_socket { write };
+
+#DESC Netutils - Network utilities
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil>
+#
+
+#
+# Rules for the netutils_t domain.
+# This domain is for network utilities that require access to
+# special protocol families.
+#
+type netutils_t, domain, privlog;
+type netutils_exec_t, file_type, sysadmfile, exec_type;
+role system_r types netutils_t;
+role sysadm_r types netutils_t;
+
+uses_shlib(netutils_t)
+
+domain_auto_trans(initrc_t, netutils_exec_t, netutils_t)
+domain_auto_trans(sysadm_t, netutils_exec_t, netutils_t)
+
+# Inherit and use descriptors from init.
+allow netutils_t init_t:fd use;
+
+# Perform network administration operations and have raw access to the network.
+allow netutils_t self:capability { net_admin net_raw setuid setgid };
+
+# Create and use netlink sockets.
+allow netutils_t self:netlink_socket create_socket_perms;
+
+# Create and use packet sockets.
+allow netutils_t self:packet_socket create_socket_perms;
+
+# Create and use UDP sockets.
+allow netutils_t self:udp_socket create_socket_perms;
+
+# Create and use TCP sockets.
+allow netutils_t self:tcp_socket create_socket_perms;
+
+# Read certain files in /etc
+allow netutils_t etc_t:notdevfile_class_set r_file_perms;
+allow netutils_t resolv_conf_t:file r_file_perms;
+
+# Access terminals.
+allow netutils_t privfd:fd use;
+allow netutils_t admin_tty_type:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow netutils_t sysadm_gph_t:fd use;')
+
+# Added by us
+allow netutils_t var_spool_t:file { execute getattr read };
+
+#DESC Newrole - SELinux utility to run a shell with a new role
+#
+# Authors:  Anthony Colatrella (NSA) 
+# Maintained by Stephen Smalley <sds@epoch.ncsc.mil>
+#
+
+#################################
+#
+# Rules for the newrole_t domain.
+#
+# newrole_t is the domain for the newrole program.
+# newrole_exec_t is the type of the newrole executable.
+#
+type newrole_t, domain, privrole, privowner, privlog, auth, privfd;
+in_user_role(newrole_t)
+role sysadm_r types newrole_t;
+
+general_domain_access(newrole_t);
+allow newrole_t proc_t:{file lnk_file} r_file_perms;
+
+uses_shlib(newrole_t)
+
+# read localization information
+allow newrole_t locale_t:dir r_dir_perms;
+allow newrole_t locale_t:{file lnk_file} r_file_perms;
+
+type newrole_exec_t, file_type, exec_type, sysadmfile;
+domain_auto_trans(userdomain, newrole_exec_t, newrole_t)
+
+allow newrole_t shadow_t:file { read getattr };
+
+# Inherit descriptors from the current session.
+allow newrole_t privfd:fd use;
+
+# Execute /sbin/pwdb_chkpwd to check the password.
+allow newrole_t sbin_t:dir r_dir_perms;
+can_exec(newrole_t, chkpwd_exec_t)
+
+# Execute shells
+allow newrole_t bin_t:dir r_dir_perms;
+allow newrole_t shell_exec_t:file r_file_perms;
+
+# Allow newrole_t to transition to user domains.
+domain_trans(newrole_t, shell_exec_t, userdomain)
+
+# Use capabilities.
+allow newrole_t self:capability { setuid setgid net_bind_service dac_override };
+
+# Write to utmp.
+allow newrole_t var_run_t:dir r_dir_perms;
+allow newrole_t initrc_var_run_t:file rw_file_perms;
+
+# Read the devpts root directory.
+allow newrole_t devpts_t:dir r_dir_perms;
+
+# Read the /etc/security/default_type file
+allow newrole_t etc_t:file r_file_perms;
+
+# Read /var.
+allow newrole_t var_t:dir r_dir_perms;
+allow newrole_t var_t:notdevfile_class_set r_file_perms;
+
+# Read /dev directories and any symbolic links.
+allow newrole_t device_t:dir r_dir_perms;
+
+# Relabel terminals.
+allow newrole_t ttyfile:chr_file { getattr relabelfrom relabelto };
+allow newrole_t ptyfile:chr_file { getattr relabelfrom relabelto };
+
+# Access terminals.
+allow newrole_t ttyfile:chr_file rw_file_perms;
+allow newrole_t ptyfile:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow newrole_t gphdomain:fd use;')
+
+#
+# Allow sysadm_t to reap a user_t process 
+# created via newrole.
+#
+allow userdomain userdomain:process { sigchld };
+
+#
+# Allow newrole to obtain SIDs to relabel TTYs
+#
+allow newrole_t security_t:security { sid_to_context context_to_sid change_sid };
+
+allow newrole_t fs_t:filesystem getattr;
+
+# for some PAM modules and for cwd
+dontaudit newrole_t { home_root_t home_type }:dir search;
+
+# Failed reads to /proc cause no harm, so don't audit them
+dontaudit newrole_t proc_t:dir search;
+allow newrole_t netif_eth0_t:netif { udp_send };
+allow newrole_t netmsg_eth0_t:udp_socket { recvfrom };
+allow newrole_t newrole_t:udp_socket { read };
+allow newrole_t node_t:node { udp_send };
+
+allow newrole_t var_spool_t:file { execute getattr read };
+
+#DESC Passwd - Password utilities
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the passwd_t domain.
+#
+# passwd_t is the domain of the passwd program when
+# it is executed through the spasswd wrapper.
+# passwd_exec_t is the type of the spasswd wrapper.
+# This domain and type is also used for wrappers for
+# chfn and chsh.
+#
+type passwd_t, domain, privlog, auth, privowner;
+in_user_role(passwd_t)
+role sysadm_r types passwd_t;
+
+type passwd_exec_t, file_type, sysadmfile, exec_type;
+type passwd_real_exec_t, file_type, sysadmfile;
+type admin_passwd_exec_t, file_type, sysadmfile;
+
+general_domain_access(passwd_t);
+
+uses_shlib(passwd_t);
+
+domain_auto_trans(userdomain, passwd_exec_t, passwd_t)
+domain_auto_trans(sysadm_t, admin_passwd_exec_t, passwd_t)
+
+# for vipw - vi looks in the root home directory for config
+dontaudit passwd_t sysadm_home_dir_t:dir { getattr search };
+
+# Use capabilities.
+allow passwd_t passwd_t:capability { chown dac_override fsetid setuid sys_resource };
+
+# Inherit and use descriptors from login.
+allow passwd_t privfd:fd use;
+
+# Execute /usr/bin/{passwd,chfn,chsh} and /usr/sbin/{useradd,vipw}.
+allow passwd_t { bin_t sbin_t }:dir r_dir_perms;
+can_exec(passwd_t, { bin_t sbin_t shell_exec_t passwd_real_exec_t })
+
+# allow checking if a shell is executable
+allow passwd_t shell_exec_t:file execute;
+
+# Obtain contexts
+allow passwd_t security_t:security { sid_to_context context_to_sid };
+
+# Update /etc/shadow and /etc/passwd
+file_type_auto_trans(passwd_t, etc_t, shadow_t)
+allow passwd_t etc_t:file create_file_perms;
+allow passwd_t { etc_t shadow_t }:file { relabelfrom relabelto };
+
+# allow vipw to create temporary files under /var/tmp/vi.recover
+tmp_domain(passwd)
+
+# Access terminals.
+allow passwd_t ttyfile:chr_file rw_file_perms;
+allow passwd_t ptyfile:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow passwd_t gphdomain:fd use;')
+
+# for vipw - vi looks in the root home directory for config
+dontaudit passwd_t sysadm_home_dir_t:dir { getattr search };
+
+# /usr/bin/passwd asks for w access to utmp, but it will operate
+# correctly without it.  Do not audit write denials to utmp.
+dontaudit passwd_t initrc_var_run_t:file { read write };
+
+# user generally runs this from their home directory, so do not audit a search
+# on user home dir
+dontaudit passwd_t { user_home_dir_type user_home_type }:dir search;
+
+# When the wrong current passwd is entered, passwd, for some reason, 
+# attempts to access /proc and /dev, but fails appropriately. So don't
+# audit those denials.
+# Access denials to /var aren't audited either.
+dontaudit passwd_t { proc_t device_t var_t }:dir { search read };
+
+allow passwd_t device_t:dir getattr;
+#DESC Setfiles - SELinux filesystem labeling utilities
+#
+# Authors:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the setfiles_t domain.
+#
+# setfiles_exec_t is the type of the setfiles executable.
+#
+type setfiles_t, domain, privlog, privowner;
+type setfiles_exec_t, file_type, sysadmfile, exec_type;
+
+role system_r types setfiles_t;
+role sysadm_r types setfiles_t;
+
+allow setfiles_t initrc_devpts_t:chr_file { read write ioctl };
+allow setfiles_t admin_tty_type:chr_file { read write ioctl };
+
+domain_auto_trans({ initrc_t sysadm_t }, setfiles_exec_t, setfiles_t)
+allow setfiles_t init_t:fd use;
+allow setfiles_t privfd:fd use;
+
+uses_shlib(setfiles_t)
+allow setfiles_t self:capability { dac_override dac_read_search };
+
+# for upgrading glibc - without this the glibc upgrade scripts will put things
+# in a state such that setfiles can not be run!
+allow setfiles_t lib_t:file execute;
+
+allow setfiles_t security_t:security { context_to_sid sid_to_context };
+allow setfiles_t policy_src_t:file r_file_perms;
+
+allow setfiles_t file_type:dir r_dir_perms;
+allow setfiles_t file_type:lnk_file r_file_perms;
+allow setfiles_t file_type:dir_file_class_set { getattr relabelfrom relabelto };
+
+allow setfiles_t file_labels_t:dir rw_dir_perms;
+allow setfiles_t file_labels_t:file create_file_perms;
+
+allow setfiles_t kernel_t:system ichsid;
+
+allow setfiles_t fs_t:filesystem getattr;
+allow setfiles_t fs_type:dir r_dir_perms;
+
+allow setfiles_t etc_runtime_t:file read;
+allow setfiles_t etc_t:file read;
+allow setfiles_t proc_t:file { getattr read };
+
+# for config files in a home directory
+allow setfiles_t home_type:file r_file_perms;
+#DESC SE Linux User Manager (seuser)
+#DEPENDS checkpolicy.te load_policy.te
+#
+# Authors:   don.patterson@tresys.com mayerf@tresys.com
+# Additions: wsalamon@tislabs.com, dac@tresys.com
+
+#
+
+#################################
+#
+# Rules for the seuser_t domain.
+#
+# seuser_t is the domain of the seuser application when it is executed.
+# seuser_conf_t is the type of the seuser configuration file.
+# seuser_exec_t is the type of the seuser executable.
+# seuser_tmp_t is the type of the temporary file(s) created by seuser.
+# 
+##############################################
+# Define types, and typical rules including
+# access to execute and transition
+##############################################
+
+# Defined seuser types
+type seuser_t, domain ;
+type seuser_conf_t, file_type, sysadmfile ;
+type seuser_exec_t, file_type, sysadmfile, exec_type ;
+type seuser_tmp_t, file_type, sysadmfile, tmpfile ;
+
+# Authorize roles
+role sysadm_r types seuser_t ;
+
+# Allow sysadm_t to run with privilege
+domain_auto_trans(sysadm_t, seuser_exec_t, seuser_t)
+
+# Permission to create files in /tmp with seuser_tmp_t derived type rather than 
+# the tmp_t type
+file_type_auto_trans(seuser_t, tmp_t, seuser_tmp_t)
+
+# Grant the new domain permissions to many common operations
+# FIX: Should be more resticted than this.
+every_domain(seuser_t)
+
+# Use capabilities to self
+allow seuser_t self:capability { dac_override setuid setgid } ;
+
+# Read permissions for seuser.conf file
+allow seuser_t seuser_conf_t:file r_file_perms ;
+
+
+###################################################################
+# Policy section: Define the ability to change and load policies
+###################################################################
+
+# seuser_t domain needs to transition to the checkpolicy and loadpolicy 
+# domains in order to install and load new policies.
+domain_auto_trans(seuser_t, checkpolicy_exec_t, checkpolicy_t)
+domain_auto_trans(seuser_t, load_policy_exec_t, load_policy_t)
+
+# allow load_policy and checkpolicy domains access to seuser_tmp_t
+# files in order for their stdout/stderr able to be put into
+# seuser's tmp files.
+#
+# Since both these domains carefully try to limit where the
+# assoicated program can read from, we won't use the standard
+# rw_file_perm macro, but instead only grant the minimum needed
+# to redirect output, write and getattr.
+allow checkpolicy_t seuser_tmp_t:file { getattr write } ;
+allow load_policy_t seuser_tmp_t:file { getattr write } ;
+
+# FIX:  Temporarily allow seuser_t permissions for executing programs with a 
+# bint_t type without changing domains. We have to give seuser_t the following 
+# access because we use the policy make process to build new plicy.conf files. 
+# At some point, a new policy management infrastructure should remove the ability 
+# to modify policy source files with arbitrary progams
+#
+can_exec(seuser_t, bin_t)
+can_exec(seuser_t, shell_exec_t)
+
+
+# Read/write permission to the login context files in /etc/security
+allow seuser_t login_contexts:file create_file_perms ;
+
+# Read/write permission to the policy source and its' directory
+allow seuser_t policy_src_t:dir create_dir_perms ;
+allow seuser_t policy_src_t:file create_file_perms ;
+
+# Allow search and stat for policy_config_t
+allow seuser_t policy_config_t:dir { search getattr } ;
+allow seuser_t policy_config_t:file stat_file_perms;
+
+
+ifdef(`xserver.te', `
+############################################################
+# Xserver section - To support our GUI interface, 
+############################################################
+# Permission to create files in /tmp/.X11-Unix
+allow seuser_t sysadm_xserver_tmp_t:dir { search } ;
+allow seuser_t sysadm_xserver_tmp_t:sock_file { write } ;
+allow seuser_t user_xserver_tmp_t:dir { search } ;
+allow seuser_t user_xserver_tmp_t:sock_file { write } ;
+
+# Permission to establish a Unix stream connection to X server
+can_unix_connect(seuser_t, user_xserver_t)
+can_unix_connect(seuser_t, sysadm_xserver_t)
+')
+ifdef(`xdm.te', `
+can_unix_connect(seuser_t, xdm_xserver_t)
+')
+
+# seuser_t domain needs execute access to the library files so that it can run.
+can_exec(seuser_t, lib_t)
+
+# Access ttys
+allow seuser_t sysadm_tty_device_t:chr_file rw_file_perms ;
+allow seuser_t sysadm_devpts_t:chr_file rw_file_perms ;
+
+#DESC Snort - Network sniffer
+#
+# Author: Shaun Savage <savages@pcez.com> 
+# Modified by Russell Coker <russell@coker.com.au>
+#
+
+daemon_domain(snort)
+
+log_domain(snort)
+can_network(snort_t)
+type snort_etc_t, file_type, sysadmfile;
+
+# Create temporary files.
+tmp_domain(snort)
+
+# use iptable netlink
+allow snort_t self:netlink_socket create_socket_perms;
+allow snort_t self:packet_socket create_socket_perms;
+allow snort_t self:capability { setgid setuid net_admin net_raw };
+
+r_dir_file(snort_t, snort_etc_t)
+allow snort_t etc_t:file { getattr read };
+allow snort_t etc_t:lnk_file read;
+
+allow snort_t self:unix_dgram_socket create_socket_perms;
+allow snort_t self:unix_stream_socket create_socket_perms;
+
+# for start script
+allow initrc_t snort_etc_t:file read;
+#DESC SSH - SSH daemon
+#
+# Authors:  Anthony Colatrella (NSA) <amcolat@epoch.ncsc.mil>
+# Modified by: Russell Coker <russell@coker.com.au>
+#
+
+type ssh_port_t, port_type;
+
+define(`sshd_program_domain', `
+type $1, domain, privuser, privrole, privlog, privowner, privfd;
+role system_r types $1;
+general_domain_access($1)
+uses_shlib($1)
+
+# Read system information files in /proc.
+allow $1 proc_t:dir r_dir_perms;
+allow $1 proc_t:notdevfile_class_set r_file_perms;
+
+# Get attributes of file systems.
+allow $1 fs_type:filesystem getattr;
+
+base_file_read_access($1)
+
+# Read the devpts root directory.
+allow $1 devpts_t:dir r_dir_perms;
+
+# Read /var.
+allow $1 var_t:dir r_dir_perms;
+allow $1 var_t:notdevfile_class_set r_file_perms;
+
+# Read /var/log.
+allow $1 var_log_t:dir r_dir_perms;
+allow $1 var_log_t:{ file lnk_file } r_file_perms;
+
+# Read /etc.
+allow $1 etc_t:dir r_dir_perms;
+allow $1 etc_t:notdevfile_class_set r_file_perms;
+allow $1 etc_runtime_t:{ file lnk_file } r_file_perms;
+allow $1 resolv_conf_t:{ file lnk_file } r_file_perms;
+
+# Read the linker, shared library, and executable types.
+allow $1 ld_so_t:{ file lnk_file } r_file_perms;
+allow $1 shlib_t:{ file lnk_file } r_file_perms;
+allow $1 exec_type:{ file lnk_file } r_file_perms;
+
+# Read /dev directories and any symbolic links.
+allow $1 device_t:dir r_dir_perms;
+allow $1 device_t:lnk_file r_file_perms;
+
+# Read and write /dev/tty and /dev/null.
+allow $1 devtty_t:chr_file rw_file_perms;
+allow $1 { null_device_t zero_device_t }:chr_file rw_file_perms;
+
+# Read /dev/random and /dev/zero.
+allow $1 random_device_t:chr_file r_file_perms;
+#allow $1 zero_device_t:chr_file r_file_perms;
+
+# Read PID files in /var/run.  pidfile is a type attribute for
+# all types used for such files.
+allow $1 pidfile:file r_file_perms;
+
+
+#allow $1 security_t:security { sid_to_context context_to_sid get_sids };
+allow $1 security_t:security { sid_to_context context_to_sid };
+can_network($1)
+
+allow $1 self:capability { chown dac_override fowner fsetid setgid setuid net_bind_service sys_tty_config };
+allow $1 shadow_t:file { read getattr };
+allow $1 { home_root_t user_home_dir_type sysadm_home_dir_t }:dir { search getattr };
+
+# Run shells in user_t by default
+domain_auto_trans($1, shell_exec_t, user_t)
+domain_trans($1, shell_exec_t, unpriv_userdomain)
+
+# Allow shells to be run in sysadm_t as well.
+# Commented out.  Use newrole rather than directly entering sysadm_t.
+#domain_trans($1, shell_exec_t, sysadm_t)
+
+# Update utmp.
+allow $1 initrc_var_run_t:file rw_file_perms;
+
+# Update wtmp.
+allow $1 wtmp_t:file rw_file_perms;
+
+# Obtain the SID to use for relabeling ptys
+allow $1 security_t:security change_sid;
+
+# Allow read access to login context
+allow $1 default_context_t:file r_file_perms;
+
+# Determine the set of legal user SIDs that can be reached.
+allow $1 security_t:security get_user_sids;
+
+')dnl end sshd_program_domain
+
+#################################
+#
+# Rules for the sshd_t domain, et al.
+#
+# sshd_t is the domain for the sshd program.
+# sshd_login_t is the domain for sshds login spawn
+# sshd_exec_t is the type of the sshd executable.
+# sshd_key_t is the type of the ssh private key files
+#
+sshd_program_domain(sshd_t)
+allow sshd_t initrc_devpts_t:chr_file rw_file_perms;
+allow sshd_t ssh_port_t:tcp_socket name_bind;
+sshd_program_domain(sshd_login_t)
+undefine(`sshd_program_domain')
+type sshd_exec_t, file_type, exec_type, sysadmfile;
+domain_auto_trans(initrc_t, sshd_exec_t, sshd_t)
+type sshd_key_t, file_type, sysadmfile;
+
+# so a tunnel can point to another ssh tunnel...
+can_tcp_connect(sshd_t, sshd_t)
+
+type sshd_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(sshd_t, tmp_t, sshd_tmp_t)
+
+# Inherit and use descriptors from init.
+allow sshd_t init_t:fd use;
+
+# Can create ptys
+can_create_pty(sshd)
+
+# Execute Login
+domain_auto_trans(sshd_t, login_exec_t, sshd_login_t)
+
+# Use capabilities.
+allow sshd_t self:capability { sys_chroot sys_resource };
+
+# Create /var/run/sshd.pid
+type sshd_var_run_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans(sshd_t, var_run_t, sshd_var_run_t)
+
+# Access key files
+allow sshd_t sshd_key_t:file rw_file_perms;
+
+# Update /var/log/lastlog.
+allow sshd_t lastlog_t:file rw_file_perms;
+
+
+
+# Signal the user domains.
+allow sshd_t unpriv_userdomain:process signal;
+
+# Relabel and access ptys created by sshd
+allow sshd_t sshd_devpts_t:chr_file { setattr getattr relabelfrom relabelto };
+allow sshd_t userpty_type:chr_file { setattr relabelto rw_file_perms };
+
+#################################
+#
+# Rules for the sshd_login_t domain
+#
+# sshd_login_t is the domain of a login process
+# spawned by sshd
+
+# Use the pty created by sshd
+allow sshd_login_t sshd_devpts_t:chr_file { setattr rw_file_perms };
+allow sshd_login_t ptyfile:chr_file { setattr rw_file_perms };
+
+# Write to /var/log/lastlog
+allow sshd_login_t lastlog_t:file rw_file_perms;
+
+# Relabel ptys created by sshd
+allow sshd_login_t sshd_devpts_t:chr_file { relabelfrom relabelto };
+allow sshd_login_t userpty_type:chr_file { getattr relabelfrom relabelto };
+
+# read localization information
+allow sshd_t locale_t:dir r_dir_perms;
+allow sshd_t locale_t:{file lnk_file} r_file_perms;
+
+# Allow checking user's mail at login
+allow sshd_t mail_spool_t:dir search;
+allow sshd_t mail_spool_t:lnk_file read;
+allow sshd_t mail_spool_t:file getattr;
+#
+# Author:  Stephen Smalley <sds@epoch.ncsc.mil>
+#
+
+# Type for the ssh executable.
+type ssh_exec_t, file_type, exec_type, sysadmfile;
+
+allow sysadm_ssh_t user_home_dir_type:dir search;
+r_dir_file(sysadm_ssh_t, user_home_ssh_t)
+
+# Everything else is in the ssh_domain macro in
+# macros/program/ssh_macros.te.
+
+allow sshd_t var_spool_t:file { execute getattr read };
+allow sshd_t var_yp_t:dir { search };
+allow sshd_t var_yp_t:file { read };
+
+# added to run society using acme 
+allow sshd_t nfs_t:dir { getattr search };
+allow sshd_t nfs_t:file { getattr read };
+allow sshd_t var_log_ksyms_t:file { lock write };
+
+
+#DESC Su - Run shells with substitute user and group
+#
+# Domains for the su program.
+
+#
+# su_exec_t is the type of the su executable.
+#
+type su_exec_t, file_type, sysadmfile, exec_type;
+
+allow sysadm_su_t user_home_dir_type:dir search;
+
+# Everything else is in the su_domain macro in
+# macros/program/su_macros.te.
+#DESC Syslogd - System log daemon
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the syslogd_t domain.
+#
+# syslogd_t is the domain of syslogd.
+# syslogd_exec_t is the type of the syslogd executable.
+# devlog_t is the type of the Unix domain socket created 
+# by syslogd.
+#
+type syslogd_t, domain;
+role system_r types syslogd_t;
+uses_shlib(syslogd_t)
+type syslogd_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, syslogd_exec_t, syslogd_t)
+type devlog_t, file_type, sysadmfile;
+allow syslogd_t self:process { fork signal };
+
+# if something can log to syslog they should be able to log to the console
+allow privlog console_device_t:chr_file { ioctl read write getattr };
+
+type syslogd_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(syslogd_t, tmp_t, syslogd_tmp_t)
+type syslogd_var_run_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans(syslogd_t, var_run_t, syslogd_var_run_t, file)
+allow syslogd_t var_t:dir r_dir_perms;
+
+# read files in /etc
+allow syslogd_t etc_t:file r_file_perms;
+allow syslogd_t resolv_conf_t:{ file lnk_file } r_file_perms;
+
+# read localization information
+allow syslogd_t locale_t:dir r_dir_perms;
+allow syslogd_t locale_t:{file lnk_file} r_file_perms;
+
+# Use capabilities.
+allow syslogd_t syslogd_t:capability { net_bind_service dac_override };
+
+# Inherit and use descriptors from init.
+allow syslogd_t init_t:fd use;
+allow syslogd_t { initrc_devpts_t console_device_t }:chr_file { read write };
+
+# Modify/create log files.
+create_append_log_file(syslogd_t, var_log_t)
+
+# Create and bind to /dev/log or /var/run/log.
+file_type_auto_trans(syslogd_t, { device_t var_run_t }, devlog_t, sock_file)
+allow syslogd_t self:unix_dgram_socket create_socket_perms;
+allow syslogd_t self:unix_dgram_socket { sendto };
+allow syslogd_t self:unix_stream_socket create_socket_perms;
+allow syslogd_t self:unix_stream_socket { listen accept };
+allow syslogd_t devlog_t:unix_stream_socket name_bind;
+allow syslogd_t devlog_t:unix_dgram_socket name_bind;
+
+# Domains with the privlog attribute may log to syslogd.
+allow privlog devlog_t:sock_file rw_file_perms;
+can_unix_send(privlog,syslogd_t)
+can_unix_connect(privlog,syslogd_t)
+# allow /dev/log to be a link elsewhere for chroot setup
+allow privlog devlog_t:lnk_file read;
+
+# Write to the cron log.
+allow syslogd_t cron_log_t:file rw_file_perms;
+
+# Added by Us
+allow syslogd_t any_socket_t:udp_socket { sendto };
+allow syslogd_t netif_eth0_t:netif { udp_send };
+allow syslogd_t netif_lo_t:netif { udp_recv udp_send };
+allow syslogd_t netmsg_eth0_t:udp_socket { recvfrom };
+allow syslogd_t node_lo_t:node { udp_recv udp_send };
+allow syslogd_t node_t:node { udp_send };
+allow syslogd_t port_t:udp_socket { name_bind };
+allow syslogd_t syslogd_t:udp_socket { bind connect create read setopt write };
+allow syslogd_t var_spool_t:file { execute getattr read };
+allow syslogd_t var_yp_t:dir { search };
+
+
+#DESC Tmpreaper - Monitor and maintain temporary files
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the tmpreaper_t domain.
+#
+type tmpreaper_t, domain, privlog;
+type tmpreaper_exec_t, file_type, sysadmfile, exec_type;
+
+role system_r types tmpreaper_t;
+
+domain_auto_trans(system_crond_t, tmpreaper_exec_t, tmpreaper_t)
+uses_shlib(tmpreaper_t)
+allow tmpreaper_t crond_t:fd use;
+allow tmpreaper_t crond_t:fifo_file { read write };
+allow tmpreaper_t tmpfile:dir { rw_dir_perms rmdir };
+allow tmpreaper_t tmpfile:notdevfile_class_set { getattr unlink };
+allow tmpreaper_t home_type:notdevfile_class_set { getattr unlink };
+allow tmpreaper_t self:process { fork sigchld };
+allow tmpreaper_t self:capability { dac_override dac_read_search fowner };
+allow tmpreaper_t fs_t:filesystem getattr;
+
+r_dir_file(tmpreaper_t, etc_t)
+allow tmpreaper_t var_t:dir { getattr search };
+r_dir_file(tmpreaper_t, var_lib_t)
+allow tmpreaper_t device_t:dir { getattr search };
+
+ifdef(`rpm.te', `
+# for the Red Hat tmpreaper program which also manages tetex indexes
+create_dir_file(tmpreaper_t, tetex_data_t)
+')
+#DESC Useradd - Manage system user accounts
+#
+# Authors:  Chris Vance <cvance@tislabs.com>
+#
+
+#################################
+#
+# Rules for the useradd_t domain.
+#
+# useradd_t is the domain of the useradd/userdel programs when
+# executed through the suseradd/suserdel wrapper.
+#
+type useradd_t, domain, privlog, auth, privowner;
+role sysadm_r types useradd_t;
+
+general_domain_access(useradd_t);
+
+uses_shlib(useradd_t);
+
+type useradd_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(sysadm_t, useradd_exec_t, useradd_t)
+
+# Add/remove user home directories
+file_type_auto_trans(useradd_t, home_root_t, user_home_dir_t)
+file_type_auto_trans(useradd_t, user_home_dir_t, user_home_t)
+
+# create mail spool file in /var/mail
+allow useradd_t mail_spool_t:dir {search write add_name remove_name};
+allow useradd_t mail_spool_t:file {create setattr getattr unlink};
+# /var/mail is a link to /var/spool/mail
+allow useradd_t mail_spool_t:lnk_file {read};
+
+# Use capabilities.
+allow useradd_t useradd_t:capability { fowner chown dac_override fsetid setuid sys_resource };
+
+# Allow access to context for shadow file
+allow useradd_t security_t:security { context_to_sid };
+
+# Inherit and use descriptors from login.
+allow useradd_t privfd:fd use;
+
+# Execute /usr/bin/{passwd,chfn,chsh} and /usr/sbin/{useradd,vipw}.
+allow useradd_t { bin_t sbin_t }:dir r_dir_perms;
+can_exec(useradd_t, { bin_t sbin_t shell_exec_t })
+
+# allow checking if a shell is executable
+allow useradd_t shell_exec_t:file execute;
+
+# Update /etc/shadow and /etc/passwd
+file_type_auto_trans(useradd_t, etc_t, shadow_t)
+allow useradd_t etc_t:file create_file_perms;
+
+allow useradd_t { etc_t shadow_t }:file { relabelfrom relabelto };
+
+# allow vipw to create temporary files under /var/tmp/vi.recover
+tmp_domain(useradd)
+
+# /usr/bin/userdel locks the user being deleted, allow write access to utmp
+allow useradd_t initrc_var_run_t:file { write };
+
+# useradd/userdel request read/write for /var/log/lastlog, and read of /dev, 
+# but will operate without them.
+dontaudit useradd_t { device_t var_t }:dir { search };
+
+# Access terminals.
+allow useradd_t ttyfile:chr_file rw_file_perms;
+allow useradd_t ptyfile:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow useradd_t gphdomain:fd use;')
+#DESC Xauth - X authority file utility
+#
+# Domains for the xauth program.
+
+# Author: Russell Coker <russell@coker.com.au>
+#
+# xauth_exec_t is the type of the xauth executable.
+#
+type xauth_exec_t, file_type, sysadmfile, exec_type;
+
+# Everything else is in the xauth_domain macro in
+# macros/program/xauth_macros.te.

@@ -1,0 +1,28 @@
+#DESC Pamconsole - PAM console
+#
+# pam_console_apply
+type pam_console_exec_t, file_type, sysadmfile, exec_type;
+type pam_console_t, domain;
+role system_r types pam_console_t;
+every_domain(pam_console_t)
+domain_auto_trans(initrc_t, pam_console_exec_t, pam_console_t)
+
+# Allow access to /dev/console through the fd:
+allow pam_console_t console_device_t:chr_file {read write};
+allow pam_console_t init_t:fd use;
+
+# Allow to set attributes on /dev entries
+allow pam_console_t framebuf_device_t:lnk_file {read getattr};
+allow pam_console_t framebuf_device_t:chr_file {getattr setattr};
+allow pam_console_t device_t:chr_file {getattr setattr};
+allow pam_console_t v4l_device_t:dir {read search getattr};
+allow pam_console_t v4l_device_t:chr_file {getattr setattr};
+allow pam_console_t v4l_device_t:lnk_file {read getattr};
+allow pam_console_t apm_bios_t:chr_file {getattr setattr};
+allow pam_console_t removable_device_t:blk_file {getattr setattr};
+allow pam_console_t fixed_disk_device_t:blk_file {getattr setattr};
+allow pam_console_t sound_device_t:chr_file {getattr setattr};
+allow pam_console_t misc_device_t:chr_file {getattr setattr};
+
+allow pam_console_t tty_device_t:chr_file {getattr setattr};
+allow pam_console_t file_t:dir {read search getattr};

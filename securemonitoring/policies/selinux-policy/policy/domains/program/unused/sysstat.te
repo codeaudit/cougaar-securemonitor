@@ -1,0 +1,64 @@
+#DESC Sysstat - Sar and similar programs
+#
+# Authors:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the sysstat_t domain.
+#
+# sysstat_exec_t is the type of the sysstat executable.
+#
+type sysstat_t, domain, privlog;
+type sysstat_exec_t, file_type, sysadmfile, exec_type;
+
+role system_r types sysstat_t;
+
+allow sysstat_t device_t:dir search;
+
+allow sysstat_t self:process { sigchld fork };
+
+#for date
+can_exec(sysstat_t, { sysstat_exec_t bin_t })
+allow sysstat_t bin_t:dir r_dir_perms;
+dontaudit sysstat_t sbin_t:dir search;
+
+allow sysstat_t devtty_t:chr_file rw_file_perms;
+# for mtab
+allow sysstat_t etc_runtime_t:file { read getattr };
+# for fstab
+allow sysstat_t etc_t:file { read getattr };
+
+dontaudit sysstat_t sysadm_home_dir_t:dir r_dir_perms;
+
+allow sysstat_t self:fifo_file rw_file_perms;
+
+# Type for files created during execution of sysstatd.
+type var_log_sysstat_t, file_type, sysadmfile;
+
+allow sysstat_t var_t:dir search;
+allow sysstat_t var_log_t:dir r_dir_perms;
+allow sysstat_t var_log_sysstat_t:dir rw_dir_perms;
+allow sysstat_t var_log_sysstat_t:file create_file_perms;
+
+allow sysstat_t etc_t:dir r_dir_perms;
+allow sysstat_t etc_t:lnk_file read;
+
+# Inherit and use descriptors from cron.
+allow sysstat_t crond_t:fd use;
+allow sysstat_t crond_t:fifo_file rw_file_perms;
+
+allow sysstat_t fs_t:filesystem getattr;
+
+# get info from /proc
+allow sysstat_t { proc_t sysctl_kernel_t sysctl_t sysctl_fs_t }:dir r_dir_perms;
+allow sysstat_t { proc_t sysctl_kernel_t sysctl_t sysctl_fs_t }:file { read getattr };
+
+domain_auto_trans({ system_crond_t initrc_t }, sysstat_exec_t, sysstat_t)
+allow sysstat_t init_t:fd use;
+allow sysstat_t console_device_t:chr_file { read write };
+
+uses_shlib(sysstat_t)
+
+allow system_crond_t var_log_sysstat_t:dir { write remove_name };
+allow system_crond_t var_log_sysstat_t:file unlink;

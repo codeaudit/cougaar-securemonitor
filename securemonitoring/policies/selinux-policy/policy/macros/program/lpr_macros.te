@@ -1,0 +1,89 @@
+#
+# Macros for lpr domains.
+#
+
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser 
+#
+
+#
+# lpr_domain(domain_prefix)
+#
+# Define a derived domain for the lpr/lpq/lprm programs when executed
+# by a user domain.
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/lpr.te. 
+#
+undefine(`lpr_domain')
+define(`lpr_domain',`
+# Derived domain based on the calling user domain and the program
+type $1_lpr_t, domain, privlog;
+
+# Transition from the user domain to the derived domain.
+domain_auto_trans($1_t, lpr_exec_t, $1_lpr_t)
+
+# The user role is authorized for this domain.
+role $1_r types $1_lpr_t;
+
+# This domain is granted permissions common to most domains (including can_net)
+every_domain($1_lpr_t)
+
+# Use capabilities.
+allow $1_lpr_t $1_lpr_t:capability { setuid dac_override net_bind_service chown };
+
+# Type for temporary files.
+type $1_lpr_tmp_t, file_type, sysadmfile, tmpfile;
+# Use this type when creating files in /tmp. 
+file_type_auto_trans($1_lpr_t, tmp_t, $1_lpr_tmp_t)
+r_dir_file($1_lpr_t, $1_tmp_t)
+
+# Type for spool files.
+type $1_print_spool_t, file_type, sysadmfile;
+# Use this type when creating files in /var/spool/lpd and /var/spool/cups.
+file_type_auto_trans($1_lpr_t, print_spool_t, $1_print_spool_t)
+
+# Access the terminal.
+allow $1_lpr_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_lpr_t $1_devpts_t:chr_file rw_file_perms;
+
+# Inherit and use descriptors from gnome-pty-helper.
+ifdef(`gnome-pty-helper.te', `allow $1_lpr_t $1_gph_t:fd use;')
+
+# Read user files. 
+allow $1_lpr_t { $1_home_t $1_home_dir_t }:dir search;  
+allow $1_lpr_t $1_home_t:{ file lnk_file } r_file_perms;  
+
+# Read and write shared files in the spool directory.
+allow $1_lpr_t print_spool_t:notdevfile_class_set rw_file_perms;
+
+# lpr can run in lightweight mode, without a local print spooler. If the
+# lpd policy is present, grant some permissions for this domain and the lpd
+# domain to interact.
+ifdef(`lpd.te', `
+allow $1_lpr_t lpd_var_run_t:dir search;
+allow $1_lpr_t lpd_var_run_t:sock_file write;
+
+# Allow lpd to read, rename, and unlink spool files.
+allow lpd_t $1_print_spool_t:file r_file_perms;
+allow lpd_t $1_print_spool_t:file link_file_perms;
+
+# Connect to lpd via a Unix domain socket.
+allow $1_lpr_t printer_t:sock_file rw_file_perms;
+can_unix_connect($1_lpr_t, lpd_t)
+dontaudit $1_lpr_t $1_t:unix_stream_socket { read write };
+
+# Connect to lpd via a TCP socket.
+can_tcp_connect($1_lpr_t, lpd_t)
+
+# Send SIGHUP to lpd.
+allow $1_lpr_t lpd_t:process signal;
+
+')
+
+ifdef(`cups.te', `
+allow { $1_lpr_t $1_t } etc_cupsd_t:dir search;
+can_tcp_connect({ $1_lpr_t $1_t }, cupsd_t)
+')
+
+')

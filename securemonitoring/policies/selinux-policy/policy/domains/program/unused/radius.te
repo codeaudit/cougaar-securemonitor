@@ -1,0 +1,61 @@
+#DESC RADIUS - Radius server
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the radiusd_t domain.
+#
+# radiusd_exec_t is the type of the radiusd executable.
+#
+type radius_port_t, port_type;
+type radacct_port_t, port_type;
+daemon_domain(radiusd)
+
+type etc_radiusd_t, file_type, sysadmfile;
+type var_log_radiusd_t, file_type, sysadmfile, logfile;
+
+domain_auto_trans(system_crond_t, radiusd_exec_t, radiusd_t)
+allow radiusd_t crond_t:fifo_file { read ioctl };
+
+allow radiusd_t self:process setsched;
+
+allow radiusd_t shadow_t:file { read getattr };
+
+allow radiusd_t proc_t:file { read getattr };
+
+dontaudit radiusd_t sysadm_home_dir_t:dir getattr;
+
+# allow pthreads to read kernel version
+allow radiusd_t sysctl_kernel_t:dir r_dir_perms;
+allow radiusd_t sysctl_kernel_t:file r_file_perms;
+# read config files
+allow radiusd_t { etc_t etc_radiusd_t }:dir r_dir_perms;
+allow radiusd_t { etc_t etc_radiusd_t etc_runtime_t resolv_conf_t }:file { read getattr };
+allow radiusd_t etc_t:lnk_file read;
+
+# write log files
+file_type_auto_trans(radiusd_t, var_log_t, var_log_radiusd_t)
+
+
+allow radiusd_t usr_t:file r_file_perms;
+
+can_exec(radiusd_t, lib_t)
+can_exec(radiusd_t, { bin_t shell_exec_t })
+allow radiusd_t { bin_t sbin_t }:dir search;
+allow radiusd_t bin_t:lnk_file read;
+
+allow radiusd_t devtty_t:chr_file { read write };
+allow radiusd_t self:fifo_file rw_file_perms;
+# fsetid is for gzip which needs it when run from scripts
+# gzip also needs chown access to preserve GID for radwtmp files
+allow radiusd_t self:capability { chown fsetid kill setuid setgid dac_override };
+
+can_network(radiusd_t)
+allow radiusd_t { radius_port_t radacct_port_t }:udp_socket name_bind;
+ifdef(`snmpd.te', `
+can_tcp_connect(radiusd_t, snmpd_t)
+')
+
+allow radiusd_t self:unix_stream_socket create_stream_socket_perms;

@@ -1,0 +1,9 @@
+# cups printing
+/etc/cups(/.*)?			system_u:object_r:etc_cupsd_t
+/etc/cups/client\.conf		system_u:object_r:etc_t
+/etc/printcap\.cups		system_u:object_r:etc_cupsd_t
+/usr/lib/cups/backend/.*	system_u:object_r:cupsd_exec_t
+/usr/sbin/cupsd			system_u:object_r:cupsd_exec_t
+/var/log/cups(/.*)?		system_u:object_r:var_log_cups_t
+/var/spool/cups(/.*)?		system_u:object_r:print_spool_t
+/usr/lib/cups/filter/.*		system_u:object_r:bin_t

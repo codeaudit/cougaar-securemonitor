@@ -1,0 +1,5 @@
+# mrtg - traffic grapher
+/usr/bin/mrtg			system_u:object_r:mrtg_exec_t
+/var/lib/mrtg(/.*)?		system_u:object_r:var_lib_mrtg_t
+/var/lock/mrtg(/.*)?		system_u:object_r:var_lock_mrtg_t
+/etc/mrtg.*			system_u:object_r:etc_mrtg_t

@@ -1,0 +1,182 @@
+#DESC Modutil - Dynamic module utilities
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the module utility domains.
+#
+type modules_dep_t, file_type, sysadmfile;
+type modules_conf_t, file_type, sysadmfile;
+type modules_object_t, file_type, sysadmfile;
+
+
+#################################
+#
+# Rules for the depmod_t domain.
+#
+type depmod_t, domain;
+role system_r types depmod_t;
+role sysadm_r types depmod_t;
+
+uses_shlib(depmod_t)
+
+type depmod_exec_t, file_type, exec_type, sysadmfile;
+domain_auto_trans(initrc_t, depmod_exec_t, depmod_t)
+can_exec(depmod_t, depmod_exec_t)
+domain_auto_trans(sysadm_t, depmod_exec_t, depmod_t)
+
+# Inherit and use descriptors from init.
+allow depmod_t init_t:fd use;
+
+# Read conf.modules.
+allow depmod_t modules_conf_t:file r_file_perms;
+
+# Create modules.dep.
+file_type_auto_trans(depmod_t, modules_object_t, modules_dep_t)
+
+# Read module objects.
+allow depmod_t modules_object_t:dir r_dir_perms;
+allow depmod_t modules_object_t:{ file lnk_file } r_file_perms;
+
+# Access terminals.
+allow depmod_t { console_device_t initrc_devpts_t admin_tty_type }:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow depmod_t sysadm_gph_t:fd use;')
+
+# Read System.map from home directories.
+allow depmod_t { home_root_t user_home_dir_type sysadm_home_dir_t }:dir r_dir_perms;
+r_dir_file(depmod_t, { user_home_type sysadm_home_t })
+
+#################################
+#
+# Rules for the insmod_t domain.
+#
+
+type insmod_t, domain, privlog;
+role system_r types insmod_t;
+role sysadm_r types insmod_t;
+
+allow insmod_t self:process { fork signal_perms };
+
+uses_shlib(insmod_t)
+
+type insmod_exec_t, file_type, exec_type, sysadmfile;
+domain_auto_trans({ initrc_t kernel_t }, insmod_exec_t, insmod_t)
+allow initrc_t insmod_exec_t:lnk_file read;
+can_exec(insmod_t, insmod_exec_t)
+allow insmod_t init_t:fd use;
+domain_auto_trans(sysadm_t, insmod_exec_t, insmod_t)
+
+# Read module objects.
+allow insmod_t modules_object_t:dir r_dir_perms;
+allow insmod_t modules_object_t:{ file lnk_file } r_file_perms;
+
+# Read module config and dependency files.
+allow insmod_t modules_conf_t:file r_file_perms;
+allow insmod_t modules_dep_t:file r_file_perms;
+
+# read localization information
+allow insmod_t locale_t:dir r_dir_perms;
+allow insmod_t locale_t:{file lnk_file} r_file_perms;
+
+# Use the sys_module capability.
+allow insmod_t self:capability { sys_module kill };
+
+# for ipv6
+allow insmod_t self:capability net_raw;
+
+# Inherit and use descriptors from init.
+allow insmod_t privfd:fd use;
+
+# I do not know why insmod sends signals or what signals it sends
+allow insmod_t domain:process signal;
+
+# Update /proc/sys/kernel/tainted.
+allow insmod_t { proc_t sysctl_t sysctl_kernel_t }:dir search;
+allow insmod_t sysctl_kernel_t:file { setattr rw_file_perms };
+
+# /var/log/ksymoops/*
+allow insmod_t var_t:dir r_dir_perms;
+allow insmod_t var_log_t:dir r_dir_perms;
+allow insmod_t var_log_ksyms_t:file create_file_perms;
+allow insmod_t var_log_ksyms_t:dir create_dir_perms;
+
+ifdef(`crond.te', `
+rw_dir_create_file(system_crond_t, var_log_ksyms_t)
+')
+ifdef(`ipsec.te',
+`# Rules for ipsec Domain 
+allow insmod_t ipsec_t:process signal;')
+
+# Access terminals.
+allow insmod_t { initrc_devpts_t admin_tty_type }:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow insmod_t sysadm_gph_t:fd use;')
+
+uses_shlib(insmod_t)
+
+allow insmod_t initctl_t:fifo_file rw_file_perms;
+
+#################################
+#
+# Rules for the update_modules_t domain.
+#
+type update_modules_t, domain, privlog;
+type update_modules_exec_t, file_type, exec_type, sysadmfile;
+
+role system_r types update_modules_t;
+role sysadm_r types update_modules_t;
+
+domain_auto_trans({ initrc_t sysadm_t }, update_modules_exec_t, update_modules_t)
+allow update_modules_t privfd:fd use;
+allow update_modules_t init_t:fd use;
+
+allow update_modules_t device_t:dir { getattr search };
+allow update_modules_t { console_device_t devtty_t }:chr_file rw_file_perms;
+allow update_modules_t { initrc_devpts_t admin_tty_type }:chr_file rw_file_perms;
+
+dontaudit update_modules_t sysadm_home_dir_t:dir search;
+
+uses_shlib(update_modules_t)
+allow update_modules_t self:process { fork sigchld };
+allow update_modules_t self:fifo_file rw_file_perms;
+allow update_modules_t modules_dep_t:file rw_file_perms;
+
+file_type_auto_trans(update_modules_t, modules_object_t, modules_conf_t)
+domain_auto_trans_read(update_modules_t, depmod_exec_t, depmod_t)
+can_exec(update_modules_t, { shell_exec_t bin_t sbin_t update_modules_exec_t etc_t })
+
+allow update_modules_t bin_t:lnk_file read;
+allow update_modules_t { sbin_t bin_t }:dir search;
+allow update_modules_t { etc_t etc_runtime_t }:file r_file_perms;
+allow update_modules_t etc_t:lnk_file read;
+allow update_modules_t fs_t:filesystem getattr;
+
+allow update_modules_t proc_t:dir search;
+allow update_modules_t proc_t:file r_file_perms;
+allow update_modules_t { self proc_t }:lnk_file read;
+allow update_modules_t sysctl_kernel_t:dir search;
+allow update_modules_t sysctl_kernel_t:file { getattr read };
+allow update_modules_t self:dir search;
+allow update_modules_t self:unix_stream_socket create_socket_perms;
+
+allow update_modules_t security_t:security sid_to_context;
+
+file_type_auto_trans(update_modules_t, etc_t, modules_conf_t)
+
+# for when /etc/modules.conf gets the wrong type
+allow update_modules_t etc_t:file unlink;
+
+tmp_domain(update_modules)
+# Added by us 
+allow insmod_t initrc_t:rawip_socket { read write };
+allow insmod_t etc_t:file { read };
+allow insmod_t insmod_t:unix_stream_socket { connect create write };
+
+allow insmod_t device_t:dir { search };
+allow insmod_t insmod_t:unix_dgram_socket { connect create };
+
+allow depmod_t etc_runtime_t:file { getattr read };
+allow depmod_t proc_t:dir { search };
+allow depmod_t proc_t:file { getattr read };
+

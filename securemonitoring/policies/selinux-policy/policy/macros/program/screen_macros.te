@@ -1,0 +1,90 @@
+#
+# Macros for screen domains.
+#
+
+#
+# Author: Russell Coker <russell@coker.com.au>
+# Based on the work of Stephen Smalley <sds@epoch.ncsc.mil>
+# and Timothy Fraser
+#
+
+#
+# screen_domain(domain_prefix)
+#
+# Define a derived domain for the screen program when executed
+# by a user domain.
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/screen.te. 
+#
+undefine(`screen_domain')
+ifdef(`screen.te', `
+define(`screen_domain',`
+# Derived domain based on the calling user domain and the program.
+type $1_screen_t, domain, privlog, auth;
+
+allow $1_screen_t shadow_t:file { read getattr };
+
+# Transition from the user domain to this domain.
+domain_auto_trans($1_t, screen_exec_t, $1_screen_t)
+
+# The user role is authorized for this domain.
+role $1_r types $1_screen_t;
+
+uses_shlib($1_screen_t)
+
+# Revert to the user domain when a shell is executed.
+domain_auto_trans($1_screen_t, shell_exec_t, $1_t)
+
+# Inherit and use descriptors from gnome-pty-helper.
+ifdef(`gnome-pty-helper.te',
+`allow $1_screen_t $1_gph_t:fd use;
+allow $1_t $1_gph_t:fd use;')
+
+# Inherit and use descriptors from newrole.
+ifdef(`newrole.te', `allow $1_screen_t newrole_t:fd use;')
+
+# Inherit and use descriptors from sshd.
+ifdef(`sshd.te', `allow $1_screen_t sshd_t:fd use;')
+
+# Write to utmp.
+allow $1_screen_t initrc_var_run_t:file rw_file_perms;
+can_create_pty($1_screen)
+
+# Create pid file.
+allow $1_screen_t var_t:dir search;
+type var_run_$1_screen_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans($1_screen_t, var_run_t, var_run_$1_screen_t)
+
+# Use the network.
+#can_network($1_screen_t)
+
+# Write to the user domain tty.
+allow $1_screen_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_screen_t $1_devpts_t:chr_file rw_file_perms;
+
+allow $1_screen_t self:process { fork sigchld signal };
+allow $1_screen_t self:capability { setuid setgid fsetid };
+
+# get stats
+allow $1_screen_t proc_t:dir search;
+allow $1_screen_t proc_t:lnk_file read;
+allow $1_screen_t devpts_t:dir { getattr search read };
+dontaudit $1_screen_t device_t:chr_file { getattr };
+allow $1_screen_t etc_t:file { read getattr };
+allow $1_screen_t self:dir { search read };
+allow $1_screen_t self:lnk_file { read };
+allow $1_screen_t device_t:filesystem getattr;
+allow $1_screen_t $1_home_t:dir search;
+
+allow $1_screen_t self:unix_stream_socket create_socket_perms;
+can_exec($1_screen_t, shell_exec_t)
+
+dontaudit $1_screen_t file_type:{ chr_file blk_file } getattr;
+')
+
+', `
+
+define(`screen_domain',`')
+
+')

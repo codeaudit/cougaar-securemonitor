@@ -1,0 +1,3265 @@
+#
+# Macros for all admin domains.
+#
+
+#
+# admin_domain(domain_prefix)
+#
+# Define derived types and rules for an administrator domain.
+#
+# The type declaration and role authorization for the domain must be
+# provided separately.  Likewise, domain transitions into this domain
+# must be specified separately.  If the every_domain() rules are desired,
+# then these rules must also be specified separately.
+#
+undefine(`admin_domain')
+define(`admin_domain',`
+# Inherit rules for ordinary users.
+user_domain($1)
+
+# Violates the goal of limiting write access to checkpolicy.
+#rw_dir_create_file($1_t, policy_config_t)
+
+ifdef(`crond.te', `
+allow $1_crond_t var_log_t:file r_file_perms;
+')
+
+# Allow system log read
+allow $1_t kernel_t:system syslog_read;
+
+# Use capabilities other than sys_module.
+allow $1_t self:capability ~sys_module;
+
+# Determine the set of legal user SIDs reachable from a given SID.
+allow $1_t security_t:security { get_user_sids };
+
+# Use system operations.
+allow $1_t kernel_t:system *;
+
+# Change system parameters.
+can_sysctl($1_t)
+
+# Create and use all files that have the sysadmfile attribute.
+allow $1_t sysadmfile:notdevfile_class_set create_file_perms;
+allow $1_t sysadmfile:dir create_dir_perms;
+
+# Access removable devices.
+allow $1_t removable_device_t:devfile_class_set rw_file_perms;
+
+# Communicate with the init process.
+allow $1_t initctl_t:fifo_file rw_file_perms;
+
+# Examine all processes.
+allow $1_t domain:dir r_dir_perms;
+allow $1_t domain:notdevfile_class_set r_file_perms;
+
+# Send signals to all processes.
+allow $1_t { domain unlabeled_t }:process signal_perms;
+
+# Access all user terminals.
+allow $1_t tty_device_t:chr_file rw_file_perms;
+allow $1_t ttyfile:chr_file rw_file_perms;
+allow $1_t ptyfile:chr_file rw_file_perms;
+
+# allow setting up tunnels
+allow $1_t tun_tap_device_t:chr_file rw_file_perms;
+
+# Run init (telinit).
+can_exec($1_t, init_exec_t)
+
+# Run programs from user home directories.
+# Not ideal, but typical if users want to login as both sysadm_t or user_t.
+can_exec($1_t, user_home_type)
+# Run programs from /usr/src.
+can_exec($1_t,src_t)
+
+# Run admin programs that require different permissions in their own domain.
+# These rules were moved into the appropriate program domain file.
+
+# added by mayerf@tresys.com
+# The following rules are temporary until such time that a complete
+# policy management infrastructure is in place so that an administrator
+# cannot directly manipulate policy files with arbitrary programs.
+#
+allow $1_t policy_src_t:notdevfile_class_set create_file_perms;
+allow $1_t policy_src_t:dir create_dir_perms;
+
+# Remove the binary policy.
+allow $1_t policy_config_t:file unlink;
+
+# Relabel all files.
+allow $1_t file_type:dir { getattr read search relabelfrom relabelto };
+allow $1_t file_type:file_class_set { getattr relabelfrom relabelto };
+
+# Create files in /tmp/orbit-* and /tmp/.ICE-unix
+# with our derived tmp type rather than user_tmp_t.
+file_type_auto_trans($1_t, user_tmpfile, $1_tmp_t)
+
+ifdef(`xserver.te',
+`# Create files in /tmp/.X11-unix with our X servers derived
+# tmp type rather than user_xserver_tmp_t.
+file_type_auto_trans($1_xserver_t, xserver_tmpfile, $1_xserver_tmp_t)')
+
+#
+# A user who is authorized for sysadm_t may nonetheless have
+# a home directory labeled with user_home_t if the user is expected
+# to login in either user_t or sysadm_t.  Hence, the derived domains
+# for programs need to be able to access user_home_t.  
+# 
+
+# Allow our xauth domain to write to .Xauthority.
+ifdef(`xauth.te', `
+file_type_auto_trans($1_xauth_t, user_home_dir_t, user_home_xauth_t)
+')
+
+# Allow our gph domain to write to .xsession-errors.
+ifdef(`gnome-pty-helper.te', `
+allow $1_gph_t user_home_dir_type:dir rw_dir_perms;
+allow $1_gph_t user_home_type:file create_file_perms;
+')
+
+ifdef(`netscape.te',
+`# Allow searching of /tmp/.X11-unix.
+ifdef(`xserver.te', `allow $1_netscape_t user_xserver_tmp_t:dir r_dir_perms;')
+# Allow our netscape domain to write to .netscape.
+allow $1_netscape_t user_netscape_rw_t:dir create_dir_perms;
+allow $1_netscape_t user_netscape_rw_t:{ file lnk_file } create_file_perms;
+# Allow our domain to relabel downloaded files to its home type.
+allow $1_t user_netscape_rw_t:{ dir file lnk_file } relabelfrom;')
+
+ifdef(`gpg.te',
+`# Allow our gpg domain to write to .gnupg
+allow $1_gpg_t user_gpg_secret_t:dir create_dir_perms;
+allow $1_gpg_t user_gpg_secret_t:file create_file_perms;')
+
+# Allow our crontab domain to unlink a user cron spool file.
+ifdef(`crontab.te',
+`allow $1_crontab_t user_cron_spool_t:file unlink;')
+
+#
+# Allow sysadm to execute quota commands against filesystems and files.
+#
+allow $1_t fs_type:filesystem { quotamod quotaget };
+allow $1_t file_t:file quotaon;
+
+# Grant read and write access to /dev/console.
+allow $1_t console_device_t:chr_file rw_file_perms;
+
+# for lsof
+allow $1_t domain:socket_class_set getattr;
+')
+##############################
+#
+# Global macros for the type enforcement (TE) configuration.
+#
+
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+# Modified: Howard Holm (NSA), <hdholm@epoch.ncsc.mil>
+#           System V IPC added
+#
+#################################
+# 
+# Macros for groups of classes and 
+# groups of permissions.
+#
+
+#
+# All directory and file classes
+#
+define(`dir_file_class_set', `{ dir file lnk_file sock_file fifo_file chr_file blk_file }')
+
+#
+# All non-directory file classes.
+#
+define(`file_class_set', `{ file lnk_file sock_file fifo_file chr_file blk_file }')
+
+#
+# Non-device file classes.
+#
+define(`notdevfile_class_set', `{ file lnk_file sock_file fifo_file }')
+
+#
+# Device file classes.
+#
+define(`devfile_class_set', `{ chr_file blk_file }')
+
+#
+# All socket classes.
+#
+define(`socket_class_set', `{ tcp_socket udp_socket rawip_socket netlink_socket packet_socket unix_stream_socket unix_dgram_socket }')
+
+#
+# Datagram socket classes.
+# 
+define(`dgram_socket_class_set', `{ udp_socket unix_dgram_socket }')
+
+#
+# Stream socket classes.
+#
+define(`stream_socket_class_set', `{ tcp_socket unix_stream_socket }')
+
+#
+# Unprivileged socket classes (exclude rawip, netlink, packet).
+#
+define(`unpriv_socket_class_set', `{ tcp_socket udp_socket unix_stream_socket unix_dgram_socket }')
+
+
+# 
+# Permissions for getting file attributes.
+#
+define(`stat_file_perms', `{ getattr }')
+
+# 
+# Permissions for executing files.
+#
+define(`x_file_perms', `{ getattr execute }')
+
+# 
+# Permissions for reading files and their attributes.
+#
+define(`r_file_perms', `{ read getattr lock ioctl }')
+
+# 
+# Permissions for reading and executing files.
+#
+define(`rx_file_perms', `{ read getattr lock execute ioctl }')
+
+# 
+# Permissions for reading and writing files and their attributes.
+#
+define(`rw_file_perms', `{ ioctl read getattr lock write append }')
+
+# 
+# Permissions for reading and appending to files.
+#
+define(`ra_file_perms', `{ ioctl read getattr lock append }')
+
+#
+# Permissions for linking, unlinking and renaming files.
+# 
+define(`link_file_perms', `{ getattr link unlink rename }')
+
+#
+# Permissions for creating and using files.
+# 
+define(`create_file_perms', `{ create ioctl read getattr lock write setattr append link unlink rename }')
+
+# 
+# Permissions for reading directories and their attributes.
+#
+define(`r_dir_perms', `{ read getattr lock search ioctl }')
+
+# 
+# Permissions for reading and writing directories and their attributes.
+#
+define(`rw_dir_perms', `{ read getattr lock search ioctl add_name remove_name write }')
+
+# 
+# Permissions for reading and adding names to directories.
+#
+define(`ra_dir_perms', `{ read getattr lock search ioctl add_name write }')
+
+
+#
+# Permissions for creating and using directories.
+# 
+define(`create_dir_perms', `{ create read getattr lock setattr link unlink rename search add_name remove_name reparent write rmdir }')
+
+#
+# Permissions to mount and unmount file systems.
+#
+define(`mount_fs_perms', `{ mount remount unmount getattr }')
+
+#
+# Permissions for using sockets.
+# 
+define(`rw_socket_perms', `{ ioctl read getattr write setattr append bind connect getopt setopt shutdown }')
+
+#
+# Permissions for creating and using sockets.
+# 
+define(`create_socket_perms', `{ create ioctl read getattr write setattr append bind connect getopt setopt shutdown }')
+
+#
+# Permissions for using stream sockets.
+# 
+define(`rw_stream_socket_perms', `{ ioctl read getattr write setattr append bind connect getopt setopt shutdown listen accept }')
+
+#
+# Permissions for creating and using stream sockets.
+# 
+define(`create_stream_socket_perms', `{ create ioctl read getattr write setattr append bind connect getopt setopt shutdown listen accept }')
+
+
+#
+# Permissions for sending all signals.
+#
+define(`signal_perms', `{ sigchld sigkill sigstop signull signal }')
+
+#
+# Permissions for sending and receiving network packets.
+#
+define(`packet_perms', `{ tcp_recv tcp_send udp_recv udp_send rawip_recv rawip_send }')
+
+#
+# Permissions for using System V IPC
+#
+define(`r_sem_perms', `{ associate getattr read unix_read }')
+define(`rw_sem_perms', `{ associate getattr setattr create destroy read write unix_read unix_write }')
+define(`r_msgq_perms', `{ associate getattr read unix_read }')
+define(`rw_msgq_perms', `{ associate getattr setattr create destroy read write enqueue unix_read unix_write }')
+define(`r_shm_perms', `{ associate getattr read unix_read }')
+define(`rw_shm_perms', `{ associate getattr setattr create destroy read write lock unix_read unix_write }')
+
+#################################
+# 
+# Macros for type transition rules and
+# access vector rules.
+#
+
+#
+# Simple combinations for reading and writing both
+# directories and files.
+# 
+define(`r_dir_file', `
+allow $1 $2:dir r_dir_perms;
+allow $1 $2:{ file lnk_file } r_file_perms;
+')
+
+define(`rw_dir_file', `
+allow $1 $2:dir rw_dir_perms;
+allow $1 $2:{ file lnk_file } rw_file_perms;
+')
+
+define(`ra_dir_file', `
+allow $1 $2:dir ra_dir_perms;
+allow $1 $2:{ file lnk_file } ra_file_perms;
+')
+
+define(`rw_dir_create_file', `
+allow $1 $2:dir rw_dir_perms;
+allow $1 $2:{ file lnk_file } create_file_perms;
+')
+
+define(`create_dir_file', `
+allow $1 $2:dir create_dir_perms;
+allow $1 $2:{ file lnk_file } create_file_perms;
+')
+
+define(`create_dir_notdevfile', `
+allow $1 $2:dir create_dir_perms;
+allow $1 $2:notdevfile_class_set create_file_perms;
+')
+
+define(`create_append_log_file', `
+allow $1 $2:dir { read getattr search add_name write };
+allow $1 $2:file { create ioctl getattr setattr append link };
+')
+
+#################################
+#
+# domain_trans(parent_domain, program_type, child_domain)
+#
+# Permissions for transitioning to a new domain.
+#
+
+define(`domain_trans',`
+
+#
+# Allow the process to transition to the new domain.
+#
+allow $1 $3:process transition;
+
+#
+# Allow the process to execute the program.
+# 
+allow $1 $2:file x_file_perms;
+
+#
+# Allow the process to reap the new domain.
+#
+allow $3 $1:process sigchld;
+
+#
+# Allow the new domain to inherit and use file 
+# descriptions from the creating process and vice versa.
+#
+allow $3 $1:fd use;
+allow $1 $3:fd use;
+
+#
+# Allow the new domain to write back to the old domain via a pipe.
+#
+allow $3 $1:fifo_file rw_file_perms;
+
+#
+# Allow the new domain to read and execute the program.
+#
+allow $3 $2:file rx_file_perms;
+
+#
+# Allow the new domain to be entered via the program.
+#
+allow $3 $2:file entrypoint;
+')
+
+#################################
+#
+# domain_auto_trans(parent_domain, program_type, child_domain)
+#
+# Define a default domain transition and allow it.
+#
+define(`domain_auto_trans',`
+domain_trans($1,$2,$3)
+type_transition $1 $2:process $3;
+')
+
+define(`domain_auto_trans_read',`
+domain_auto_trans($1, $2, $3)
+allow $1 $2:file read;
+')
+
+#################################
+#
+# uses_shlib(domain)
+#
+# Permissions for using shared libraries.
+#
+define(`uses_shlib',`
+allow $1 { root_t usr_t lib_t etc_t }:dir r_dir_perms;
+allow $1 ld_so_t:file rx_file_perms;
+allow $1 ld_so_t:file execute_no_trans;
+allow $1 ld_so_t:lnk_file r_file_perms;
+allow $1 shlib_t:file rx_file_perms;
+allow $1 shlib_t:lnk_file r_file_perms;
+allow $1 ld_so_cache_t:file r_file_perms;
+allow $1 null_device_t:chr_file rw_file_perms;
+')
+
+define(`uses_java', `
+allow $1 any_socket_t:udp_socket { sendto };
+allow $1 port_t:udp_socket { ioctl recvfrom name_bind };
+allow $1 netif_eth0_t:netif { udp_recv };
+allow $1 node_t:node { tcp_recv };
+allow $1 resolv_conf_t:file { read };
+allow $1 tcp_socket_t:tcp_socket { recvfrom };
+allow $1 var_yp_t:file { setattr write };
+')
+
+#################################
+#
+# can_ptrace(domain, domain)
+#
+# Permissions for running ptrace (strace or gdb) on another domain
+#
+define(`can_ptrace',`
+allow $1 $2:process ptrace;
+')
+
+#################################
+#
+# can_exec(domain, type)
+#
+# Permissions for executing programs with
+# a specified type without changing domains.
+#
+define(`can_exec',`
+allow $1 $2:file { rx_file_perms execute_no_trans };
+')
+
+#################################
+#
+# can_exec_any(domain)
+#
+# Permissions for executing a variety
+# of executable types.
+#
+define(`can_exec_any',`
+allow $1 { bin_t sbin_t lib_t etc_t }:dir r_dir_perms;
+allow $1 { bin_t sbin_t }:lnk_file read;
+uses_shlib($1)
+can_exec($1, etc_t)
+can_exec($1, lib_t)
+can_exec($1, bin_t)
+can_exec($1, sbin_t)
+can_exec($1, exec_type)
+')
+
+
+#################################
+#
+# file_type_trans(domain, dir_type, file_type)
+#
+# Permissions for transitioning to a new file type.
+#
+
+define(`file_type_trans',`
+
+#
+# Allow the process to modify the directory.
+#
+allow $1 $2:dir rw_dir_perms;
+
+#
+# Allow the process to create the file.
+#
+ifelse(`$4', `', `
+allow $1 $3:notdevfile_class_set create_file_perms;
+allow $1 $3:dir create_dir_perms;
+', `
+allow $1 $3:$4 create_file_perms;
+')
+
+')
+
+#################################
+#
+# file_type_auto_trans(creator_domain, parent_directory_type, file_type, object_class)
+#
+# the object class will default to notdevfile_class_set if not specified as
+# the fourth parameter
+#
+# Define a default file type transition and allow it.
+#
+define(`file_type_auto_trans',`
+ifelse(`$4', `', `
+file_type_trans($1,$2,$3)
+type_transition $1 $2:dir $3;
+type_transition $1 $2:notdevfile_class_set $3;
+', `
+file_type_trans($1,$2,$3,$4)
+type_transition $1 $2:$4 $3;
+')
+
+')
+
+#################################
+#
+# can_network(domain)
+#
+# Permissions for accessing the network.
+# See types/network.te for the network types.
+# See net_contexts for security contexts for network entities.
+#
+define(`can_network',`
+#
+# Allow the domain to create and use UDP and TCP sockets.
+# Other kinds of sockets must be separately authorized for use.
+allow $1 self:udp_socket create_socket_perms;
+allow $1 self:tcp_socket create_stream_socket_perms;
+
+#
+# Allow the domain to send UDP packets.
+# Since the destination sockets type is unknown, the generic
+# any_socket_t type is used as a placeholder.
+#
+allow $1 any_socket_t:udp_socket sendto;
+
+#
+# Allow the domain to send using any network interface.
+# netif_type is a type attribute for all network interface types.
+#
+allow $1 netif_type:netif { tcp_send udp_send rawip_send };
+
+#
+# Allow packets sent by the domain to be received on any network interface.
+#
+allow $1 netif_type:netif { tcp_recv udp_recv rawip_recv };
+
+#
+# Allow the domain to receive packets from any network interface.
+# netmsg_type is a type attribute for all default message types.
+#
+allow $1 netmsg_type:{ udp_socket tcp_socket rawip_socket } recvfrom;
+
+#
+# Allow the domain to initiate or accept TCP connections 
+# on any network interface.
+#
+allow $1 netmsg_type:tcp_socket { connectto acceptfrom };
+
+#
+# Receive resets from the TCP reset socket.
+# The TCP reset socket is labeled with the tcp_socket_t type.
+#
+allow $1 tcp_socket_t:tcp_socket recvfrom;
+
+dontaudit $1 tcp_socket_t:tcp_socket connectto;
+
+#
+# Allow the domain to send to any node.
+# node_type is a type attribute for all node types.
+#
+allow $1 node_type:node { tcp_send udp_send rawip_send };
+
+#
+# Allow packets sent by the domain to be received from any node.
+#
+allow $1 node_type:node { tcp_recv udp_recv rawip_recv };
+
+#
+# Allow the domain to send NFS client requests via the socket
+# created by mount.
+#
+allow $1 mount_t:udp_socket rw_socket_perms;
+
+#
+# Bind to the default port type.
+# Other port types must be separately authorized.
+#
+allow $1 port_t:udp_socket name_bind;
+allow $1 port_t:tcp_socket name_bind;
+')
+
+#################################
+#
+# can_unix_connect(client, server)
+#
+# Permissions for establishing a Unix stream connection.
+#
+define(`can_unix_connect',`
+allow $1 $2:unix_stream_socket connectto;
+')
+
+#################################
+#
+# can_unix_send(sender, receiver)
+#
+# Permissions for sending Unix datagrams.
+#
+define(`can_unix_send',`
+allow $1 $2:unix_dgram_socket sendto;
+')
+
+#################################
+#
+# can_tcp_connect(client, server)
+#
+# Permissions for establishing a TCP connection.
+#
+define(`can_tcp_connect',`
+allow $1 $2:tcp_socket { connectto recvfrom };
+allow $2 $1:tcp_socket { acceptfrom recvfrom };
+allow $2 tcp_socket_t:tcp_socket { recvfrom };
+allow $1 tcp_socket_t:tcp_socket { recvfrom };
+')
+
+#################################
+#
+# can_udp_send(sender, receiver)
+#
+# Permissions for sending/receiving UDP datagrams.
+#
+define(`can_udp_send',`
+allow $1 $2:udp_socket { sendto };
+allow $2 $1:udp_socket { recvfrom };
+')
+
+#################################
+#
+# can_sysctl(domain)
+#
+# Permissions for modifying sysctl parameters.
+#
+define(`can_sysctl',`
+allow $1 sysctl_t:dir r_dir_perms;
+allow $1 sysctl_t:file { setattr rw_file_perms };
+allow $1 sysctl_fs_t:dir r_dir_perms;
+allow $1 sysctl_fs_t:file { setattr rw_file_perms };
+allow $1 sysctl_kernel_t:dir r_dir_perms;
+allow $1 sysctl_kernel_t:file { setattr rw_file_perms };
+allow $1 sysctl_net_t:dir r_dir_perms;
+allow $1 sysctl_net_t:file { setattr rw_file_perms };
+allow $1 sysctl_net_unix_t:dir r_dir_perms;
+allow $1 sysctl_net_unix_t:file { setattr rw_file_perms };
+allow $1 sysctl_vm_t:dir r_dir_perms;
+allow $1 sysctl_vm_t:file { setattr rw_file_perms };
+allow $1 sysctl_dev_t:dir r_dir_perms;
+allow $1 sysctl_dev_t:file { setattr rw_file_perms };
+allow $1 sysctl_modprobe_t:file { setattr rw_file_perms };
+')
+
+
+##################################
+#
+# can_create_pty(domain_prefix, attributes)
+#
+# Permissions for creating ptys.
+#
+define(`can_create_pty',`
+
+type $1_devpts_t, file_type, sysadmfile, ptyfile $2;
+
+# Allow the pty to be associated with the file system.
+allow $1_devpts_t devpts_t:filesystem associate;
+
+# Access the pty master multiplexer.
+allow $1_t ptmx_t:chr_file rw_file_perms;
+
+# Label pty files with a derived type.
+type_transition $1_t devpts_t:chr_file $1_devpts_t;
+
+# Read and write my pty files.
+allow $1_t $1_devpts_t:chr_file { setattr rw_file_perms };
+
+ifdef(`devfsd.te', `
+allow $1_t device_t:filesystem getattr;
+')
+
+')
+
+
+##################################
+#
+# can_create_other_pty(domain_prefix,other_domain)
+#
+# Permissions for creating ptys for another domain.
+#
+define(`can_create_other_pty',`
+
+# Access the pty master multiplexer.
+allow $1_t ptmx_t:chr_file rw_file_perms;
+
+# Label pty files with a derived type.
+type_transition $1_t devpts_t:chr_file $2_devpts_t;
+
+# Read and write pty files.
+allow $1_t $2_devpts_t:chr_file { setattr rw_file_perms };
+
+ifdef(`devfsd.te', `
+allow $1_t device_t:filesystem getattr;
+')
+
+')
+
+
+
+################################################
+#
+# The following macros are an attempt to start
+# partitioning every_domain into finer-grained subsets
+# that can be used by individual domains.
+#
+
+#
+# general_domain_access(domain)
+#
+# Grant permissions within the domain.
+# This includes permissions to processes, /proc/PID files,
+# file descriptors, pipes, Unix sockets, and System V IPC objects
+# labeled with the domain.
+#
+define(`general_domain_access',`
+# Access other processes in the same domain.
+allow $1 self:process *;
+
+# Access /proc/PID files for processes in the same domain.
+allow $1 self:dir r_dir_perms;
+allow $1 self:notdevfile_class_set r_file_perms;
+
+# Access file descriptions, pipes, and sockets
+# created by processes in the same domain.
+allow $1 self:fd *;
+allow $1 self:fifo_file rw_file_perms;
+allow $1 self:unix_dgram_socket create_socket_perms;
+allow $1 self:unix_stream_socket create_stream_socket_perms;
+
+# Allow the domain to communicate with other processes in the same domain.
+allow $1 self:unix_dgram_socket sendto;
+allow $1 self:unix_stream_socket connectto;
+
+# Access System V IPC objects created by processes in the same domain.
+allow $1 self:sem  rw_sem_perms;
+allow $1 self:msg  { send receive };
+allow $1 self:msgq rw_msgq_perms;
+allow $1 self:shm  rw_shm_perms;
+
+')
+
+#
+# general_proc_read_access(domain)
+#
+# Grant read/search permissions to most of /proc, excluding
+# the /proc/PID directories and the /proc/kmsg and /proc/kcore files.
+# The general_domain_access macro grants access to the domain /proc/PID
+# directories, but not to other domains.  Only permissions to stat
+# are granted for /proc/kmsg and /proc/kcore, since these files are more
+# sensitive.
+# 
+define(`general_proc_read_access',`
+# Read system information files in /proc.
+allow $1 proc_t:dir r_dir_perms;
+allow $1 proc_t:notdevfile_class_set r_file_perms;
+
+# Stat /proc/kmsg and /proc/kcore.
+allow $1 proc_kmsg_t:file stat_file_perms;
+allow $1 proc_kcore_t:file stat_file_perms;
+
+# Read system variables in /proc/sys.
+allow $1 sysctl_modprobe_t:file r_file_perms;
+allow $1 sysctl_t:file r_file_perms;
+allow $1 sysctl_t:dir r_dir_perms;
+allow $1 sysctl_fs_t:file r_file_perms;
+allow $1 sysctl_fs_t:dir r_dir_perms;
+allow $1 sysctl_kernel_t:file r_file_perms;
+allow $1 sysctl_kernel_t:dir r_dir_perms;
+allow $1 sysctl_net_t:file r_file_perms;
+allow $1 sysctl_net_t:dir r_dir_perms;
+allow $1 sysctl_vm_t:file r_file_perms;
+allow $1 sysctl_vm_t:dir r_dir_perms;
+allow $1 sysctl_dev_t:file r_file_perms;
+allow $1 sysctl_dev_t:dir r_dir_perms;
+')
+
+#
+# base_file_read_access(domain)
+#
+# Grant read/search permissions to a few system file types.
+#
+define(`base_file_read_access',`
+# Read /.
+allow $1 root_t:dir r_dir_perms;
+allow $1 root_t:notdevfile_class_set r_file_perms;
+
+# Read /home.
+allow $1 home_root_t:dir r_dir_perms;
+
+# Read /usr.
+allow $1 usr_t:dir r_dir_perms;
+allow $1 usr_t:notdevfile_class_set r_file_perms;
+
+# Read bin and sbin directories.
+allow $1 bin_t:dir r_dir_perms;
+allow $1 bin_t:notdevfile_class_set r_file_perms;
+allow $1 sbin_t:dir r_dir_perms;
+allow $1 sbin_t:notdevfile_class_set r_file_perms;
+')
+
+#
+# general_file_read_access(domain)
+#
+# Grant read/search permissions to many system file types.
+#
+define(`general_file_read_access',`
+errprint(`m4: '__file__:__line__: `Warning:  general_file_read_access is deprecated.
+')
+# Get attributes of file systems.
+allow $1 fs_type:filesystem getattr;
+
+base_file_read_access($1)
+
+# Read directories and files with the readable_t type.
+# This type is a general type for "world"-readable files.
+allow $1 readable_t:dir r_dir_perms;
+allow $1 readable_t:notdevfile_class_set r_file_perms;
+
+# Stat /...security and lost+found.
+allow $1 file_labels_t:dir getattr;
+allow $1 lost_found_t:dir getattr;
+
+# Read the devpts root directory.  
+allow $1 devpts_t:dir r_dir_perms;
+ifdef(`sshd.te',
+`allow $1 sshd_devpts_t:dir r_dir_perms;')
+
+# Read the /tmp directory and any /tmp files with the base type.
+# Temporary files created at runtime will typically use derived types.
+allow $1 tmp_t:dir r_dir_perms;
+allow $1 tmp_t:{ file lnk_file } r_file_perms;
+
+# Read /var.
+allow $1 var_t:dir r_dir_perms;
+allow $1 var_t:notdevfile_class_set r_file_perms;
+
+# Read /var/catman.
+allow $1 catman_t:dir r_dir_perms;
+allow $1 catman_t:{ file lnk_file } r_file_perms;
+
+# Read /var/lib.
+allow $1 var_lib_t:dir r_dir_perms;
+allow $1 var_lib_t:notdevfile_class_set r_file_perms;
+allow $1 var_lib_nfs_t:dir r_dir_perms;
+allow $1 var_lib_nfs_t:notdevfile_class_set r_file_perms;
+ifdef(`rpm.te',
+`allow $1 var_lib_rpm_t:dir r_dir_perms;
+allow $1 var_lib_rpm_t:{ file lnk_file} r_file_perms;')
+r_dir_file($1, tetex_data_t)
+
+# Read /var/yp.
+allow $1 var_yp_t:dir r_dir_perms;
+allow $1 var_yp_t:notdevfile_class_set r_file_perms;
+
+# Read /var/spool.
+allow $1 var_spool_t:dir r_dir_perms;
+allow $1 var_spool_t:notdevfile_class_set r_file_perms;
+
+# Read /var/run, /var/lock, /var/log.
+allow $1 var_run_t:dir r_dir_perms;
+allow $1 var_run_t:{ file lnk_file } r_file_perms;
+allow $1 var_log_t:dir r_dir_perms;
+#allow $1 var_log_t:{ file lnk_file } r_file_perms;
+allow $1 var_log_sa_t:dir r_dir_perms;
+allow $1 var_log_sa_t:{ file lnk_file } r_file_perms;
+allow $1 var_log_ksyms_t:{ file lnk_file } r_file_perms;
+ifdef(`rpm.te', `allow $1 var_log_rpm_t:{ file lnk_file } r_file_perms;')
+allow $1 var_lock_t:dir r_dir_perms;
+allow $1 var_lock_t:{ file lnk_file } r_file_perms;
+
+# Read /var/run/utmp and /var/log/wtmp.
+allow $1 initrc_var_run_t:file r_file_perms;
+allow $1 wtmp_t:file r_file_perms;
+
+# Read /boot, /boot/System.map*, and /vmlinuz*
+allow $1 boot_t:dir { search getattr };
+allow $1 boot_t:file getattr;
+allow $1 system_map_t:{ file lnk_file } r_file_perms;
+ifdef(`rpm.te', `
+allow $1 boot_runtime_t:{ file lnk_file } r_file_perms;
+')
+allow $1 boot_t:lnk_file read;
+
+# Read /etc.
+allow $1 etc_t:dir r_dir_perms;
+allow $1 etc_t:notdevfile_class_set r_file_perms;
+allow $1 etc_runtime_t:{ file lnk_file } r_file_perms;
+allow $1 etc_aliases_t:{ file lnk_file } r_file_perms;
+allow $1 etc_mail_t:dir r_dir_perms;
+allow $1 etc_mail_t:{ file lnk_file } r_file_perms;
+allow $1 resolv_conf_t:{ file lnk_file } r_file_perms;
+allow $1 ld_so_cache_t:file r_file_perms;
+
+# Read /lib.
+allow $1 lib_t:dir r_dir_perms;
+allow $1 lib_t:notdevfile_class_set r_file_perms;
+
+# Read the linker, shared library, and executable types.
+allow $1 ld_so_t:{ file lnk_file } r_file_perms;
+allow $1 shlib_t:{ file lnk_file } r_file_perms;
+allow $1 exec_type:{ file lnk_file } r_file_perms;
+
+# Read man directories and files.
+allow $1 man_t:dir r_dir_perms;
+allow $1 man_t:notdevfile_class_set r_file_perms;
+
+# Read /usr/src.
+allow $1 src_t:dir r_dir_perms;
+allow $1 src_t:notdevfile_class_set r_file_perms;
+
+# Read module-related files.
+allow $1 modules_object_t:dir r_dir_perms;
+allow $1 modules_object_t:{ file lnk_file } r_file_perms;
+allow $1 modules_dep_t:{ file lnk_file } r_file_perms;
+allow $1 modules_conf_t:{ file lnk_file} r_file_perms;
+
+# Read /dev directories and any symbolic links.
+allow $1 device_t:dir r_dir_perms;
+allow $1 device_t:lnk_file r_file_perms;
+
+# Read /dev/random and /dev/zero.
+allow $1 random_device_t:chr_file r_file_perms;
+allow $1 zero_device_t:chr_file r_file_perms;
+
+# Read the root directory of a tmpfs filesytem and any symbolic links.
+allow $1 tmpfs_t:dir r_dir_perms;
+allow $1 tmpfs_t:lnk_file r_file_perms;
+
+# Read any symbolic links on a devfs file system.
+allow $1 device_t:lnk_file r_file_perms;
+
+# Read the root directory of a usbdevfs filesystem, and
+# the devices and drivers files.  Permit stating of the
+# device nodes, but nothing else.
+allow $1 usbdevfs_t:dir r_dir_perms;
+allow $1 usbdevfs_t:{ file lnk_file } r_file_perms;
+allow $1 usbdevfs_device_t:file getattr;
+')
+
+#
+# general_file_write_access(domain)
+#
+# Grant write permissions to a small set of system file types, e.g. 
+# /dev/tty, /dev/null, etc.
+#
+# For shared directories like /tmp, each domain should have its own derived
+# type (with a file_type_auto_trans rule) for files created in the shared
+# directory.
+#
+define(`general_file_write_access',`
+errprint(`m4: '__file__:__line__: `Warning:  general_file_write_access is deprecated.
+')
+# Read and write /dev/tty and /dev/null.
+allow $1 devtty_t:chr_file rw_file_perms;
+allow $1 { null_device_t zero_device_t }:chr_file rw_file_perms;
+
+# Do not audit write denials to /etc/ld.so.cache.
+dontaudit $1 ld_so_cache_t:file write;
+')
+
+#
+# every_test_domain(domain)
+#
+# Grant permissions common to the test domains.
+#
+define(`every_test_domain',`
+# Grant permissions within the domain.
+general_domain_access($1)
+
+# Grant read/search permissions to most of /proc.
+general_proc_read_access($1)
+
+# Grant read/search permissions to many system file types.
+general_file_read_access($1)
+
+# Grant write permissions to a small set of system file types.
+# No permission to create files is granted here.  Use allow rules to grant 
+# create permissions to a type or use file_type_auto_trans rules to set up
+# new types for files.
+general_file_write_access($1)
+
+# Execute from the system shared libraries.
+# No permission to execute anything else is granted here.
+# Use can_exec or can_exec_any to grant the ability to execute within a domain.
+# Use domain_auto_trans for executing and changing domains.
+uses_shlib($1)
+
+# read localization information
+allow $1 locale_t:dir r_dir_perms;
+allow $1 locale_t:{file lnk_file} r_file_perms;
+
+# Obtain the context of any SID, the SID for any context, 
+# and the list of active SIDs.
+allow $1 security_t:security { sid_to_context context_to_sid get_sids };
+
+')
+
+################################
+#
+# every_domain(domain)
+#
+# Grant permissions common to most domains.
+#
+# This macro replaces the rules formerly located in domains/every.te.
+# An every_domain macro has been inserted into each domain .te file
+# for each domain defined within that file.  If you want a new domain
+# to inherit these rules, then you can likewise use this macro in
+# your new domain .te file.  However, for least privilege purposes, you 
+# may want to consider using macros or individual rules that only include 
+# a subset of these permissions for your new domain.  This macro has already 
+# been partitioned into a few subsets, with corresponding macros defined 
+# above and used in defining this macro.  
+#
+define(`every_domain',`
+errprint(`m4: '__file__:__line__: `Warning:  every_domain is deprecated.
+')
+# Grant the permissions common to the test domains.
+every_test_domain($1)
+
+# Grant permissions needed to create TCP and UDP sockets and 
+# to access the network.
+can_network($1)
+')
+
+#######################
+# daemon_base_domain(domain_prefix, attribs)
+#
+# Define a daemon domain with a base set of type declarations
+# and permissions that are common to most daemons.
+# attribs is the list of attributes which must start with `,' if it is not empty
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+define(`daemon_base_domain', `
+type $1_t, domain, privlog $2;
+type $1_exec_t, file_type, sysadmfile, exec_type;
+
+role system_r types $1_t;
+
+domain_auto_trans(initrc_t, $1_exec_t, $1_t)
+
+# Inherit and use descriptors from init.
+allow $1_t init_t:fd use;
+allow $1_t init_t:process sigchld;
+allow $1_t privfd:fd use;
+ifdef(`newrole.te', `allow $1_t newrole_t:process sigchld;')
+allow $1_t self:process { signal_perms fork };
+
+uses_shlib($1_t)
+
+allow $1_t { self proc_t }:dir r_dir_perms;
+allow $1_t { self proc_t }:lnk_file read;
+
+allow $1_t device_t:dir { getattr search };
+allow $1_t null_device_t:chr_file rw_file_perms;
+allow $1_t console_device_t:chr_file rw_file_perms;
+allow $1_t initrc_devpts_t:chr_file rw_file_perms;
+')dnl
+
+define(`daemon_domain', `
+daemon_base_domain($1, `$2')
+# Create pid file.
+allow $1_t var_t:dir { getattr search };
+type var_run_$1_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans($1_t, var_run_t, var_run_$1_t)
+
+allow $1_t devtty_t:chr_file rw_file_perms;
+
+# for daemons that look at /root on startup
+dontaudit $1_t sysadm_home_dir_t:dir search;
+
+# for df
+allow $1_t fs_type:filesystem getattr;
+')dnl
+
+define(`uses_authbind',
+`domain_auto_trans_read($1, authbind_exec_t, authbind_t)
+allow authbind_t $1:process sigchld;
+allow authbind_t $1:fd use;
+allow authbind_t $1:{ tcp_socket udp_socket } rw_socket_perms;
+')
+
+# define a sub-domain, $1_t is the parent domain, $2 is the name
+# of the sub-domain.
+#
+define(`daemon_sub_domain', `
+# $1 is the parent domain (or domains), $2_t is the child domain,
+# and $3 is any attributes to apply to the child
+type $2_t, domain, privlog $3;
+type $2_exec_t, file_type, sysadmfile, exec_type;
+
+role system_r types $2_t;
+
+domain_auto_trans($1, $2_exec_t, $2_t)
+
+# Inherit and use descriptors from parent.
+allow $2_t $1:fd use;
+allow $2_t $1:process sigchld;
+
+allow $2_t self:process signal_perms;
+
+uses_shlib($2_t)
+
+allow $2_t { self proc_t }:dir r_dir_perms;
+allow $2_t { self proc_t }:lnk_file read;
+
+allow $2_t device_t:dir { getattr search };
+allow $2_t null_device_t:chr_file rw_file_perms;
+')
+
+
+define(`tmp_domain', `
+type $1_tmp_t, file_type, sysadmfile, tmpfile $2;
+file_type_auto_trans($1_t, tmp_t, $1_tmp_t)
+')
+
+define(`var_lib_domain', `
+type var_lib_$1_t, file_type, sysadmfile;
+file_type_auto_trans($1_t, var_lib_t, var_lib_$1_t)
+')
+
+define(`log_domain', `
+type $1_log_t, file_type, sysadmfile, logfile;
+file_type_auto_trans($1_t, var_log_t, $1_log_t)
+')
+
+define(`lock_domain', `
+type $1_lock_t, file_type, sysadmfile, lockfile;
+file_type_auto_trans($1_t, var_lock_t, $1_lock_t)
+')
+
+#######################
+# application_domain(domain_prefix)
+#
+# Define a domain with a base set of type declarations
+# and permissions that are common to simple applications.
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+define(`application_domain', `
+type $1_t, domain, privlog;
+type $1_exec_t, file_type, sysadmfile, exec_type;
+role sysadm_r types $1_t;
+domain_auto_trans(sysadm_t, $1_exec_t, $1_t)
+uses_shlib($1_t)
+')
+
+define(`user_application_domain', `
+application_domain($1)
+in_user_role($1_t)
+domain_auto_trans(userdomain, $1_exec_t, $1_t)
+')
+
+define(`system_domain', `
+type $1_t, domain, privlog $2;
+type $1_exec_t, file_type, sysadmfile, exec_type;
+role system_r types $1_t;
+uses_shlib($1_t)
+allow $1_t etc_t:dir r_dir_perms;
+')
+
+
+#
+# Macros for all user login domains.
+#
+
+#
+# user_domain(domain_prefix)
+#
+# Define derived types and rules for an ordinary user domain.
+#
+# The type declaration and role authorization for the domain must be
+# provided separately.  Likewise, domain transitions into this domain
+# must be specified separately.  
+#
+undefine(`user_domain')
+define(`user_domain',`
+# Use capabilities
+allow $1_t self:capability { setgid chown fowner };
+dontaudit $1_t self:capability { sys_nice fsetid };
+
+# Type for home directory.
+ifelse($1, sysadm, `
+type $1_home_dir_t, file_type, sysadmfile, home_dir_type, home_type;
+type $1_home_t, file_type, sysadmfile, home_type;
+tmp_domain($1)
+', `
+type $1_home_dir_t, file_type, sysadmfile, home_dir_type, user_home_dir_type, home_type, user_home_type;
+type $1_home_t, file_type, sysadmfile, home_type, user_home_type;
+# do not allow privhome access to sysadm_home_dir_t
+file_type_auto_trans(privhome, $1_home_dir_t, $1_home_t)
+tmp_domain($1, `, user_tmpfile')
+')
+
+# Create, access, and remove files in home directory.
+file_type_auto_trans($1_t, $1_home_dir_t, $1_home_t)
+allow $1_t $1_home_t:dir_file_class_set { relabelfrom relabelto };
+
+# Bind to a Unix domain socket in /tmp.
+allow $1_t $1_tmp_t:unix_stream_socket name_bind;
+
+# Type for tty devices.
+type $1_tty_device_t, file_type, sysadmfile, ttyfile;
+# Access ttys.
+allow $1_t $1_tty_device_t:chr_file { setattr rw_file_perms };
+# Use the type when relabeling terminal devices.
+type_change $1_t tty_device_t:chr_file $1_tty_device_t;
+ifdef(`dpkg.te', `
+# Debian login is from shadow utils and does not allow resetting the perms.
+# have to fix this!
+type_change $1_t ttyfile:chr_file $1_tty_device_t;
+')
+
+# Type and access for pty devices.
+ifelse(`$1', `sysadm', `
+can_create_pty($1)
+', `
+can_create_pty($1, `, userpty_type')
+')
+
+# Use the type when relabeling pty devices.
+ifdef(`rlogind.te',
+`type_change $1_t rlogind_devpts_t:chr_file $1_devpts_t;')
+ifdef(`ssh.te', `
+type_change $1_t sshd_devpts_t:chr_file $1_devpts_t;
+
+# Connect to sshd.
+can_tcp_connect($1_t, sshd_t)
+
+# Connect to ssh proxy.
+can_tcp_connect($1_t, $1_ssh_t)
+
+allow $1_t sshd_t:fd use;
+allow $1_t sshd_t:tcp_socket rw_stream_socket_perms;
+# Use a Unix stream socket inherited from sshd.
+allow $1_t sshd_t:unix_stream_socket rw_stream_socket_perms;
+')dnl end of ssh section
+
+# Type for tmpfs/shm files.
+type $1_tmpfs_t, file_type, sysadmfile, tmpfsfile;
+# Use the type when creating files in tmpfs.
+file_type_auto_trans($1_t, tmpfs_t, $1_tmpfs_t)
+allow $1_tmpfs_t tmpfs_t:filesystem associate;
+
+# Read and write /var/catman.
+allow $1_t catman_t:dir rw_dir_perms;
+allow $1_t catman_t:notdevfile_class_set create_file_perms;
+
+# Modify mail spool file.
+allow $1_t mail_spool_t:dir r_dir_perms;
+allow $1_t mail_spool_t:file rw_file_perms;
+allow $1_t mail_spool_t:lnk_file read;
+
+#
+# Allow the query of filesystem quotas
+#
+allow $1_t fs_type:filesystem quotaget;
+
+# Run helper programs.
+can_exec_any($1_t)
+# Run programs developed by other users in the same domain.
+can_exec($1_t, $1_home_t)
+can_exec($1_t, $1_tmp_t)
+
+# Run user programs that require different permissions in their own domain.
+# These rules were moved into the individual program domains.
+
+# Instantiate derived domains for a number of programs.
+# These derived domains encode both information about the calling
+# user domain and the program, and allow us to maintain separation
+# between different instances of the program being run by different
+# user domains.
+ifdef(`gnome-pty-helper.te', `gph_domain($1)')
+ifdef(`su.te', `su_domain($1)')
+ifdef(`chkpwd.te', `chkpwd_domain($1)')
+ifdef(`screen.te', `screen_domain($1)')
+ifdef(`netscape.te', `netscape_domain($1)')
+ifdef(`games.te', `
+x_client_domain($1, games)
+rw_dir_create_file($1_games_t, games_data_t)
+')
+ifdef(`gpg.te', `gpg_domain($1)')
+ifdef(`xauth.te', `xauth_domain($1)')
+ifdef(`xserver.te', `xserver_domain($1)')
+ifdef(`lpr.te', `lpr_domain($1)')
+ifdef(`mta.te', `mail_domain($1)')
+ifdef(`sendmail.te', `sendmail_user_domain($1)')
+ifdef(`crontab.te', `crontab_domain($1)')
+ifdef(`ssh.te', `ssh_domain($1)')
+ifdef(`irc.te', `irc_domain($1)')
+ifdef(`clamav.te', `user_clamscan_domain($1)')
+ifdef(`fingerd.te', `fingerd_macro($1)')
+
+# Instantiate a derived domain for user cron jobs.
+ifdef(`crond.te', `crond_domain($1)')
+
+ifdef(`vmware.te', `
+# probably should have a separate domain for each user
+file_type_auto_trans(vmware_user_t, $1_home_dir_t, vmware_user_file_t)
+')
+
+# Read the mouse.
+allow $1_t mouse_device_t:chr_file r_file_perms;
+# Access other miscellaneous devices.
+allow $1_t misc_device_t:file_class_set rw_file_perms;
+
+# Use the network.
+can_network($1_t)
+
+#
+# connect_secure and sendmsg_secure calls with a 
+# peer or destination socket SID can be enforced
+# when using the loopback interface.  Enforcement
+# for real network interfaces will be possible when
+# a packet labeling mechanism is integrated.
+#
+allow $1_t node_lo_t:node enforce_dest;
+
+# Communicate within the domain.
+can_udp_send($1_t, $1_t)
+can_tcp_connect($1_t, $1_t)
+
+# Connect to inetd.
+ifdef(`inetd.te', `can_tcp_connect($1_t,inetd_t)')
+
+ifdef(`rshd.te',
+`# Connect second port to rshd.
+can_tcp_connect(rshd_t, $1_t)')
+
+# Connect data port to ftpd.
+ifdef(`ftpd.te', `can_tcp_connect(ftpd_t, $1_t)')
+
+# Connect to portmap.
+ifdef(`portmap.te', `can_tcp_connect($1_t, portmap_t)')
+
+# Inherit and use sockets from inetd
+ifdef(`inetd.te',
+`allow $1_t inetd_t:fd use;
+allow $1_t inetd_t:tcp_socket rw_stream_socket_perms;')
+
+# Allow system log read
+#allow $1_t kernel_t:system syslog_read;
+# else do not log it
+dontaudit $1_t kernel_t:system syslog_read;
+
+# Very permissive allowing every domain to see every type.
+allow $1_t kernel_t:system { ipc_info };
+
+# When the user domain runs ps, there will be a number of access
+# denials when ps tries to search /proc.  Do not audit these denials.
+dontaudit $1_t domain:dir r_dir_perms;
+dontaudit $1_t domain:notdevfile_class_set r_file_perms;
+
+# Some shells ask for w access to utmp, but will operate
+# correctly without it.  Do not audit write denials to utmp.
+dontaudit $1_t initrc_var_run_t:file { getattr read write };
+
+# do not audit getattr on tmpfile, otherwise ls -l /tmp fills the logs
+dontaudit $1_t tmpfile:dir_file_class_set getattr;
+
+# do not audit getattr on disk devices, otherwise KDE fills the logs
+dontaudit $1_t { removable_device_t fixed_disk_device_t }:blk_file getattr;
+
+ifdef(`xdm.te', `
+# Connect to the X server run by the X Display Manager.
+can_unix_connect($1_t, xdm_t)
+allow $1_t xdm_tmp_t:sock_file rw_file_perms;
+allow $1_t xdm_tmp_t:dir r_dir_perms;
+allow $1_t xdm_xserver_tmp_t:sock_file { read write };
+allow $1_t xdm_xserver_tmp_t:dir search;
+
+ifelse(`$1', sysadm, `', `
+file_type_auto_trans(xdm_t, $1_home_dir_t, $1_home_xauth_t, file)
+')dnl end ifelse sysadm
+')dnl end ifdef xdm.te
+
+# Access the sound device.
+allow $1_t sound_device_t:chr_file { getattr read write ioctl };
+
+# Allow reading dpkg origins file
+ifdef(`dpkg.te', `
+r_dir_file($1_t, etc_dpkg_t)
+')
+
+ifdef(`ftpd.te', `
+# uncomment the following for FTP access to all home directories
+# or you can just enable FTP access for certain user domains in the ftpd.te
+# file
+#file_type_auto_trans(ftpd_t, $1_home_dir_t, $1_home_t)
+')
+
+')
+
+
+###########################################################################
+#
+# Domains for ordinary users.
+#
+undefine(`full_user_role')
+define(`full_user_role', `
+
+# user_t/$1_t is an unprivileged users domain.
+type $1_t, domain, userdomain, unpriv_userdomain;
+
+# $1_r is authorized for $1_t for the initial login domain.
+role $1_r types $1_t;
+allow system_r $1_r;
+
+# Grant permissions within the domain.
+general_domain_access($1_t);
+
+# Grant read/search permissions to some of /proc.
+allow $1_t proc_t:dir r_dir_perms;
+allow $1_t proc_t:{ file lnk_file } r_file_perms;
+
+# Grand read/search permissions to many system types.
+#general_file_read_access($1_t);
+# Get attributes of file systems.
+allow $1_t fs_type:filesystem getattr;
+
+base_file_read_access($1_t)
+
+# Read directories and files with the readable_t type.
+# This type is a general type for "world"-readable files.
+allow $1_t readable_t:dir r_dir_perms;
+allow $1_t readable_t:notdevfile_class_set r_file_perms;
+
+# Stat /...security and lost+found.
+allow $1_t file_labels_t:dir getattr;
+allow $1_t lost_found_t:dir getattr;
+
+# Read the devpts root directory.
+allow $1_t devpts_t:dir r_dir_perms;
+ifdef(`sshd.te',
+`allow $1_t sshd_devpts_t:dir r_dir_perms;')
+
+# Read the /tmp directory and any /tmp files with the base type.
+# Temporary files created at runtime will typically use derived types.
+allow $1_t tmp_t:dir r_dir_perms;
+allow $1_t tmp_t:{ file lnk_file } r_file_perms;
+
+# Read /var, /var/spool, /var/run.
+allow $1_t var_t:dir r_dir_perms;
+allow $1_t var_t:notdevfile_class_set r_file_perms;
+allow $1_t var_spool_t:dir r_dir_perms;
+allow $1_t var_spool_t:notdevfile_class_set r_file_perms;
+allow $1_t var_run_t:dir r_dir_perms;
+allow $1_t var_run_t:{ file lnk_file } r_file_perms;
+
+# Read /etc.
+allow $1_t etc_t:dir r_dir_perms;
+allow $1_t etc_t:notdevfile_class_set r_file_perms;
+allow $1_t etc_runtime_t:{ file lnk_file } r_file_perms;
+
+# Read man directories and files.
+allow $1_t man_t:dir r_dir_perms;
+allow $1_t man_t:notdevfile_class_set r_file_perms;
+
+# Read /dev directories and any symbolic links.
+allow $1_t device_t:dir r_dir_perms;
+allow $1_t device_t:lnk_file r_file_perms;
+
+# Read and write /dev/tty and /dev/null.
+allow $1_t devtty_t:chr_file rw_file_perms;
+allow $1_t { null_device_t zero_device_t }:chr_file rw_file_perms;
+
+# Do not audit write denials to /etc/ld.so.cache.
+dontaudit $1_t ld_so_cache_t:file write;
+
+# Execute from the system shared libraries.
+uses_shlib($1_t);
+
+# Obtain the context of any SID, the SID for any context,
+# and the list of active SIDs.
+allow $1_t security_t:security { sid_to_context context_to_sid get_sids };
+
+# $1_t is also granted permissions specific to user domains.
+user_domain($1)
+
+# When an ordinary user domain runs su, su may try to
+# update the /root/.Xauthority file, and the user shell may
+# try to update the shell history. This isnt allowed, but 
+# we dont need to audit it.
+ifdef(`su.te', `
+dontaudit $1_su_t sysadm_home_t:dir  { read getattr search write add_name remove_name };
+dontaudit $1_su_t sysadm_home_t:file { read getattr create write link unlink };')
+dontaudit $1_t    sysadm_home_t:dir { read search getattr };
+dontaudit $1_t    sysadm_home_t:file { read getattr append };
+
+ifdef(`syslogd.te', `
+# Some programs that are left in $1_t will try to connect
+# to syslogd, but we do not want to let them generate log messages.
+# Do not audit.
+dontaudit $1_t devlog_t:sock_file { read write };
+dontaudit $1_t syslogd_t:unix_dgram_socket sendto;
+')
+
+# stop warnings about "ls -l" on directories with unlabelled files
+dontaudit $1_t file_t:{ dir file lnk_file } getattr;
+')
+
+undefine(`in_user_role')
+define(`in_user_role', `
+role user_r types $1;
+role cougaar_r types $1;
+#role staff_r types $1;
+')
+
+
+#
+# Macros for chkpwd domains.
+#
+
+#
+# chkpwd_domain(domain_prefix)
+#
+# Define a derived domain for the *_chkpwd program when executed
+# by a user domain.
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/su.te. 
+#
+undefine(`chkpwd_domain')
+ifdef(`chkpwd.te', `
+define(`chkpwd_domain',`
+# Derived domain based on the calling user domain and the program.
+type $1_chkpwd_t, domain, privlog, auth;
+
+# Transition from the user domain to this domain.
+domain_auto_trans($1_t, chkpwd_exec_t, $1_chkpwd_t)
+
+# The user role is authorized for this domain.
+role $1_r types $1_chkpwd_t;
+
+# This domain is granted permissions common to most domains (includes can_net)
+every_domain($1_chkpwd_t)
+
+# Use capabilities.
+allow $1_chkpwd_t self:capability setuid;
+
+# Inherit and use descriptors from gnome-pty-helper.
+ifdef(`gnome-pty-helper.te',`allow $1_chkpwd_t $1_gph_t:fd use;')
+
+# Inherit and use descriptors from newrole.
+ifdef(`newrole.te', `allow $1_chkpwd_t newrole_t:fd use;')
+
+# Write to the user domain tty.
+allow $1_chkpwd_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_chkpwd_t $1_devpts_t:chr_file rw_file_perms;
+')
+
+', `
+
+define(`chkpwd_domain',`')
+
+')
+
+# macro for chroot environments
+# Author Russell Coker
+
+# chroot(initial_domain, basename, role, tty_device_type)
+define(`chroot', `
+
+ifelse(`$1', `initrc', `
+define(`chroot_role', `system_r')
+define(`chroot_tty_device', `{ console_device_t admin_tty_type }')
+define(`chroot_mount_domain', `mount_t')
+define(`chroot_fd_use', `{ privfd init_t }')
+', `
+define(`chroot_role', `$1_r')
+define(`chroot_tty_device', `{ $1_devpts_t $1_tty_device_t }')
+define(`chroot_fd_use', `privfd')
+
+# allow mounting /proc and /dev
+ifdef(`$1_mount_def', `', `
+mount_domain($1, $1_mount)
+role chroot_role types $1_mount_t;
+')
+define(`chroot_mount_domain', `$1_mount_t')
+ifdef(`ssh.te', `
+can_tcp_connect($1_ssh_t, $2_t)
+')dnl end ssh
+')dnl end ifelse initrc
+
+# types for read-only and read-write files in the chroot
+type $2_ro_t, file_type, sysadmfile, home_type, user_home_type;
+type $2_rw_t, file_type, sysadmfile, home_type, user_home_type;
+# type like $2_ro_t but that triggers a transition from $2_super_t to $2_t
+# when you execute it
+type $2_dropdown_t, file_type, sysadmfile, home_type, user_home_type;
+
+allow chroot_mount_domain { $2_rw_t $2_ro_t }:dir { getattr search mounton };
+allow chroot_mount_domain { $2_rw_t $2_ro_t }:file { getattr mounton };
+
+# entry point for $2_super_t
+type $2_super_entry_t, file_type, sysadmfile, home_type, user_home_type;
+# $2_t is the base domain, has full access to $2_rw_t files
+type $2_t, domain, userdomain, unpriv_userdomain;
+# $2_super_t is the super-chroot domain, can also write to $2_ro_t
+# but still can not access outside the chroot
+type $2_super_t, domain, userdomain, unpriv_userdomain;
+allow $2_super_t chroot_tty_device:chr_file rw_file_perms;
+
+ifdef(`$1_chroot_def', `', `
+dnl can not have this defined twice
+define(`$1_chroot_def')
+
+allow chroot_mount_domain { proc_t device_t fs_t }:filesystem { mount unmount };
+
+# $1_chroot_t is the domain for /usr/sbin/chroot
+type $1_chroot_t, domain;
+
+# allow $1_chroot_t to write to the tty device
+allow $1_chroot_t chroot_tty_device:chr_file rw_file_perms;
+allow $1_chroot_t chroot_fd_use:fd use;
+allow { $1_chroot_t $2_t $2_super_t } $1_t:fd use;
+
+role chroot_role types $1_chroot_t;
+uses_shlib($1_chroot_t)
+allow $1_chroot_t self:capability sys_chroot;
+allow $1_t $1_chroot_t:dir { search getattr read };
+allow $1_t $1_chroot_t:{ file lnk_file } { read getattr };
+domain_auto_trans($1_t, chroot_exec_t, $1_chroot_t)
+allow $1_chroot_t fs_t:filesystem getattr;
+')dnl End conditional
+
+role chroot_role types { $2_t $2_super_t };
+
+# allow ps to show processes and allow killing them
+allow $1_t { $2_super_t $2_t }:dir { search getattr read };
+allow $1_t { $2_super_t $2_t }:{ file lnk_file } { read getattr };
+allow $1_t { $2_super_t $2_t }:process signal_perms;
+allow $2_super_t $2_t:dir { search getattr read };
+allow $2_super_t $2_t:{ file lnk_file } { read getattr };
+allow { $1_t $2_super_t } $2_t:process { signal_perms ptrace };
+allow $1_t $2_super_t:process { signal_perms ptrace };
+allow sysadm_t { $2_super_t $2_t }:process { signal_perms ptrace };
+
+allow { $2_super_t $2_t } { fs_t device_t }:filesystem getattr;
+allow { $2_super_t $2_t } device_t:dir { search getattr };
+allow { $2_super_t $2_t } devtty_t:chr_file rw_file_perms;
+allow { $2_super_t $2_t } random_device_t:chr_file r_file_perms;
+allow { $2_super_t $2_t } self:capability { fowner chown fsetid setgid setuid net_bind_service sys_tty_config };
+allow $2_super_t self:capability sys_ptrace;
+
+can_tcp_connect($2_super_t, $2_t)
+allow { $2_super_t $2_t } $2_rw_t:sock_file create_file_perms;
+
+allow { $2_super_t $2_t } devpts_t:dir { getattr search read };
+
+# quiet ps and killall
+dontaudit { $2_super_t $2_t } domain:dir { search getattr };
+
+# allow $2_t to write to the owner tty device (should remove this)
+allow $2_t chroot_tty_device:chr_file { read write };
+
+r_dir_file($1_chroot_t, { $2_ro_t $2_rw_t $2_super_entry_t $2_dropdown_t })
+can_exec($2_t, { $2_ro_t $2_rw_t $2_super_entry_t $2_dropdown_t })
+can_exec($2_super_t, { $2_ro_t $2_super_entry_t })
+create_dir_notdevfile($2_super_t, { $2_ro_t $2_rw_t $2_super_entry_t $2_dropdown_t })
+# $2_super_t transitions to $2_t when it executes
+# any file that $2_t can write
+domain_auto_trans($2_super_t, { $2_rw_t $2_dropdown_t }, $2_t)
+allow $1_chroot_t { $2_ro_t $2_rw_t }:lnk_file read;
+r_dir_file($2_t, { $2_ro_t $2_super_entry_t $2_dropdown_t })
+create_dir_notdevfile($2_t, $2_rw_t)
+allow $2_t $2_rw_t:fifo_file create_file_perms;
+allow $2_t $2_ro_t:fifo_file rw_file_perms;
+allow { $1_t $2_super_t } { $2_rw_t $2_ro_t }:fifo_file create_file_perms;
+create_dir_notdevfile($1_t, { $2_ro_t $2_rw_t $2_super_entry_t $2_dropdown_t })
+can_exec($1_t, { $2_ro_t $2_dropdown_t })
+domain_auto_trans($1_chroot_t, { $2_ro_t $2_rw_t $2_dropdown_t }, $2_t)
+domain_auto_trans_read($1_chroot_t, $2_super_entry_t, $2_super_t)
+allow { $1_t $2_super_t } { $2_ro_t $2_rw_t $2_super_entry_t $2_dropdown_t }:{ dir notdevfile_class_set } { relabelfrom relabelto };
+general_proc_read_access({ $2_t $2_super_t })
+general_domain_access({ $2_t $2_super_t })
+can_create_pty($2)
+can_create_pty($2_super)
+can_network({ $2_t $2_super_t })
+allow { $2_t $2_super_t } null_device_t:chr_file rw_file_perms;
+allow $2_super_t { $2_rw_t $2_ro_t }:{ dir file } mounton;
+allow { $2_t $2_super_t } self:capability { dac_override kill };
+
+undefine(`chroot_role')
+undefine(`chroot_tty_device')
+undefine(`chroot_mount_domain')
+undefine(`chroot_fd_use')
+')
+#
+# Macros for clamscan
+#
+# Author:  Brian May <bam@snoopy.apana.org.au>
+#
+
+#
+# clamscan_domain(domain_prefix)
+#
+# Define a derived domain for the clamscan program when executed
+#
+define(`clamscan_domain', `
+# Derived domain based on the calling user domain and the program.
+type $1_clamscan_t, domain, privlog;
+# Transition from the user domain to the derived domain.
+domain_auto_trans($1_t, clamscan_exec_t, $1_clamscan_t)
+# Uses shared librarys
+uses_shlib($1_clamscan_t)
+
+# Access virus signatures
+allow $1_clamscan_t var_lib_t:dir search;
+# /etc/alternatives/oav-virussignatures and /etc/localtime
+allow $1_clamscan_t etc_t:lnk_file read;
+# /var/lib/oav-update and /var/lib/oav-virussignatures
+allow $1_clamscan_t oav_update_var_lib_t:lnk_file read;
+allow $1_clamscan_t oav_update_var_lib_t:dir r_dir_perms;
+allow $1_clamscan_t oav_update_var_lib_t:file r_file_perms;
+
+# Why is this required?
+allow $1_clamscan_t proc_t:dir r_dir_perms;
+allow $1_clamscan_t proc_t:file r_file_perms;
+allow $1_clamscan_t sysctl_kernel_t:dir r_dir_perms;
+allow $1_clamscan_t sysctl_kernel_t:file r_file_perms;
+allow $1_clamscan_t self:unix_stream_socket { connect create read write };
+')
+
+define(`user_clamscan_domain',`
+clamscan_domain($1)
+allow $1_clamscan_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_clamscan_t $1_devpts_t:chr_file rw_file_perms;
+allow $1_clamscan_t $1_home_t:dir r_dir_perms;
+allow $1_clamscan_t $1_home_t:file r_file_perms;
+ifdef(`gnome-pty-helper.te', `allow $1_clamscan_t $1_gph_t:fd use;')
+')
+#
+# Macros for crond domains.
+#
+
+#
+# Authors:  Jonathan Crowley (MITRE) <jonathan@mitre.org>,
+#	    Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser
+#
+
+#
+# crond_domain(domain_prefix)
+#
+# Define a derived domain for cron jobs executed by crond on behalf 
+# of a user domain.  These domains are separate from the top-level domain
+# defined for the crond daemon and the domain defined for system cron jobs,
+# which are specified in domains/program/crond.te.
+#
+undefine(`crond_domain')
+define(`crond_domain',`
+# Derived domain for user cron jobs, user user_crond_domain if not system
+ifelse(`system', `$1', `
+type $1_crond_t, domain;
+', `
+type $1_crond_t, domain, user_crond_domain;
+')
+
+# Permit a transition from the crond_t domain to this domain.
+# The transition is requested explicitly by the modified crond 
+# via execve_secure.  There is no way to set up an automatic
+# transition, since crontabs are configuration files, not executables.
+domain_trans(crond_t, shell_exec_t, $1_crond_t)
+
+ifdef(`mta.te', `
+domain_auto_trans($1_crond_t, sendmail_exec_t, $1_mail_t)
+# $1_mail_t should only be reading from the cron fifo not needing to write
+dontaudit $1_mail_t crond_t:fifo_file write;
+allow mta_user_agent $1_crond_t:fd use;
+')
+
+# The user role is authorized for this domain.
+role $1_r types $1_crond_t;
+
+# This domain is granted permissions common to most domains.
+every_domain($1_crond_t)
+
+# Use capabilities.
+allow $1_crond_t $1_crond_t:capability dac_override;
+
+# Inherit and use descriptors from initrc.
+allow $1_crond_t initrc_t:fd use;
+
+# 
+# Since crontab files are not directly executed,
+# crond must ensure that the crontab file has
+# a type that is appropriate for the domain of
+# the user cron job.  It performs an entrypoint
+# permission check for this purpose.
+#
+allow $1_crond_t $1_cron_spool_t:file entrypoint;
+
+# Access user files and dirs.
+file_type_auto_trans($1_crond_t, $1_home_dir_t, $1_home_t)
+
+file_type_auto_trans($1_crond_t, tmp_t, $1_tmp_t)
+
+# Run helper programs.
+can_exec_any($1_crond_t)
+
+# Run scripts in user home directory.
+can_exec($1_crond_t, $1_home_t)
+')
+
+# When system_crond_t domain executes a type $1 executable then transition to
+# domain $2, allow $2 to interact with crond_t as well.
+define(`system_crond_entry', `
+domain_auto_trans(system_crond_t, $1, $2)
+allow $2 crond_t:fifo_file { getattr read write ioctl };
+# a rule for privfd may make this obsolete
+allow $2 crond_t:fd use;
+allow $2 crond_t:process sigchld;
+')
+#
+# Macros for crontab domains.
+#
+
+#
+# Authors:  Jonathan Crowley (MITRE) <jonathan@mitre.org>
+# Revised by Stephen Smalley <sds@epoch.ncsc.mil>
+#
+
+#
+# crontab_domain(domain_prefix)
+#
+# Define a derived domain for the crontab program when executed by
+# a user domain.  
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/crontab.te. 
+#
+undefine(`crontab_domain')
+define(`crontab_domain',`
+# Derived domain based on the calling user domain and the program.
+type $1_crontab_t, domain, privlog;
+
+# Transition from the user domain to the derived domain.
+domain_auto_trans($1_t, crontab_exec_t, $1_crontab_t)
+
+# The user role is authorized for this domain.
+role $1_r types $1_crontab_t;
+
+# This domain is granted permissions common to most domains (including can_net)
+every_domain($1_crontab_t)
+
+# Use capabilities
+allow $1_crontab_t $1_crontab_t:capability { setuid setgid chown };
+
+# Type for temporary files.
+file_type_auto_trans($1_crontab_t, tmp_t, $1_tmp_t)
+
+# Type of user crontabs once moved to cron spool.
+type $1_cron_spool_t, file_type, sysadmfile;
+# Use the type when creating files in /var/spool/cron.
+allow sysadm_crontab_t $1_cron_spool_t:file { getattr read };
+file_type_auto_trans($1_crontab_t, cron_spool_t, $1_cron_spool_t)
+ifdef(`fcron.te', `
+allow crond_t $1_cron_spool_t:file create_file_perms;
+# fcron wants an instant update of a crontab change for the administrator
+ifelse(`$1', `sysadm', `
+allow $1_crontab_t crond_t:process signal;
+', `
+dontaudit $1_crontab_t crond_t:process signal;
+')dnl end ifelse
+')dnl end ifdef fcron
+
+# crontab signals crond by updating the mtime on the spooldir
+allow $1_crontab_t cron_spool_t:dir setattr;
+# Allow crond to read those crontabs in cron spool.
+allow crond_t $1_cron_spool_t:file r_file_perms;
+
+# Run helper programs as $1_t
+domain_auto_trans($1_crontab_t, { bin_t sbin_t exec_type }, $1_t)
+
+# Read user crontabs 
+allow $1_crontab_t { $1_home_t $1_home_dir_t }:dir r_dir_perms;  
+allow $1_crontab_t $1_home_t:file r_file_perms;  
+dontaudit $1_crontab_t $1_home_dir_t:dir write;
+
+# Access the cron log file.
+allow $1_crontab_t cron_log_t:file r_file_perms;
+allow $1_crontab_t cron_log_t:file { append };
+
+# Access terminals.
+allow $1_crontab_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_crontab_t $1_devpts_t:chr_file rw_file_perms;
+
+# Inherit and use descriptors from gnome-pty-helper.
+ifdef(`gnome-pty-helper.te', `allow $1_crontab_t $1_gph_t:fd use;')
+
+')
+#
+# Macro for fingerd
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#
+# fingerd_macro(domain_prefix)
+#
+# allow fingerd to create a fingerlog file in the user home dir
+#
+define(`fingerd_macro', `
+type $1_home_fingerlog_t, file_type, sysadmfile;
+file_type_auto_trans(fingerd_t, $1_home_dir_t, $1_home_fingerlog_t)
+')
+#
+# Macros for gpg and pgp
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+# based on the work of:
+# Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser
+#
+
+#
+# gpg_domain(domain_prefix)
+#
+# Define a derived domain for the gpg/pgp program when executed by
+# a user domain.
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/gpg.te.
+#
+define(`gpg_domain', `
+# Derived domain based on the calling user domain and the program.
+type $1_gpg_t, domain, privlog;
+# Transition from the user domain to the derived domain.
+domain_auto_trans($1_t, gpg_exec_t, $1_gpg_t)
+
+can_network($1_gpg_t)
+
+# for a bug in kmail
+dontaudit $1_gpg_t $1_t:unix_stream_socket { read write };
+
+# The user role is authorized for this domain.
+role $1_r types $1_gpg_t;
+
+type $1_gpg_secret_t, file_type, sysadmfile;
+
+allow $1_t $1_gpg_secret_t:file getattr;
+
+allow $1_gpg_t device_t:dir r_dir_perms;
+allow $1_gpg_t random_device_t:chr_file r_file_perms;
+
+allow $1_gpg_t { etc_t resolv_conf_t }:file r_file_perms;
+
+allow $1_gpg_t self:unix_stream_socket create_stream_socket_perms;
+allow $1_gpg_t self:tcp_socket create_stream_socket_perms;
+
+allow $1_gpg_t { $1_devpts_t $1_tty_device_t }:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow $1_gpg_t $1_gph_t:fd use;')
+allow $1_gpg_t privfd:fd use;
+
+# Inherit and use descriptors
+allow $1_gpg_t $1_t:fd use;
+allow $1_gpg_t $1_t:process sigchld;
+allow { $1_t $1_gpg_t } $1_gpg_t:process signal;
+
+# allow ps to show gpg
+allow $1_t $1_gpg_t:dir { search getattr read };
+allow $1_t $1_gpg_t:{ file lnk_file } { read getattr };
+
+uses_shlib($1_gpg_t)
+
+# should not need read access...
+allow $1_gpg_t home_root_t:dir { read search };
+
+# use $1_gpg_secret_t for files it creates
+# NB we are doing the type transition for directory creation only!
+# so ~/.gnupg will be of $1_gpg_secret_t, then files created under it such as
+# secring.gpg will be of $1_gpg_secret_t too.  But when you use gpg to decrypt
+# a file and write output to your home directory it will use user_home_t.
+file_type_auto_trans($1_gpg_t, $1_home_dir_t, $1_gpg_secret_t, dir)
+rw_dir_create_file($1_gpg_t, $1_gpg_secret_t)
+
+file_type_auto_trans($1_gpg_t, $1_home_dir_t, $1_home_t, file)
+create_dir_file($1_gpg_t, $1_home_t)
+
+# allow the usual access to /tmp
+file_type_auto_trans($1_gpg_t, tmp_t, $1_tmp_t)
+
+allow $1_gpg_t self:capability { ipc_lock setuid };
+allow $1_gpg_t devtty_t:chr_file rw_file_perms;
+
+allow $1_gpg_t { etc_t usr_t }:dir r_dir_perms;
+allow $1_gpg_t fs_t:filesystem getattr;
+allow $1_gpg_t usr_t:file r_file_perms;
+allow $1_gpg_t etc_t:lnk_file r_file_perms;
+allow $1_t $1_gpg_secret_t:dir rw_dir_perms;
+')
+#
+# Macros for gnome-pty-helper domains.
+#
+
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser 
+#
+
+#
+# gph_domain(domain_prefix)
+#
+# Define a derived domain for the gnome-pty-helper program when
+# executed by a user domain.
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/gnome-pty-helper.te. 
+#
+# The *_gph_t domains are for the gnome_pty_helper program.
+# This program is executed by gnome-terminal to handle
+# updates to utmp and wtmp.  In this regard, it is similar
+# to utempter.  However, unlike utempter, gnome-pty-helper
+# also creates the pty file for the terminal program.
+# There is one *_gph_t domain for each user domain.  
+#
+undefine(`gph_domain')
+define(`gph_domain',`
+# Derived domain based on the calling user domain and the program.
+type $1_gph_t, domain, gphdomain;
+
+# Transition from the user domain to the derived domain.
+domain_auto_trans($1_t, gph_exec_t, $1_gph_t)
+
+# The user role is authorized for this domain.
+role $1_r types $1_gph_t;
+
+# This domain is granted permissions common to most domains.
+every_domain($1_gph_t)
+
+# Use capabilities.
+allow $1_gph_t $1_gph_t:capability { setuid setgid fsetid };
+
+# Create ptys for the user domain.
+can_create_other_pty($1_gph, $1)
+
+# Update /var/run/utmp and /var/log/wtmp.
+allow $1_gph_t initrc_var_run_t:file rw_file_perms;
+allow $1_gph_t wtmp_t:file rw_file_perms;
+
+# Allow gph to rw to stream sockets of appropriate user type.
+# (Need this so gnome-pty-helper can pass pty fd to parent 
+#  gnome-terminal which is running in a user domain.)
+allow $1_gph_t $1_t:unix_stream_socket rw_stream_socket_perms;
+
+# Read and write the users tty.
+allow $1_gph_t $1_tty_device_t:chr_file rw_file_perms;
+
+# Allow user domain to use pty fd from gnome-pty-helper.
+allow $1_t $1_gph_t:fd use;
+
+# Use the network, e.g. for NIS lookups.
+can_network($1_gph_t)
+
+# Added by David A. Wheeler:
+# Allow gnome-pty-helper to update /var/log/lastlog
+# (the gnome-pty-helper in Red Hat Linux 7.1 does this):
+allow $1_gph_t lastlog_t:file rw_file_perms;
+
+# Allow gnome-pty-helper to write the .xsession-errors file.
+allow $1_gph_t home_root_t:dir search;
+allow $1_gph_t $1_home_t:dir { search add_name };
+allow $1_gph_t $1_home_t:file { create write };
+')
+
+#
+# Macros for irc domains.
+#
+
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#
+# irc_domain(domain_prefix)
+#
+# Define a derived domain for the irc program when executed
+# by a user domain.
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/irc.te. 
+#
+undefine(`irc_domain')
+ifdef(`irc.te', `
+define(`irc_domain',`
+# Derived domain based on the calling user domain and the program.
+type $1_irc_t, domain;
+type $1_home_irc_t, file_type, sysadmfile;
+type $1_irc_exec_t, file_type, sysadmfile;
+
+allow $1_t { $1_home_irc_t $1_irc_exec_t }:file { relabelfrom relabelto create_file_perms };
+
+ifdef(`ircd.te', `
+can_tcp_connect($1_irc_t, ircd_t)
+')
+
+# Transition from the user domain to this domain.
+domain_auto_trans($1_t, { irc_exec_t $1_irc_exec_t }, $1_irc_t)
+
+# The user role is authorized for this domain.
+role $1_r types $1_irc_t;
+
+# Inherit and use descriptors from gnome-pty-helper.
+ifdef(`gnome-pty-helper.te',
+`allow $1_irc_t $1_gph_t:fd use;
+allow $1_t $1_gph_t:fd use;')
+
+# Inherit and use descriptors from newrole.
+ifdef(`newrole.te', `allow $1_irc_t newrole_t:fd use;')
+
+# allow ps to show irc
+allow $1_t $1_irc_t:dir { search getattr read };
+allow $1_t $1_irc_t:{ file lnk_file } { read getattr };
+allow $1_t $1_irc_t:process signal;
+
+# Use the network.
+can_network($1_irc_t)
+
+uses_shlib($1_irc_t)
+allow $1_irc_t { etc_t resolv_conf_t }:file { read getattr };
+allow $1_irc_t etc_t:lnk_file read;
+allow $1_irc_t fs_t:filesystem getattr;
+allow $1_irc_t var_t:dir search;
+allow $1_irc_t devpts_t:dir { getattr read search };
+allow $1_irc_t device_t:dir search;
+allow $1_irc_t devtty_t:chr_file rw_file_perms;
+allow $1_irc_t self:unix_stream_socket create_stream_socket_perms;
+allow $1_irc_t privfd:fd use;
+allow $1_irc_t proc_t:dir search;
+allow $1_irc_t { self proc_t }:lnk_file read;
+allow $1_irc_t self:dir search;
+dontaudit $1_irc_t var_run_t:dir search;
+
+# Write to the user domain tty.
+allow $1_irc_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_irc_t $1_devpts_t:chr_file rw_file_perms;
+
+# allow utmp access
+allow $1_irc_t initrc_var_run_t:file read;
+dontaudit $1_irc_t initrc_var_run_t:file lock;
+
+# access config files
+allow $1_irc_t home_root_t:dir search;
+file_type_auto_trans($1_irc_t, $1_home_dir_t, $1_home_irc_t, file)
+
+# access files under /tmp
+file_type_auto_trans($1_irc_t, tmp_t, $1_tmp_t)
+')
+
+', `
+
+define(`irc_domain',`')
+
+')
+#
+# Macros for lpr domains.
+#
+
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser 
+#
+
+#
+# lpr_domain(domain_prefix)
+#
+# Define a derived domain for the lpr/lpq/lprm programs when executed
+# by a user domain.
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/lpr.te. 
+#
+undefine(`lpr_domain')
+define(`lpr_domain',`
+# Derived domain based on the calling user domain and the program
+type $1_lpr_t, domain, privlog;
+
+# Transition from the user domain to the derived domain.
+domain_auto_trans($1_t, lpr_exec_t, $1_lpr_t)
+
+# The user role is authorized for this domain.
+role $1_r types $1_lpr_t;
+
+# This domain is granted permissions common to most domains (including can_net)
+every_domain($1_lpr_t)
+
+# Use capabilities.
+allow $1_lpr_t $1_lpr_t:capability { setuid dac_override net_bind_service chown };
+
+# Type for temporary files.
+type $1_lpr_tmp_t, file_type, sysadmfile, tmpfile;
+# Use this type when creating files in /tmp. 
+file_type_auto_trans($1_lpr_t, tmp_t, $1_lpr_tmp_t)
+r_dir_file($1_lpr_t, $1_tmp_t)
+
+# Type for spool files.
+type $1_print_spool_t, file_type, sysadmfile;
+# Use this type when creating files in /var/spool/lpd and /var/spool/cups.
+file_type_auto_trans($1_lpr_t, print_spool_t, $1_print_spool_t)
+
+# Access the terminal.
+allow $1_lpr_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_lpr_t $1_devpts_t:chr_file rw_file_perms;
+
+# Inherit and use descriptors from gnome-pty-helper.
+ifdef(`gnome-pty-helper.te', `allow $1_lpr_t $1_gph_t:fd use;')
+
+# Read user files. 
+allow $1_lpr_t { $1_home_t $1_home_dir_t }:dir search;  
+allow $1_lpr_t $1_home_t:{ file lnk_file } r_file_perms;  
+
+# Read and write shared files in the spool directory.
+allow $1_lpr_t print_spool_t:notdevfile_class_set rw_file_perms;
+
+# lpr can run in lightweight mode, without a local print spooler. If the
+# lpd policy is present, grant some permissions for this domain and the lpd
+# domain to interact.
+ifdef(`lpd.te', `
+allow $1_lpr_t lpd_var_run_t:dir search;
+allow $1_lpr_t lpd_var_run_t:sock_file write;
+
+# Allow lpd to read, rename, and unlink spool files.
+allow lpd_t $1_print_spool_t:file r_file_perms;
+allow lpd_t $1_print_spool_t:file link_file_perms;
+
+# Connect to lpd via a Unix domain socket.
+allow $1_lpr_t printer_t:sock_file rw_file_perms;
+can_unix_connect($1_lpr_t, lpd_t)
+dontaudit $1_lpr_t $1_t:unix_stream_socket { read write };
+
+# Connect to lpd via a TCP socket.
+can_tcp_connect($1_lpr_t, lpd_t)
+
+# Send SIGHUP to lpd.
+allow $1_lpr_t lpd_t:process signal;
+
+')
+
+ifdef(`cups.te', `
+allow { $1_lpr_t $1_t } etc_cupsd_t:dir search;
+can_tcp_connect({ $1_lpr_t $1_t }, cupsd_t)
+')
+
+')
+#
+# Macros for mount
+#
+# Author:  Brian May <bam@snoopy.apana.org.au>
+# Extended by Russell Coker <russell@coker.com.au>
+#
+
+#
+# mount_domain(domain_prefix,dst_domain_prefix)
+#
+# Define a derived domain for the mount program for anyone.
+#
+define(`mount_domain', `
+#
+# Rules for the $2_t domain, used by the $1_t domain.
+#
+# $2_t is the domain for the mount process.
+#
+# This macro will not be included by all users and it may be included twice if
+# called from other macros, so we need protection for this do not call this
+# macro if $2_def is defined
+define(`$2_def', `')
+#
+type $2_t, domain, privlog;
+
+every_domain($2_t)
+# when mount is run by $1 goto $2_t domain
+domain_auto_trans($1_t, mount_exec_t, $2_t)
+
+tmp_domain($2)
+
+# Use capabilities.
+allow $2_t self:capability { net_bind_service sys_rawio sys_admin };
+
+# Create and modify /etc/mtab.
+file_type_auto_trans($2_t, etc_t, etc_runtime_t, file)
+
+# Access the terminal.
+allow $2_t $1_tty_device_t:chr_file { getattr read write ioctl };
+allow $2_t $1_devpts_t:chr_file { getattr read write };
+ifdef(`gnome-pty-helper.te', `allow $2_t $1_gph_t:fd use;')
+')
+#
+# Macros for MTA domains.
+#
+
+#
+# Author:   Russell Coker <russell@coker.com.au>
+# Based on the work of: Stephen Smalley <sds@epoch.ncsc.mil>
+#                       Timothy Fraser 
+#
+
+#
+# mail_domain(domain_prefix)
+#
+# Define a derived domain for the sendmail program when executed by
+# a user domain to send outgoing mail.  These domains are separate and
+# independent of the domain used for the sendmail daemon process.
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/mta.te. 
+#
+undefine(`mail_domain')
+define(`mail_domain',`
+# Derived domain based on the calling user domain and the program.
+type $1_mail_t, domain, privlog, user_mail_domain;
+
+ifelse(`$1', `system', `
+# Transition from a system domain to the derived domain.
+domain_auto_trans_read(privmail, sendmail_exec_t, system_mail_t)
+', `
+# Transition from the user domain to the derived domain.
+domain_auto_trans($1_t, sendmail_exec_t, $1_mail_t)
+')
+can_exec($1_mail_t, sendmail_exec_t)
+
+# The user role is authorized for this domain.
+role $1_r types $1_mail_t;
+
+# This domain is granted permissions common to most domains (including can_net)
+every_domain($1_mail_t)
+
+# Use capabilities
+allow $1_mail_t self:capability { setuid setgid chown };
+
+# Execute procmail.
+can_exec($1_mail_t, bin_t)
+ifdef(`procmail.te',`
+can_exec($1_mail_t, procmail_exec_t)')
+
+ifelse(`$1', `system', `
+# Read cron temporary files.
+allow system_mail_t system_crond_tmp_t:file { read getattr };
+allow mta_user_agent system_crond_tmp_t:file { read getattr };
+allow system_mail_t initrc_devpts_t:chr_file { read write getattr };
+
+', `
+# Read user temporary files.
+allow $1_mail_t $1_tmp_t:file { read getattr };
+dontaudit $1_mail_t $1_tmp_t:file append;
+ifdef(`postfix.te', `
+# postfix seems to need write access if the file handle is opened read/write
+allow $1_mail_t $1_tmp_t:file write;
+')
+allow mta_user_agent $1_tmp_t:file { read getattr };
+
+allow mta_user_agent { $1_devpts_t $1_tty_device_t }:chr_file { getattr read write };
+
+# Write to the user domain tty.
+allow $1_mail_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_mail_t $1_devpts_t:chr_file rw_file_perms;
+
+# Inherit and use descriptors from gnome-pty-helper.
+ifdef(`gnome-pty-helper.te', `allow $1_mail_t $1_gph_t:fd use;')
+
+# Create dead.letter in user home directories.
+file_type_auto_trans($1_mail_t, $1_home_dir_t, $1_home_t)
+
+# if you do not want to allow dead.letter then use the following instead
+#allow $1_mail_t { $1_home_dir_t $1_home_t }:dir r_dir_perms;
+#allow $1_mail_t $1_home_t:file r_file_perms;
+
+# for reading .forward - maybe we need a new type for it?
+# also for delivering mail to maildir
+file_type_auto_trans(mta_delivery_agent, $1_home_dir_t, $1_home_t)
+')
+
+ifdef(`qmail.te', `
+allow $1_mail_t etc_qmail_t:dir search;
+allow $1_mail_t etc_qmail_t:{ file lnk_file } read;
+')
+
+')
+#
+# Macros for netscape/mozilla (or other browser) domains.
+#
+
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser 
+#
+
+#
+# netscape_domain(domain_prefix)
+#
+# Define a derived domain for the netscape/mozilla program when executed by
+# a user domain.  
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/netscape.te. 
+#
+define(`netscape_domain',`
+x_client_domain($1, netscape, `, privlog')
+
+# Execute downloaded programs.
+can_exec($1_netscape_t, $1_netscape_rw_t)
+
+ifdef(`apache.te', `
+# additions by Brian May <bam@snoopy.apana.org.au> 2002-07-16
+allow $1_netscape_t httpd_t:tcp_socket { recvfrom connectto };
+allow httpd_t $1_netscape_t:tcp_socket { recvfrom acceptfrom };
+')
+
+dontaudit $1_netscape_t $1_home_t:dir rw_dir_perms;
+dontaudit $1_netscape_t $1_home_t:file rw_file_perms;
+
+# Use printer
+ifdef(`lpr.te', `domain_auto_trans($1_netscape_t, lpr_exec_t, $1_lpr_t)')
+
+')dnl end netscape macro
+
+# $1 is the source domain (or domains), $2 is the source role (or roles) and $3
+# is the base name for the domain to run.  $1 is normally sysadm_t, and $2 is
+# normally sysadm_r.  $4 is the type of program to run and $5 is the domain to
+# transition to.
+# sample usage:
+# run_program(sysadm_t, sysadm_r, init, etc_t, initrc_t)
+#
+# if you have several users who run the same run_init type program for
+# different purposes (think of a run_db program used by several database
+# administrators to start several databases) then you can list all the source
+# domains in $1, all the source roles in $2, but you may not want to list all
+# types of programs to run in $4 and target domains in $5 (as that may permit
+# entering a domain from the wrong type).  In such a situation just specify
+# one value for each of $4 and $5 and have some rules such as the following:
+# domain_trans(run_whatever_t, whatever_exec_t, whatever_t)
+
+define(`run_program', `
+type run_$3_exec_t, file_type, exec_type, sysadmfile;
+
+# domain for program to run in, needs to change role (privrole), change
+# identity to system_u (privuser), log failures to syslog (privlog) and
+# authenticate users (auth)
+type run_$3_t, domain, privrole, privuser, privlog, auth;
+domain_auto_trans($1, run_$3_exec_t, run_$3_t)
+role $2 types run_$3_t;
+
+# for utmp
+allow run_$3_t initrc_var_run_t:file rw_file_perms;
+allow run_$3_t admin_tty_type:chr_file rw_file_perms;
+
+# often the administrator runs such programs from a directory that is owned
+# by a different user or has restrictive SE permissions, do not want to audit
+# the failed access to the current directory
+dontaudit run_$3_t file_type:dir search;
+dontaudit run_$3_t self:capability { dac_override dac_read_search };
+
+can_exec(run_$3_t, { bin_t chkpwd_exec_t shell_exec_t })
+
+domain_trans(run_$3_t, $4, $5)
+
+# hmm, do we REALLY need this?
+every_domain(run_$3_t)
+')
+#
+# Macros for screen domains.
+#
+
+#
+# Author: Russell Coker <russell@coker.com.au>
+# Based on the work of Stephen Smalley <sds@epoch.ncsc.mil>
+# and Timothy Fraser
+#
+
+#
+# screen_domain(domain_prefix)
+#
+# Define a derived domain for the screen program when executed
+# by a user domain.
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/screen.te. 
+#
+undefine(`screen_domain')
+ifdef(`screen.te', `
+define(`screen_domain',`
+# Derived domain based on the calling user domain and the program.
+type $1_screen_t, domain, privlog, auth;
+
+allow $1_screen_t shadow_t:file { read getattr };
+
+# Transition from the user domain to this domain.
+domain_auto_trans($1_t, screen_exec_t, $1_screen_t)
+
+# The user role is authorized for this domain.
+role $1_r types $1_screen_t;
+
+uses_shlib($1_screen_t)
+
+# Revert to the user domain when a shell is executed.
+domain_auto_trans($1_screen_t, shell_exec_t, $1_t)
+
+# Inherit and use descriptors from gnome-pty-helper.
+ifdef(`gnome-pty-helper.te',
+`allow $1_screen_t $1_gph_t:fd use;
+allow $1_t $1_gph_t:fd use;')
+
+# Inherit and use descriptors from newrole.
+ifdef(`newrole.te', `allow $1_screen_t newrole_t:fd use;')
+
+# Inherit and use descriptors from sshd.
+ifdef(`sshd.te', `allow $1_screen_t sshd_t:fd use;')
+
+# Write to utmp.
+allow $1_screen_t initrc_var_run_t:file rw_file_perms;
+can_create_pty($1_screen)
+
+# Create pid file.
+allow $1_screen_t var_t:dir search;
+type var_run_$1_screen_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans($1_screen_t, var_run_t, var_run_$1_screen_t)
+
+# Use the network.
+#can_network($1_screen_t)
+
+# Write to the user domain tty.
+allow $1_screen_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_screen_t $1_devpts_t:chr_file rw_file_perms;
+
+allow $1_screen_t self:process { fork sigchld signal };
+allow $1_screen_t self:capability { setuid setgid fsetid };
+
+# get stats
+allow $1_screen_t proc_t:dir search;
+allow $1_screen_t proc_t:lnk_file read;
+allow $1_screen_t devpts_t:dir { getattr search read };
+dontaudit $1_screen_t device_t:chr_file { getattr };
+allow $1_screen_t etc_t:file { read getattr };
+allow $1_screen_t self:dir { search read };
+allow $1_screen_t self:lnk_file { read };
+allow $1_screen_t device_t:filesystem getattr;
+allow $1_screen_t $1_home_t:dir search;
+
+allow $1_screen_t self:unix_stream_socket create_socket_perms;
+can_exec($1_screen_t, shell_exec_t)
+
+dontaudit $1_screen_t file_type:{ chr_file blk_file } getattr;
+')
+
+', `
+
+define(`screen_domain',`')
+
+')
+#
+# Macros for sendmail domains.
+#
+
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser 
+#           Russell Coker <russell@coker.com.au>
+#
+
+#
+# sendmail_user_domain(domain_prefix)
+#
+# Define a derived domain for the sendmail program when executed by
+# a user domain to send outgoing mail.  These domains are separate and
+# independent of the domain used for the sendmail daemon process.
+#
+undefine(`sendmail_user_domain')
+define(`sendmail_user_domain', `
+
+# Use capabilities
+allow $1_mail_t self:capability net_bind_service;
+
+# Type for temporary files.
+type $1_mail_tmp_t, file_type, sysadmfile, tmpfile;
+# Use this type when creating files in /tmp.
+file_type_auto_trans($1_mail_t, tmp_t, $1_mail_tmp_t)
+
+# Update /etc/mail/statistics.
+allow $1_mail_t etc_mail_t:file rw_file_perms;
+
+# Write to /var/spool/mail and /var/spool/mqueue.
+allow $1_mail_t mail_spool_t:dir rw_dir_perms;
+allow $1_mail_t mail_spool_t:file create_file_perms;
+allow $1_mail_t mqueue_spool_t:dir rw_dir_perms;
+allow $1_mail_t mqueue_spool_t:file create_file_perms;
+
+# Write to /var/log/sendmail.st
+file_type_auto_trans($1_mail_t, var_log_t, sendmail_var_log_t)
+
+')
+
+#
+# Macros for ssh domains.
+#
+
+#
+# Author:  Stephen Smalley <sds@epoch.ncsc.mil>
+#
+
+# 
+# ssh_domain(domain_prefix)
+#
+# Define a derived domain for the ssh program when executed
+# by a user domain.
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/ssh.te. 
+#
+undefine(`ssh_domain')
+ifdef(`ssh.te',
+`
+define(`ssh_domain',`
+# Derived domain based on the calling user domain and the program.
+type $1_ssh_t, domain, privlog;
+
+# Transition from the user domain to the derived domain.
+domain_auto_trans($1_t, ssh_exec_t, $1_ssh_t)
+
+# The user role is authorized for this domain.
+role $1_r types $1_ssh_t;
+
+# Grant permissions within the domain.
+general_domain_access($1_ssh_t)
+
+# Use descriptors created by sshd
+allow $1_ssh_t privfd:fd use;
+
+uses_shlib($1_ssh_t)
+
+# read localization information
+allow $1_ssh_t locale_t:dir r_dir_perms;
+allow $1_ssh_t locale_t:{file lnk_file} r_file_perms;
+
+# Get attributes of file systems.
+allow $1_ssh_t fs_type:filesystem getattr;
+
+base_file_read_access($1_ssh_t)
+
+# Read the devpts root directory.
+allow $1_ssh_t devpts_t:dir r_dir_perms;
+
+# Read /var.
+allow $1_ssh_t var_t:dir r_dir_perms;
+allow $1_ssh_t var_t:notdevfile_class_set r_file_perms;
+
+# Read /var/run, /var/log.
+allow $1_ssh_t var_run_t:dir r_dir_perms;
+allow $1_ssh_t var_run_t:{ file lnk_file } r_file_perms;
+allow $1_ssh_t var_log_t:dir r_dir_perms;
+allow $1_ssh_t var_log_t:{ file lnk_file } r_file_perms;
+
+# Read /etc.
+allow $1_ssh_t etc_t:dir r_dir_perms;
+allow $1_ssh_t etc_t:notdevfile_class_set r_file_perms;
+allow $1_ssh_t etc_runtime_t:{ file lnk_file } r_file_perms;
+allow $1_ssh_t resolv_conf_t:{ file lnk_file } r_file_perms;
+
+# Read the linker, shared library, and executable types.
+allow $1_ssh_t ld_so_t:{ file lnk_file } r_file_perms;
+allow $1_ssh_t shlib_t:{ file lnk_file } r_file_perms;
+allow $1_ssh_t exec_type:{ file lnk_file } r_file_perms;
+
+# Read /dev directories and any symbolic links.
+allow $1_ssh_t device_t:dir r_dir_perms;
+allow $1_ssh_t device_t:lnk_file r_file_perms;
+
+# Read /dev/random.
+allow $1_ssh_t random_device_t:chr_file r_file_perms;
+
+# Read and write /dev/tty and /dev/null.
+allow $1_ssh_t devtty_t:chr_file rw_file_perms;
+allow $1_ssh_t { null_device_t zero_device_t }:chr_file rw_file_perms;
+
+# Grant permissions needed to create TCP and UDP sockets and
+# to access the network.
+can_network($1_ssh_t)
+
+# for sshing to a ssh tunnel
+can_tcp_connect($1_ssh_t, $1_ssh_t)
+
+# Use capabilities.
+allow $1_ssh_t self:capability { setuid setgid dac_override dac_read_search };
+
+# Run helpers.
+can_exec_any($1_ssh_t)
+
+# Read the ssh key file.
+allow $1_ssh_t sshd_key_t:file r_file_perms;
+
+# Access the ssh temporary files.
+file_type_auto_trans($1_ssh_t, tmp_t, sshd_tmp_t)
+allow $1_ssh_t $1_tmp_t:dir r_dir_perms;
+
+# for rsync
+allow $1_ssh_t $1_t:unix_stream_socket rw_socket_perms;
+
+# Access the users .ssh directory.
+type $1_home_ssh_t, file_type, sysadmfile;
+file_type_auto_trans({ sysadm_ssh_t $1_ssh_t }, $1_home_dir_t, $1_home_ssh_t)
+allow { sysadm_ssh_t $1_ssh_t } $1_home_ssh_t:lnk_file { getattr read };
+dontaudit $1_ssh_t $1_home_t:dir search;
+r_dir_file(sshd_t, $1_home_ssh_t)
+rw_dir_create_file($1_t, $1_home_ssh_t)
+
+# Inherit and use descriptors from gnome-pty-helper.
+ifdef(`gnome-pty-helper.te', `allow $1_ssh_t $1_gph_t:fd use;')
+
+# Connect to sshd.
+can_tcp_connect($1_ssh_t, sshd_t)
+
+# Write to the user domain tty.
+allow $1_ssh_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_ssh_t $1_devpts_t:chr_file rw_file_perms;
+
+# Allow the user shell to signal the ssh program.
+allow $1_t $1_ssh_t:process signal;
+# allow ps to show ssh
+allow $1_t $1_ssh_t:dir { search getattr read };
+allow $1_t $1_ssh_t:{ file lnk_file } { read getattr };
+
+# Allow the ssh program to communicate with ssh-agent.
+allow $1_ssh_t $1_tmp_t:sock_file write;
+allow $1_ssh_t $1_t:unix_stream_socket connectto;
+allow $1_ssh_t sshd_t:unix_stream_socket connectto;
+
+ifdef(`xserver.te', `
+# Communicate with the X server.
+can_unix_connect($1_ssh_t, $1_xserver_t)
+allow $1_ssh_t $1_xserver_tmp_t:sock_file rw_file_perms;
+allow $1_ssh_t { initrc_xserver_tmp_t $1_xserver_tmp_t }:dir search;
+')
+
+ifdef(`xdm.te', `
+# should be able to remove these two later
+allow $1_ssh_t xdm_xserver_tmp_t:sock_file { read write };
+allow $1_ssh_t xdm_xserver_tmp_t:dir search;
+allow $1_ssh_t xdm_xserver_t:unix_stream_socket connectto;
+allow $1_ssh_t xdm_xserver_t:shm { read unix_read getattr associate };
+allow $1_ssh_t xdm_xserver_t:fd use;
+allow $1_ssh_t xdm_xserver_tmpfs_t:file read;
+')
+
+')dnl  end of ifdef ssh.te
+
+
+', `
+
+define(`ssh_domain',`')
+
+')
+#
+# Macros for su domains.
+#
+
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser
+#
+
+#
+# su_domain(domain_prefix)
+#
+# Define a derived domain for the su program when executed
+# by a user domain.
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/su.te. 
+#
+undefine(`su_mini_domain')
+undefine(`su_domain')
+ifdef(`su.te', `
+define(`su_mini_domain', `
+# Derived domain based on the calling user domain and the program.
+type $1_su_t, domain, privlog, auth;
+
+# Transition from the user domain to this domain.
+domain_auto_trans($1_t, su_exec_t, $1_su_t)
+
+# This domain is granted permissions common to most domains.
+every_domain($1_su_t)
+
+# Use capabilities.
+allow $1_su_t self:capability { setuid setgid net_bind_service chown dac_override sys_nice sys_resource };
+
+# Revert to the user domain when a shell is executed.
+domain_auto_trans($1_su_t, shell_exec_t, $1_t)
+
+allow $1_su_t privfd:fd use;
+
+# Write to utmp.
+allow $1_su_t initrc_var_run_t:file rw_file_perms;
+
+')dnl end su_mini_domain
+
+define(`su_domain', `
+su_mini_domain($1)
+ifdef(`chkpwd.te', `
+# Run chkpwd.
+can_exec($1_su_t, chkpwd_exec_t)
+')
+
+# Inherit and use descriptors from gnome-pty-helper.
+ifdef(`gnome-pty-helper.te', `
+allow { $1_su_t $1_t } $1_gph_t:fd use;
+')
+
+# The user role is authorized for this domain.
+role $1_r types $1_su_t;
+
+# Write to the user domain tty.
+allow $1_su_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_su_t $1_devpts_t:chr_file rw_file_perms;
+
+allow $1_su_t $1_home_dir_t:dir search;
+
+# Modify .Xauthority file (via xauth program).
+ifdef(`xauth.te', `
+domain_auto_trans($1_su_t, xauth_exec_t, $1_xauth_t)
+')
+
+# Access sshd cookie files.
+allow $1_su_t sshd_tmp_t:dir rw_dir_perms;
+allow $1_su_t sshd_tmp_t:file rw_file_perms;
+file_type_auto_trans($1_su_t, sshd_tmp_t, $1_tmp_t)
+
+# stop su complaining if you run it from a directory with restrictive perms
+dontaudit $1_su_t file_type:dir search;
+')dnl end su_domain
+
+', `
+
+define(`su_domain',`')
+
+')
+#
+# Macros for xauth domains.
+#
+
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#
+# xauth_domain(domain_prefix)
+#
+# Define a derived domain for the xauth program when executed
+# by a user domain.
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/xauth.te. 
+#
+undefine(`xauth_domain')
+ifdef(`xauth.te', `
+define(`xauth_domain',`
+# Derived domain based on the calling user domain and the program.
+type $1_xauth_t, domain;
+type $1_home_xauth_t, file_type, sysadmfile;
+
+allow $1_t $1_home_xauth_t:file { relabelfrom relabelto create_file_perms };
+
+# Transition from the user domain to this domain.
+domain_auto_trans($1_t, xauth_exec_t, $1_xauth_t)
+ifdef(`ssh.te', `
+domain_auto_trans($1_ssh_t, xauth_exec_t, $1_xauth_t)
+allow $1_xauth_t sshd_t:fifo_file { getattr read };
+dontaudit $1_xauth_t $1_ssh_t:tcp_socket { read write };
+allow $1_xauth_t sshd_t:process sigchld;
+')
+
+ifdef(`su.te', `
+domain_auto_trans($1_su_t, xauth_exec_t, $1_xauth_t)
+')
+
+# The user role is authorized for this domain.
+role $1_r types $1_xauth_t;
+
+# Inherit and use descriptors from gnome-pty-helper.
+ifdef(`gnome-pty-helper.te', `
+allow $1_xauth_t $1_gph_t:fd use;
+')
+
+allow $1_xauth_t privfd:fd use;
+
+# allow ps to show xauth
+allow $1_t $1_xauth_t:dir { search getattr read };
+allow $1_t $1_xauth_t:{ file lnk_file } { read getattr };
+allow $1_t $1_xauth_t:process signal;
+
+uses_shlib($1_xauth_t)
+
+# allow DNS lookups...
+can_network($1_xauth_t)
+ifdef(`named.te', `
+can_udp_send($1_xauth_t, named_t)
+can_udp_send(named_t, $1_xauth_t)
+')
+
+#allow $1_xauth_t devpts_t:dir { getattr read search };
+#allow $1_xauth_t device_t:dir search;
+#allow $1_xauth_t devtty_t:chr_file rw_file_perms;
+allow $1_xauth_t self:unix_stream_socket create_stream_socket_perms;
+allow $1_xauth_t { etc_t resolv_conf_t }:file { getattr read };
+allow $1_xauth_t fs_t:filesystem getattr;
+
+#allow $1_xauth_t proc_t:dir search;
+#allow $1_xauth_t { self proc_t }:lnk_file read;
+#allow $1_xauth_t self:dir search;
+#dontaudit $1_xauth_t var_run_t:dir search;
+
+# Write to the user domain tty.
+allow $1_xauth_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_xauth_t $1_devpts_t:chr_file rw_file_perms;
+
+# allow utmp access
+#allow $1_xauth_t initrc_var_run_t:file read;
+#dontaudit $1_xauth_t initrc_var_run_t:file lock;
+
+# Scan /var/run.
+allow $1_xauth_t var_t:dir search;
+allow $1_xauth_t var_run_t:dir search; 
+
+# this is what we are here for
+allow $1_xauth_t home_root_t:dir search;
+file_type_auto_trans($1_xauth_t, $1_home_dir_t, $1_home_xauth_t, file)
+
+')
+
+', `
+
+define(`xauth_domain',`')
+
+')
+#
+# Macros for X client programs ($2 etc)
+#
+
+#
+# Author: Russell Coker <russell@coker.com.au>
+# Based on the work of Stephen Smalley <sds@epoch.ncsc.mil>
+# and Timothy Fraser 
+#
+
+#
+# x_client_domain(domain_prefix)
+#
+# Define a derived domain for an X program when executed by
+# a user domain.  
+#
+# The type declaration for the executable type for this program ($2_exec_t)
+# must be provided separately!
+#
+# The first parameter is the base name for the domain/role (EG user or sysadm)
+# The second parameter is the program name (EG $2)
+# The third parameter is the attributes for the domain (if any)
+#
+define(`x_client_domain',`
+# Derived domain based on the calling user domain and the program.
+type $1_$2_t, domain $3;
+
+# Transition from the user domain to the derived domain.
+domain_auto_trans($1_t, $2_exec_t, $1_$2_t)
+
+# The user role is authorized for this domain.
+role $1_r types $1_$2_t;
+
+# This domain is granted permissions common to most domains (including can_net)
+every_domain($1_$2_t)
+
+# Type for files that are writeable by this domain.
+type $1_$2_rw_t, file_type, sysadmfile, tmpfile;
+# Use this type for files created in /tmp.
+file_type_auto_trans($1_$2_t, tmp_t, $1_$2_rw_t)
+
+allow $1_$2_t $1_home_xauth_t:file { getattr read };
+
+# Allow the user domain to relabel to or create files with this type
+# to provide the domain with write access to particular files.
+allow $1_t $1_$2_rw_t:{ dir file lnk_file } { relabelfrom relabelto };
+# allow $1_t to create dirs and files in the rw type (the auto_trans rule above
+# does it for $1_$2_t)
+allow $1_t $1_$2_rw_t:dir create_dir_perms;
+allow $1_t $1_$2_rw_t:{ file lnk_file } create_file_perms;
+
+# Type for files that are read-only for this domain
+type $1_$2_ro_t, file_type, sysadmfile;
+r_dir_file($1_$2_t, $1_$2_ro_t)
+allow $1_$2_t $1_$2_ro_t:fifo_file { read write };
+create_dir_file($1_t, $1_$2_ro_t)
+allow $1_t $1_$2_ro_t:fifo_file create_file_perms;
+allow $1_t $1_$2_ro_t:{ dir file lnk_file } { relabelto relabelfrom };
+
+# Allow the user domain to send any signal to the $2 process.
+allow $1_t $1_$2_t:process signal_perms;
+
+# Allow the user domain to read the /proc/PID directory for 
+# the $2 process.
+allow $1_t $1_$2_t:dir r_dir_perms;
+allow $1_t $1_$2_t:notdevfile_class_set r_file_perms;
+
+# Allow use of /dev/zero by ld.so.
+allow $1_$2_t zero_device_t:chr_file rw_file_perms;
+allow $1_$2_t zero_device_t:chr_file x_file_perms;
+
+# Execute system programs.
+can_exec_any($1_$2_t)
+
+# Inherit and use descriptors from gnome-pty-helper.
+ifdef(`gnome-pty-helper.te', `allow $1_$2_t $1_gph_t:fd use;')
+
+# Connect to sshd.
+ifdef(`sshd.te', `can_tcp_connect($1_$2_t, sshd_t)')
+
+# Allow connections to X server.
+ifdef(`xserver.te', `
+# for when /tmp/.X11-unix is created by the X server
+allow $1_$2_t $1_xserver_tmp_t:dir search;
+# for when /tmp/.X11-unix is created by the system
+allow $1_$2_t initrc_xserver_tmp_t:dir search;
+
+# for /tmp/.X0-lock
+allow $1_$2_t $1_xserver_tmp_t:file getattr;
+
+allow $1_$2_t $1_xserver_tmp_t:sock_file rw_file_perms;
+can_unix_connect($1_$2_t, $1_xserver_t)')
+
+ifdef(`xdm.te', `
+# Allow connections to X server run by an X Display Manager.
+#allow $1_$2_t xdm_tmp_t:dir r_dir_perms;
+#allow $1_$2_t xdm_tmp_t:sock_file rw_file_perms;
+can_unix_connect($1_$2_t, xdm_xserver_t)
+allow $1_$2_t xdm_xserver_tmp_t:dir search;
+allow $1_$2_t xdm_xserver_tmp_t:sock_file { read write };
+allow $1_$2_t xdm_t:fd use;
+dontaudit $1_$2_t xdm_t:tcp_socket { read write };
+# for X over a ssh tunnel
+ifdef(`ssh.te', `
+can_tcp_connect($1_$2_t, sshd_t)
+')
+
+# for .xsession-errors
+dontaudit $1_$2_t $1_home_t:file write;
+')
+
+# Access the terminal.
+allow $1_$2_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_$2_t $1_devpts_t:chr_file rw_file_perms;
+
+# Read the home directory, e.g. for .Xauthority and to get to config files
+file_type_auto_trans($1_$2_t, $1_home_dir_t, $1_$2_rw_t)
+
+# Use a separate type for tmpfs/shm pseudo files.
+type $1_$2_tmpfs_t, file_type, sysadmfile;
+file_type_auto_trans($1_$2_t, tmpfs_t, $1_$2_tmpfs_t)
+allow $1_$2_tmpfs_t tmpfs_t:filesystem associate;
+
+# Communicate via shared memory.
+ifdef(`xserver.te', `
+# Allow the $2 domain to signal the X server.
+allow $1_$2_t $1_xserver_t:process signal;
+# Use descriptors created by each other.
+allow $1_$2_t $1_xserver_t:fd use;
+
+allow $1_xserver_t $1_$2_t:fd use;
+allow $1_xserver_t $1_$2_t:shm rw_shm_perms;
+allow $1_xserver_t $1_$2_tmpfs_t:file rw_file_perms;
+allow $1_$2_t $1_xserver_t:shm r_shm_perms;
+allow $1_$2_t $1_xserver_tmpfs_t:file r_file_perms;
+')dnl end xserver.te policy
+
+')dnl end x_client macro
+#
+# Macros for X server domains.
+#
+
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser
+#
+
+#################################
+#
+# xserver_domain(domain_prefix)
+#
+# Define a derived domain for the X server when executed
+# by a user domain (e.g. via startx).  See the xdm_t domain
+# in domains/program/xdm.te if using an X Display Manager.
+#
+# The type declarations for the executable type for this program 
+# and the log type are provided separately in domains/program/xserver.te. 
+#
+# FIXME!  The X server requires far too many privileges.
+#
+undefine(`xserver_domain')
+ifdef(`xserver.te', `
+
+define(`xserver_domain',`
+# Derived domain based on the calling user domain and the program.
+type $1_xserver_t, domain, privlog, privmem;
+
+# Transition from the user domain to this domain.
+domain_auto_trans($1_t, xserver_exec_t, $1_xserver_t)
+
+ifelse($1, xdm, `
+# The system role is authorised for the xdm domain
+role system_r types $1_xserver_t;
+', `
+# The user role is authorized for this domain.
+role $1_r types $1_xserver_t;
+')dnl
+
+uses_shlib($1_xserver_t)
+can_network($1_xserver_t)
+
+# for access within the domain
+general_domain_access($1_xserver_t)
+
+# for access to lots of base files
+general_file_read_access($1_xserver_t)
+
+allow $1_xserver_t proc_t:dir search;
+
+# Use capabilities.
+# allow setuid/setgid for the wrapper program to change UID
+# sys_rawio is for iopl access - should not be needed for frame-buffer
+# sys_admin, locking shared mem?  chowning IPC message queues or semaphores?
+# admin of APM bios?
+# sys_nice is so that the X server can set a negative nice value
+allow $1_xserver_t self:capability { setuid setgid sys_rawio sys_admin sys_nice };
+dontaudit $1_xserver_t self:capability { dac_override dac_read_search };
+
+# memory_device_t access is needed if not using the frame buffer
+dontaudit $1_xserver_t memory_device_t:chr_file read;
+#allow $1_xserver_t memory_device_t:chr_file { rw_file_perms execute };
+# net_bind_service is needed if you want your X server to allow TCP connections
+# from other hosts, EG an XDM serving a network of X terms
+# if you want good security you do not want this
+# not sure why some people want chown, fsetid, and sys_tty_config.
+#allow $1_xserver_t self:capability { net_bind_service chown fsetid sys_tty_config };
+dontaudit $1_xserver_t self:capability chown;
+
+allow $1_xserver_t mtrr_device_t:file rw_file_perms;
+allow $1_xserver_t apm_bios_t:chr_file rw_file_perms;
+allow $1_xserver_t framebuf_device_t:chr_file rw_file_perms;
+allow $1_xserver_t devtty_t:chr_file rw_file_perms;
+allow $1_xserver_t devtty_t:lnk_file read;
+
+# Type for temporary files.
+tmp_domain($1_xserver)
+file_type_auto_trans($1_xserver_t, initrc_xserver_tmp_t, $1_xserver_tmp_t, sock_file)
+allow $1_t initrc_xserver_tmp_t:dir r_dir_perms;
+
+# Create files in /var/log with the xserver_var_log_t type.
+file_type_auto_trans($1_xserver_t, var_log_t, xserver_var_log_t)
+
+# Allow the user domain to signal the X server for termination.
+allow $1_t $1_xserver_t:process signal;
+
+# Allow the user domain to connect to the X server.
+can_unix_connect($1_t, $1_xserver_t)
+allow $1_t $1_xserver_tmp_t:sock_file rw_file_perms;
+allow $1_t $1_xserver_tmp_t:dir r_dir_perms;
+
+# Signal the user domain.
+allow $1_xserver_t $1_t:process signal;
+
+# Access AGP device.
+allow $1_xserver_t agp_device_t:chr_file rw_file_perms;
+
+# Access /proc/mtrr
+allow $1_xserver_t proc_t:file rw_file_perms;
+
+# Create and access /dev/dri devices.
+allow $1_xserver_t dri_device_t:dir { setattr rw_dir_perms };
+allow $1_xserver_t dri_device_t:chr_file create_file_perms;
+
+# Access ttys.
+ifelse($1, xdm, , `
+allow $1_xserver_t $1_tty_device_t:chr_file { setattr rw_file_perms };
+')
+allow $1_xserver_t tty_device_t:chr_file { setattr rw_file_perms };
+
+# Run helper programs in $1_xserver_t.
+can_exec_any($1_xserver_t)
+
+# Connect to xfs.
+ifdef(`xfs.te',
+`can_unix_connect($1_xserver_t, xfs_t)
+allow $1_xserver_t xfs_tmp_t:dir r_dir_perms;
+allow $1_xserver_t xfs_tmp_t:sock_file rw_file_perms;
+
+# Bind to the X server socket in /tmp.
+allow $1_xserver_t $1_xserver_tmp_t:unix_stream_socket name_bind;')
+
+# Communicate via System V shared memory.
+allow $1_xserver_t $1_t:shm rw_shm_perms;
+allow $1_t $1_xserver_t:shm rw_shm_perms;
+ifelse($1, xdm, `', `
+allow $1_xserver_t $1_tmpfs_t:file rw_file_perms;
+allow $1_t $1_xserver_tmpfs_t:file rw_file_perms;
+')
+
+# David Wheeler says he needs the following permission
+# for his X server.  Something is wrong here - the shared
+# memory pseudo file should be labeled $1_tmpfs_t and handled
+# by the rule above.  Needs further investigation.
+allow $1_xserver_t tmpfs_t:file rw_file_perms;
+
+# Type for tmpfs/shm files.
+type $1_xserver_tmpfs_t, file_type, sysadmfile;
+# Use this type when creating tmpfs/shm objects.
+file_type_auto_trans($1_xserver_t, tmpfs_t, $1_xserver_tmpfs_t)
+allow $1_xserver_tmpfs_t tmpfs_t:filesystem associate;
+
+# Use the mouse.
+allow $1_xserver_t mouse_device_t:chr_file rw_file_perms;
+
+ifelse($1, xdm, `
+dontaudit xdm_xserver_t sysadm_home_dir_t:dir { read search };
+', `
+# Access the home directory.
+allow $1_xserver_t $1_home_dir_t:dir { getattr read search };
+file_type_auto_trans($1_xserver_t, $1_home_dir_t, $1_home_xauth_t, file)
+')dnl end ifelse xdm
+
+allow $1_xserver_t var_lib_xkb_t:dir rw_dir_perms;
+allow $1_xserver_t var_lib_xkb_t:file create_file_perms;
+')dnl end macro definition
+
+', `
+
+define(`xserver_domain',`')
+
+')
+

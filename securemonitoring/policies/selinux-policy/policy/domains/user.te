@@ -1,0 +1,69 @@
+#DESC User - Domains for ordinary users.
+#
+#################################
+#full_user_role(java)
+#allow system_r java_r;
+#allow sysadm_r java_r;
+
+full_user_role(user)
+# a role for staff that allows seeing all domains and control over the user_t
+# domain
+#full_user_role(staff)
+#allow staff_t user_t:process signal_perms;
+#r_dir_file(staff_t, domain)
+#file_type_auto_trans(staff_t, user_home_dir_t, user_home_t)
+
+# read localization information
+allow user_t locale_t:dir r_dir_perms;
+allow user_t locale_t:{file lnk_file} r_file_perms;
+
+# if adding new user roles make sure you edit the in_user_role macro in
+# macros/user_macros.te to match
+
+# lots of user programs accidentally search /root, and also the admin often
+# logs in as UID=0 domain=user_t...
+dontaudit unpriv_userdomain sysadm_home_dir_t:dir { getattr search };
+
+# system_r is authorized for user_t as a fallback for unmodified daemons.
+role system_r types user_t;
+
+# change from role $1_r to $2_r and relabel tty appropriately
+define(`role_tty_type_change', `
+allow $1_r $2_r;
+type_change $2_t $1_devpts_t:chr_file $2_devpts_t;
+type_change $2_t $1_tty_device_t:chr_file $2_tty_device_t;
+')
+
+ifdef(`newrole.te', `
+#
+# Allow the user roles to transition
+# into each other.
+role_tty_type_change(sysadm, user)
+role_tty_type_change(user, sysadm)
+#role_tty_type_change(staff, sysadm)
+#role_tty_type_change(sysadm, staff)
+')
+
+# "ps aux" and "ls -l /dev/pts" make too much noise without this
+dontaudit unpriv_userdomain ptyfile:chr_file getattr;
+
+
+
+full_user_role(cougaar)
+allow system_r cougaar_r;
+allow sysadm_r cougaar_r;
+allow user_r cougaar_r;
+
+allow user_t var_log_t:dir { getattr read };
+allow user_t var_spool_t:file { execute };
+allow user_t sysadm_home_dir_t:dir { add_name read remove_name write };
+allow user_t sysadm_home_dir_t:file { create getattr link read unlink write };
+allow user_t user_t:capability { sys_tty_config kill };
+
+# added to run society with acme
+allow user_t sysadm_home_dir_t:file { setattr };
+allow user_xauth_t sshd_t:unix_stream_socket { read write };
+allow user_xauth_t sysadm_home_dir_t:dir { add_name remove_name search write };
+allow user_xauth_t sysadm_home_dir_t:file { create getattr link read unlink write };
+
+

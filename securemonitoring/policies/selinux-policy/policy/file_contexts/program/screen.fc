@@ -1,0 +1,2 @@
+# su
+/usr/bin/screen			system_u:object_r:screen_exec_t

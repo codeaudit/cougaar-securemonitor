@@ -1,0 +1,2 @@
+# pump
+/sbin/pump			system_u:object_r:pump_exec_t

@@ -1,0 +1,7 @@
+/usr/local/acme/bin       system_u:object_r:acme_exec_t
+/usr/local/acme/          system_u:object_r:usr_t
+/usr/local/acme/acme.sh   system_u:object_r:acme_exec_t
+/usr/local/bin/ruby       system_u:object_r:acme_exec_t
+/etc/init.d/acme          system_u:object_r:acme_exec_t
+
+

@@ -1,0 +1,6 @@
+# ipchains
+/sbin/ipchains			system_u:object_r:ipchains_exec_t
+/sbin/ipchains-restore		system_u:object_r:ipchains_exec_t
+/sbin/ipchains-save		system_u:object_r:ipchains_exec_t
+/sbin/iptables			system_u:object_r:ipchains_exec_t
+/usr/sbin/ipchains		system_u:object_r:ipchains_exec_t

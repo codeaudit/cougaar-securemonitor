@@ -1,0 +1,7 @@
+/var/lib/ntp(/.*)?			system_u:object_r:var_lib_ntp_t
+/etc/ntp\.conf				system_u:object_r:etc_ntp_t
+/usr/sbin/ntpd				system_u:object_r:ntpd_exec_t
+/usr/sbin/ntpdate			system_u:object_r:ntpd_exec_t
+/var/log/ntpstats(/.*)?			system_u:object_r:var_log_ntp_t
+/var/log/ntpd.*				system_u:object_r:var_log_ntp_t
+/etc/cron\.(daily|weekly)/ntp-simple	system_u:object_r:ntpd_exec_t

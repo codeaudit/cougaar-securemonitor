@@ -1,0 +1,36 @@
+#DESC Ypbind - NIS/YP
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the ypbind_t domain.
+#
+type ypbind_t, domain, privlog;
+role system_r types ypbind_t;
+every_domain(ypbind_t)
+type ypbind_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, ypbind_exec_t, ypbind_t)
+
+type ypbind_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(ypbind_t, tmp_t, ypbind_tmp_t)
+type ypbind_var_run_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans(ypbind_t, var_run_t, ypbind_var_run_t)
+
+# Use capabilities.
+allow ypbind_t ypbind_t:capability net_bind_service;
+
+# Inherit and use descriptors from init.
+allow ypbind_t init_t:fd use;
+
+# Use the network.
+can_network(ypbind_t)
+
+# Send to portmap and initrc.
+can_udp_send(ypbind_t, portmap_t)
+can_udp_send(ypbind_t, initrc_t)
+
+# Read and write /var/yp.
+allow ypbind_t var_yp_t:dir rw_dir_perms;
+allow ypbind_t var_yp_t:file create_file_perms;

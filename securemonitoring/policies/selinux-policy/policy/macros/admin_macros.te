@@ -1,0 +1,150 @@
+#
+# Macros for all admin domains.
+#
+
+#
+# admin_domain(domain_prefix)
+#
+# Define derived types and rules for an administrator domain.
+#
+# The type declaration and role authorization for the domain must be
+# provided separately.  Likewise, domain transitions into this domain
+# must be specified separately.  If the every_domain() rules are desired,
+# then these rules must also be specified separately.
+#
+undefine(`admin_domain')
+define(`admin_domain',`
+# Inherit rules for ordinary users.
+user_domain($1)
+
+# Violates the goal of limiting write access to checkpolicy.
+#rw_dir_create_file($1_t, policy_config_t)
+
+ifdef(`crond.te', `
+allow $1_crond_t var_log_t:file r_file_perms;
+')
+
+# Allow system log read
+allow $1_t kernel_t:system syslog_read;
+
+# Use capabilities other than sys_module.
+allow $1_t self:capability ~sys_module;
+
+# Determine the set of legal user SIDs reachable from a given SID.
+allow $1_t security_t:security { get_user_sids };
+
+# Use system operations.
+allow $1_t kernel_t:system *;
+
+# Change system parameters.
+can_sysctl($1_t)
+
+# Create and use all files that have the sysadmfile attribute.
+allow $1_t sysadmfile:notdevfile_class_set create_file_perms;
+allow $1_t sysadmfile:dir create_dir_perms;
+
+# Access removable devices.
+allow $1_t removable_device_t:devfile_class_set rw_file_perms;
+
+# Communicate with the init process.
+allow $1_t initctl_t:fifo_file rw_file_perms;
+
+# Examine all processes.
+allow $1_t domain:dir r_dir_perms;
+allow $1_t domain:notdevfile_class_set r_file_perms;
+
+# Send signals to all processes.
+allow $1_t { domain unlabeled_t }:process signal_perms;
+
+# Access all user terminals.
+allow $1_t tty_device_t:chr_file rw_file_perms;
+allow $1_t ttyfile:chr_file rw_file_perms;
+allow $1_t ptyfile:chr_file rw_file_perms;
+
+# allow setting up tunnels
+allow $1_t tun_tap_device_t:chr_file rw_file_perms;
+
+# Run init (telinit).
+can_exec($1_t, init_exec_t)
+
+# Run programs from user home directories.
+# Not ideal, but typical if users want to login as both sysadm_t or user_t.
+can_exec($1_t, user_home_type)
+# Run programs from /usr/src.
+can_exec($1_t,src_t)
+
+# Run admin programs that require different permissions in their own domain.
+# These rules were moved into the appropriate program domain file.
+
+# added by mayerf@tresys.com
+# The following rules are temporary until such time that a complete
+# policy management infrastructure is in place so that an administrator
+# cannot directly manipulate policy files with arbitrary programs.
+#
+allow $1_t policy_src_t:notdevfile_class_set create_file_perms;
+allow $1_t policy_src_t:dir create_dir_perms;
+
+# Remove the binary policy.
+allow $1_t policy_config_t:file unlink;
+
+# Relabel all files.
+allow $1_t file_type:dir { getattr read search relabelfrom relabelto };
+allow $1_t file_type:file_class_set { getattr relabelfrom relabelto };
+
+# Create files in /tmp/orbit-* and /tmp/.ICE-unix
+# with our derived tmp type rather than user_tmp_t.
+file_type_auto_trans($1_t, user_tmpfile, $1_tmp_t)
+
+ifdef(`xserver.te',
+`# Create files in /tmp/.X11-unix with our X servers derived
+# tmp type rather than user_xserver_tmp_t.
+file_type_auto_trans($1_xserver_t, xserver_tmpfile, $1_xserver_tmp_t)')
+
+#
+# A user who is authorized for sysadm_t may nonetheless have
+# a home directory labeled with user_home_t if the user is expected
+# to login in either user_t or sysadm_t.  Hence, the derived domains
+# for programs need to be able to access user_home_t.  
+# 
+
+# Allow our xauth domain to write to .Xauthority.
+ifdef(`xauth.te', `
+file_type_auto_trans($1_xauth_t, user_home_dir_t, user_home_xauth_t)
+')
+
+# Allow our gph domain to write to .xsession-errors.
+ifdef(`gnome-pty-helper.te', `
+allow $1_gph_t user_home_dir_type:dir rw_dir_perms;
+allow $1_gph_t user_home_type:file create_file_perms;
+')
+
+ifdef(`netscape.te',
+`# Allow searching of /tmp/.X11-unix.
+ifdef(`xserver.te', `allow $1_netscape_t user_xserver_tmp_t:dir r_dir_perms;')
+# Allow our netscape domain to write to .netscape.
+allow $1_netscape_t user_netscape_rw_t:dir create_dir_perms;
+allow $1_netscape_t user_netscape_rw_t:{ file lnk_file } create_file_perms;
+# Allow our domain to relabel downloaded files to its home type.
+allow $1_t user_netscape_rw_t:{ dir file lnk_file } relabelfrom;')
+
+ifdef(`gpg.te',
+`# Allow our gpg domain to write to .gnupg
+allow $1_gpg_t user_gpg_secret_t:dir create_dir_perms;
+allow $1_gpg_t user_gpg_secret_t:file create_file_perms;')
+
+# Allow our crontab domain to unlink a user cron spool file.
+ifdef(`crontab.te',
+`allow $1_crontab_t user_cron_spool_t:file unlink;')
+
+#
+# Allow sysadm to execute quota commands against filesystems and files.
+#
+allow $1_t fs_type:filesystem { quotamod quotaget };
+allow $1_t file_t:file quotaon;
+
+# Grant read and write access to /dev/console.
+allow $1_t console_device_t:chr_file rw_file_perms;
+
+# for lsof
+allow $1_t domain:socket_class_set getattr;
+')

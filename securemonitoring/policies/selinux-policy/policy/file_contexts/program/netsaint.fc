@@ -1,0 +1,8 @@
+# netsaint - network monitoring server
+/usr/sbin/netsaint		system_u:object_r:netsaint_exec_t
+/var/lib/ldap(/.*)?		system_u:object_r:netsaint_db_t
+#/var/run/netsaint(/.*)?		system_u:object_r:var_run_netsaint_t
+/etc/netsaint(/.*)?		system_u:object_r:etc_netsaint_t
+/var/log/netsaint(/.*)?		system_u:object_r:netsaint_log_t
+/usr/lib/netsaint/plugins(/.*)?	system_u:object_r:bin_t
+/usr/lib/cgi-bin/netsaint/.+	system_u:object_r:netsaint_cgi_exec_t

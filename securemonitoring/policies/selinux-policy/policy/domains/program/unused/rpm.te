@@ -1,0 +1,68 @@
+#DESC RPM - Red Hat package management
+#
+#################################
+#
+# Rules for running the Redhat Package Manager (RPM) tools.
+#
+# rpm_t is the domain for rpm and related utilities in /usr/lib/rpm
+# rpm_exec_t is the type of the rpm executables.
+# var_log_rpm_t is the type for rpm log files (/var/log/rpmpkgs*)
+# var_lib_rpm_t is the type for rpm files in /var/lib
+#
+type rpm_t, domain, privlog;
+role system_r types rpm_t;
+role sysadm_r types rpm_t;
+every_domain(rpm_t)
+type rpm_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(system_crond_t, rpm_exec_t, rpm_t)
+#domain_auto_trans(sysadm_t, rpm_exec_t, rpm_t)
+
+type rpm_file_t, file_type, sysadmfile;
+type var_lib_rpm_t, file_type, sysadmfile;
+
+type rpm_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(rpm_t, tmp_t, rpm_tmp_t)
+
+type rpm_tmpfs_t, file_type, sysadmfile, tmpfsfile;
+file_type_auto_trans(rpm_t, tmpfs_t, rpm_tmpfs_t)
+allow rpm_tmpfs_t tmpfs_t:filesystem associate;
+
+type var_log_rpm_t, file_type, sysadmfile, logfile;
+file_type_auto_trans(rpm_t, var_log_t, var_log_rpm_t)
+
+# Allow the rpm domain to execute other programs
+can_exec_any(rpm_t)
+
+# Capabilties needed by rpm utils
+allow rpm_t rpm_t:capability { dac_override dac_read_search chown setuid setgid };
+
+# Access /usr/lib files
+allow rpm_t lib_t:dir r_dir_perms;
+allow rpm_t lib_t:file r_file_perms;
+
+# Access /var/lib/rpm files
+allow rpm_t var_lib_rpm_t:dir rw_dir_perms;
+allow rpm_t var_lib_rpm_t:file create_file_perms;
+
+# When the RPM updates are run from cron, inherit cron descriptors and 
+# read from the FIFO created by cron
+allow rpm_t crond_t:fd use;
+allow rpm_t crond_t:fifo_file r_file_perms;
+
+# Access terminals.
+allow rpm_t sysadm_tty_device_t:chr_file rw_file_perms;
+allow rpm_t sysadm_devpts_t:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow rpm_t sysadm_gph_t:fd use;')
+
+# Write to /usr/src.
+#allow rpm_t src_t:dir create_dir_perms;
+#allow rpm_t src_t:{ file lnk_file } create_file_perms;
+
+# Execute from /usr/src.
+#can_exec(rpm_t, src_t)
+
+# Execute helper programs.
+#can_exec_any(rpm_t)
+
+# Execute temporary files.
+#can_exec(rpm_t, rpm_tmp_t)

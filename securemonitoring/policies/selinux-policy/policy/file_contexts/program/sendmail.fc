@@ -1,0 +1,4 @@
+# sendmail
+/etc/mail(/.*)?			system_u:object_r:etc_mail_t
+/var/spool/mqueue(/.*)?		system_u:object_r:mqueue_spool_t
+/var/log/sendmail\.st		system_u:object_r:sendmail_var_log_t

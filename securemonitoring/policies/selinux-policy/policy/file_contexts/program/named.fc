@@ -1,0 +1,12 @@
+# named
+/var/named(/.*)?      		system_u:object_r:named_conf_t
+/etc/named\.conf       		system_u:object_r:named_conf_t
+/etc/bind(/.*)?			system_u:object_r:named_zone_t
+/etc/bind/named\.conf		system_u:object_r:named_conf_t
+/etc/bind/rndc\.key		system_u:object_r:rndc_conf_t
+/usr/sbin/named.*      		system_u:object_r:named_exec_t
+/usr/sbin/r?ndc			system_u:object_r:ndc_exec_t
+/var/cache/bind(/.*)?		system_u:object_r:named_cache_t
+/var/run/ndc			system_u:object_r:var_run_named_t
+/var/run/bind(/.*)?		system_u:object_r:var_run_named_t
+/usr/sbin/lwresd		system_u:object_r:named_exec_t

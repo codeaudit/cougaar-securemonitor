@@ -1,0 +1,6 @@
+# slapd - ldap server
+/usr/sbin/slapd			system_u:object_r:slapd_exec_t
+/var/lib/ldap(/.*)?		system_u:object_r:slapd_db_t
+/var/lib/ldap/replog(/.*)?	system_u:object_r:slapd_replog_t
+/var/run/slapd\.args		system_u:object_r:var_run_slapd_t
+/etc/ldap/slapd\.conf		system_u:object_r:etc_slapd_t

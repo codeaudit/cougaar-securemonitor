@@ -1,0 +1,51 @@
+#DESC Rpcd - RPC daemon
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the rpcd_t domain.
+#
+# rpcd_t is the domain of rpc daemons.
+# rpcd_exec_t is the type of rpc daemon programs.
+#
+type rpcd_t, domain, privlog;
+role system_r types rpcd_t;
+every_domain(rpcd_t)
+type rpcd_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, rpcd_exec_t, rpcd_t)
+can_udp_send({ init_t initrc_t }, rpcd_t)
+can_udp_send(rpcd_t, { init_t initrc_t })
+allow init_t rpcd_t:udp_socket write;
+
+can_udp_send(rpcd_t, rpcd_t)
+can_udp_send(mount_t, rpcd_t)
+can_udp_send(rpcd_t, mount_t)
+
+type rpcd_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(rpcd_t, tmp_t, rpcd_tmp_t)
+
+# Inherit and use descriptors from init
+allow rpcd_t init_t:fd use;
+
+# rpcd_t needs to talk to the portmap_t domain
+can_udp_send(rpcd_t, portmap_t)
+
+# Use capabilities.
+allow rpcd_t self:capability { net_bind_service dac_override setgid setuid };
+
+# Access /var/lib/nfs.
+allow rpcd_t var_lib_nfs_t:dir rw_dir_perms;
+allow rpcd_t var_lib_nfs_t:file rw_file_perms;
+
+# allow mountd to create /var/lib/nfs/xtab
+rw_dir_create_file(rpcd_t, var_lib_nfs_t)
+
+# allow nfsd to do it's thing - should go into its own domain
+#allow rpcd_t kernel_t:system nfsd_control;
+#allow rpcd_t self:capability sys_admin;
+
+# nfs kernel server needs kernel UDP access.  It is less risky and painful
+# to just give it everything.
+can_network(kernel_t)

@@ -1,0 +1,93 @@
+#DESC DHCPC - DHCP client
+#
+# Authors:  Wayne Salamon (NAI Labs) <wsalamon@tislabs.com>
+#
+
+#################################
+#
+# Rules for the dhcpc_t domain.
+#
+# dhcpc_t is the domain for the client side of DHCP. dhcpcd, the DHCP 
+# network configurator daemon started by /etc/sysconfig/network-scripts 
+# rc scripts, runs in this domain.
+# dhcpc_exec_t is the type of the dhcpcd executable.
+# The dhcpc_t can be used for other DHCPC related files as well.
+#
+type dhcpc_t, domain, privlog;
+role system_r types dhcpc_t;
+every_domain(dhcpc_t)
+type dhcpc_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, dhcpc_exec_t, dhcpc_t)
+
+ifdef(`cardmgr.te', `
+domain_auto_trans(cardmgr_t, dhcpc_exec_t, dhcpc_t)
+allow cardmgr_t dhcpc_t:process signal_perms;
+')
+
+# for the dhcp client to run ping to check IP addresses
+ifdef(`ping.te', `
+domain_auto_trans(dhcpc_t, ping_exec_t, ping_t)
+# because dhcpc is buggy and leaves file handles open...
+dontaudit ping_t dhcpc_state_t:file read;
+dontaudit ping_t dhcpc_t:packet_socket { read write };
+dontaudit ping_t dhcpc_t:udp_socket { read write };
+')
+
+# Type for files created during execution of dhcpcd.
+type var_run_dhcpc_t, file_type, sysadmfile, pidfile;
+ifdef(`dhcpd.te', `',
+`type dhcp_state_t, file_type, sysadmfile;')
+type dhcpc_state_t, file_type, sysadmfile;
+type etc_dhcpc_t, file_type, sysadmfile;
+file_type_auto_trans(dhcpc_t, var_run_t, var_run_dhcpc_t)
+
+# Inherit and use descriptors from init.
+allow dhcpc_t init_t:fd use;
+
+# Use capabilities
+allow dhcpc_t self:capability { net_admin net_raw net_bind_service };
+
+# Allow read/write to /etc/resolv.conf. Note that any files in /etc 
+# created by dhcpcd will be labelled resolv_conf_t. As of RH 7.2, no
+# other files are accessed in the /etc dir, only in /etc/dhcpc dir.
+file_type_auto_trans(dhcpc_t, etc_t, resolv_conf_t)
+
+# Allow access to the dhcpc file types
+allow dhcpc_t etc_dhcpc_t:file rw_file_perms;
+allow dhcpc_t etc_dhcpc_t:dir rw_dir_perms;
+can_exec(dhcpc_t, { dhcpc_exec_t etc_dhcpc_t sbin_t })
+domain_auto_trans(dhcpc_t, ifconfig_exec_t, ifconfig_t)
+# because dhclient is buggy and does not close file handles
+dontaudit ifconfig_t dhcpc_t:{ packet_socket udp_socket } { read write };
+dontaudit ifconfig_t dhcpc_state_t:file { read write };
+
+# Allow dhcpc_t to use packet sockets
+allow dhcpc_t self:packet_socket create_socket_perms;
+allow dhcpc_t self:packet_socket recvfrom;
+allow dhcpc_t netmsg_eth0_t:packet_socket { recvfrom };
+allow dhcpc_t icmp_socket_t:packet_socket { recvfrom };
+file_type_auto_trans(dhcpc_t, dhcp_state_t, dhcpc_state_t)
+
+can_exec(dhcpc_t, { bin_t shell_exec_t })
+# need to modify later  
+allow dhcpc_t crond_t:packet_socket { recvfrom };
+allow dhcpc_t sysadm_t:packet_socket { recvfrom };
+allow dhcpc_t tcp_socket_t:packet_socket { recvfrom };
+allow dhcpc_t user_t:packet_socket { recvfrom };
+allow dhcpc_t cougaar_t:packet_socket { recvfrom };
+allow dhcpc_t initrc_t:packet_socket { recvfrom };
+allow dhcpc_t sshd_t:packet_socket { recvfrom };
+allow dhcpc_t mount_t:packet_socket { recvfrom };
+allow dhcpc_t newrole_t:packet_socket { recvfrom };
+allow dhcpc_t initrc_exec_t:file { execute };
+allow dhcpc_t local_login_t:packet_socket { recvfrom };
+allow dhcpc_t syslogd_t:packet_socket { recvfrom };
+allow dhcpc_t var_spool_t:file { execute };
+
+allow dhcpc_t dhcpc_t:capability { sys_admin };
+
+# added to run society under acme
+allow dhcpc_t acme_t:packet_socket { recvfrom };
+allow dhcpc_t sysadm_su_t:packet_socket { recvfrom };
+
+

@@ -1,0 +1,44 @@
+
+# $1 is the source domain (or domains), $2 is the source role (or roles) and $3
+# is the base name for the domain to run.  $1 is normally sysadm_t, and $2 is
+# normally sysadm_r.  $4 is the type of program to run and $5 is the domain to
+# transition to.
+# sample usage:
+# run_program(sysadm_t, sysadm_r, init, etc_t, initrc_t)
+#
+# if you have several users who run the same run_init type program for
+# different purposes (think of a run_db program used by several database
+# administrators to start several databases) then you can list all the source
+# domains in $1, all the source roles in $2, but you may not want to list all
+# types of programs to run in $4 and target domains in $5 (as that may permit
+# entering a domain from the wrong type).  In such a situation just specify
+# one value for each of $4 and $5 and have some rules such as the following:
+# domain_trans(run_whatever_t, whatever_exec_t, whatever_t)
+
+define(`run_program', `
+type run_$3_exec_t, file_type, exec_type, sysadmfile;
+
+# domain for program to run in, needs to change role (privrole), change
+# identity to system_u (privuser), log failures to syslog (privlog) and
+# authenticate users (auth)
+type run_$3_t, domain, privrole, privuser, privlog, auth;
+domain_auto_trans($1, run_$3_exec_t, run_$3_t)
+role $2 types run_$3_t;
+
+# for utmp
+allow run_$3_t initrc_var_run_t:file rw_file_perms;
+allow run_$3_t admin_tty_type:chr_file rw_file_perms;
+
+# often the administrator runs such programs from a directory that is owned
+# by a different user or has restrictive SE permissions, do not want to audit
+# the failed access to the current directory
+dontaudit run_$3_t file_type:dir search;
+dontaudit run_$3_t self:capability { dac_override dac_read_search };
+
+can_exec(run_$3_t, { bin_t chkpwd_exec_t shell_exec_t })
+
+domain_trans(run_$3_t, $4, $5)
+
+# hmm, do we REALLY need this?
+every_domain(run_$3_t)
+')

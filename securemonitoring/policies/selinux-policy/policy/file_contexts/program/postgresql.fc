@@ -1,0 +1,7 @@
+# postgresql - ldap server
+/usr/lib/postgresql/bin/.*	system_u:object_r:postgresql_exec_t
+/var/lib/postgres(/.*)?		system_u:object_r:postgresql_db_t
+/var/run/postgresql(/.*)?	system_u:object_r:var_run_postgresql_t
+/etc/postgresql(/.*)?		system_u:object_r:etc_postgresql_t
+/var/log/postgres\.log.*	system_u:object_r:postgresql_log_t
+/var/log/postgresql(/.*)?	system_u:object_r:postgresql_log_t

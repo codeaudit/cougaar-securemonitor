@@ -1,0 +1,80 @@
+#DESC Passwd - Password utilities
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the passwd_t domain.
+#
+# passwd_t is the domain of the passwd program when
+# it is executed through the spasswd wrapper.
+# passwd_exec_t is the type of the spasswd wrapper.
+# This domain and type is also used for wrappers for
+# chfn and chsh.
+#
+type passwd_t, domain, privlog, auth, privowner;
+in_user_role(passwd_t)
+role sysadm_r types passwd_t;
+
+type passwd_exec_t, file_type, sysadmfile, exec_type;
+type passwd_real_exec_t, file_type, sysadmfile;
+type admin_passwd_exec_t, file_type, sysadmfile;
+
+general_domain_access(passwd_t);
+
+uses_shlib(passwd_t);
+
+domain_auto_trans(userdomain, passwd_exec_t, passwd_t)
+domain_auto_trans(sysadm_t, admin_passwd_exec_t, passwd_t)
+
+# for vipw - vi looks in the root home directory for config
+dontaudit passwd_t sysadm_home_dir_t:dir { getattr search };
+
+# Use capabilities.
+allow passwd_t passwd_t:capability { chown dac_override fsetid setuid sys_resource };
+
+# Inherit and use descriptors from login.
+allow passwd_t privfd:fd use;
+
+# Execute /usr/bin/{passwd,chfn,chsh} and /usr/sbin/{useradd,vipw}.
+allow passwd_t { bin_t sbin_t }:dir r_dir_perms;
+can_exec(passwd_t, { bin_t sbin_t shell_exec_t passwd_real_exec_t })
+
+# allow checking if a shell is executable
+allow passwd_t shell_exec_t:file execute;
+
+# Obtain contexts
+allow passwd_t security_t:security { sid_to_context context_to_sid };
+
+# Update /etc/shadow and /etc/passwd
+file_type_auto_trans(passwd_t, etc_t, shadow_t)
+allow passwd_t etc_t:file create_file_perms;
+allow passwd_t { etc_t shadow_t }:file { relabelfrom relabelto };
+
+# allow vipw to create temporary files under /var/tmp/vi.recover
+tmp_domain(passwd)
+
+# Access terminals.
+allow passwd_t ttyfile:chr_file rw_file_perms;
+allow passwd_t ptyfile:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow passwd_t gphdomain:fd use;')
+
+# for vipw - vi looks in the root home directory for config
+dontaudit passwd_t sysadm_home_dir_t:dir { getattr search };
+
+# /usr/bin/passwd asks for w access to utmp, but it will operate
+# correctly without it.  Do not audit write denials to utmp.
+dontaudit passwd_t initrc_var_run_t:file { read write };
+
+# user generally runs this from their home directory, so do not audit a search
+# on user home dir
+dontaudit passwd_t { user_home_dir_type user_home_type }:dir search;
+
+# When the wrong current passwd is entered, passwd, for some reason, 
+# attempts to access /proc and /dev, but fails appropriately. So don't
+# audit those denials.
+# Access denials to /var aren't audited either.
+dontaudit passwd_t { proc_t device_t var_t }:dir { search read };
+
+allow passwd_t device_t:dir getattr;

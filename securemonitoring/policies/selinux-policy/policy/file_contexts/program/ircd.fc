@@ -1,0 +1,5 @@
+# ircd - irc server
+/usr/sbin/(dancer-)?ircd	system_u:object_r:ircd_exec_t
+/etc/(dancer-)?ircd(/.*)?	system_u:object_r:etc_ircd_t
+/var/log/(dancer-)?ircd(/.*)?	system_u:object_r:ircd_log_t
+/var/lib/dancer-ircd(/.*)?	system_u:object_r:var_lib_ircd_t

@@ -1,0 +1,47 @@
+#DESC Rlogind - Remote login daemon
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the rlogind_t domain.
+#
+type rlogin_port_t, port_type;
+type rlogind_t, domain, privlog, auth, privfd;
+role system_r types rlogind_t;
+every_domain(rlogind_t)
+type rlogind_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(inetd_t, rlogind_exec_t, rlogind_t)
+domain_auto_trans(tcpd_t, rlogind_exec_t, rlogind_t)
+
+# for /usr/lib/telnetlogin
+can_exec(rlogind_t, rlogind_exec_t)
+
+type rlogind_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(rlogind_t, tmp_t, rlogind_tmp_t)
+
+# Inherit and use descriptors from inetd.
+allow rlogind_t inetd_t:fd use;
+
+# Use sockets inherited from inetd.
+allow rlogind_t inetd_t:tcp_socket rw_stream_socket_perms;
+
+# Use capabilities.
+allow rlogind_t rlogind_t:capability { net_bind_service setuid setgid fowner fsetid chown dac_override };
+
+# Run login in remote_login_t.
+domain_auto_trans(rlogind_t, login_exec_t, remote_login_t)
+
+# Send SIGCHLD to inetd on death.
+allow rlogind_t inetd_t:process sigchld;
+
+# Create ptys.
+can_create_pty(rlogind)
+allow rlogind_t userpty_type:chr_file setattr;
+
+# Modify /var/run/utmp.
+allow rlogind_t initrc_var_run_t:file rw_file_perms;
+
+# Modify /var/log/wtmp.
+allow rlogind_t wtmp_t:file rw_file_perms;

@@ -1,0 +1,77 @@
+#DESC Inetd - Internet services daemon
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+# re-written with daemon_domain by Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the inetd_t domain and
+# the inetd_child_t domain.
+#
+type telnet_port_t, port_type;
+#################################
+#
+# Rules for the inetd_t domain.
+#
+daemon_domain(inetd)
+
+can_network(inetd_t)
+allow inetd_t self:unix_dgram_socket create_socket_perms;
+allow inetd_t self:unix_stream_socket create_socket_perms;
+allow inetd_t etc_t:lnk_file read;
+allow inetd_t inetd_t:process setsched;
+allow inetd_t resolv_conf_t:file { getattr read };
+
+log_domain(inetd)
+tmp_domain(inetd)
+
+# Use capabilities.
+allow inetd_t self:capability { setuid setgid net_bind_service };
+
+# allow any domain to connect to inetd
+can_tcp_connect(domain, inetd_t)
+
+# Run each daemon with a defined domain in its own domain.
+# These rules have been moved to the individual target domain .te files.
+
+# Run other daemons in the inetd_child_t domain.
+domain_auto_trans(inetd_t, inetd_child_exec_t, inetd_child_t)
+
+# Run helper programs.
+can_exec_any(inetd_t)
+
+# Bind to the telnet, ftp, rlogin and rsh ports.
+allow inetd_t telnet_port_t:tcp_socket name_bind;
+ifdef(`ftpd.te', `allow inetd_t ftp_port_t:tcp_socket name_bind;')
+ifdef(`rlogind.te', `allow inetd_t rlogin_port_t:tcp_socket name_bind;')
+ifdef(`rshd.te', `allow inetd_t rsh_port_t:tcp_socket name_bind;')
+
+# Communicate with the portmapper.
+ifdef(`portmap.te', `can_udp_send(inetd_t, portmap_t)')
+
+
+#################################
+#
+# Rules for the inetd_child_t domain.
+#
+# inetd_child_t is a general domain for daemons started
+# by inetd that do not have their own individual domains yet.
+# inetd_child_exec_t is the type of the corresponding
+# programs.
+#
+type inetd_child_t, domain, privlog;
+role system_r types inetd_child_t;
+every_domain(inetd_child_t)
+type inetd_child_exec_t, file_type, sysadmfile, exec_type;
+
+type inetd_child_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(inetd_child_t, tmp_t, inetd_child_tmp_t)
+type inetd_child_var_run_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans(inetd_child_t, var_run_t, inetd_child_var_run_t)
+
+# Use sockets inherited from inetd.
+allow inetd_child_t inetd_t:tcp_socket rw_stream_socket_perms;
+
+# for identd
+#allow inetd_child_t self:capability { setuid setgid };

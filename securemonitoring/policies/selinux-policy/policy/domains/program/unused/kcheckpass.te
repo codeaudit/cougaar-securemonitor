@@ -1,0 +1,41 @@
+#DESC Kcheckpass - Program to check password for KDE
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the kcheckpass_t domain.
+#
+# kcheckpass_exec_t is the type of the kcheckpass executable.
+#
+user_application_domain(kcheckpass)
+
+allow kcheckpass_t shadow_t:file { read getattr };
+can_network(kcheckpass_t)
+allow kcheckpass_t self:capability dac_override;
+
+can_exec(kcheckpass_t, chkpwd_exec_t)
+allow kcheckpass_t sbin_t:dir search;
+allow kcheckpass_t self:fifo_file { read write ioctl };
+allow kcheckpass_t self:unix_stream_socket create_stream_socket_perms;
+allow kcheckpass_t userdomain:unix_stream_socket { read write ioctl };
+allow kcheckpass_t self:unix_dgram_socket create_socket_perms;
+
+allow kcheckpass_t self:process { fork sigchld };
+
+allow kcheckpass_t devtty_t:chr_file rw_file_perms;
+
+# read config files
+allow kcheckpass_t { etc_t resolv_conf_t }:file { read getattr };
+allow kcheckpass_t etc_t:lnk_file read;
+
+allow kcheckpass_t fs_t:filesystem getattr;
+
+dontaudit kcheckpass_t { home_root_t user_home_dir_type }:dir search;
+dontaudit kcheckpass_t user_home_type:dir read;
+ifdef(`xdm.te', `
+dontaudit kcheckpass_t xdm_t:fd use;
+')
+dontaudit kcheckpass_t user_tmpfile:file read;
+dontaudit kcheckpass_t device_t:dir search;

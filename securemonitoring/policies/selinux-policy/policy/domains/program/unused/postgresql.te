@@ -1,0 +1,89 @@
+#DESC Postgresql - Database server
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the postgresql_t domain.
+#
+# postgresql_exec_t is the type of the postgresql executable.
+#
+daemon_domain(postgresql)
+
+ifdef(`dpkg.te', `
+# gross hack
+domain_auto_trans(dpkg_t, postgresql_exec_t, postgresql_t)
+')
+
+dontaudit postgresql_t sysadm_home_dir_t:dir search;
+
+# quiet ps
+dontaudit postgresql_t domain:dir getattr;
+
+# for currect directory of scripts
+allow postgresql_t { var_spool_t cron_spool_t }:dir search;
+
+# capability kill is for shutdown script
+allow postgresql_t self:capability { kill dac_override dac_read_search chown fowner fsetid setuid setgid };
+
+type etc_postgresql_t, file_type, sysadmfile;
+type postgresql_db_t, file_type, sysadmfile;
+type postgresql_log_t, file_type, sysadmfile, logfile;
+
+file_type_auto_trans(postgresql_t, var_log_t, postgresql_log_t)
+
+# allow crond to find /usr/lib/postgresql/bin/do.maintenance
+allow crond_t postgresql_db_t:dir search;
+
+system_crond_entry(postgresql_exec_t, postgresql_t)
+
+tmp_domain(postgresql);
+file_type_auto_trans(postgresql_t, tmpfs_t, postgresql_tmp_t)
+
+can_exec(postgresql_t, dpkg_exec_t)
+
+# Use the network.
+can_network(postgresql_t)
+allow postgresql_t self:fifo_file { getattr read write ioctl };
+allow postgresql_t self:unix_stream_socket create_stream_socket_perms;
+can_unix_connect(postgresql_t, self)
+allow postgresql_t self:unix_dgram_socket create_socket_perms;
+
+allow postgresql_t self:shm rw_shm_perms;
+
+# allow any user domain to connect to the database server
+can_tcp_connect(userdomain, postgresql_t)
+
+allow postgresql_t { proc_t self }:file { getattr read };
+
+# Allow access to the postgresql databases
+create_dir_file(postgresql_t, postgresql_db_t)
+allow postgresql_t var_lib_t:dir { getattr search };
+
+# read config files
+allow postgresql_t { etc_t etc_runtime_t }:{ file lnk_file } { read getattr };
+r_dir_file({ initrc_t postgresql_t }, etc_postgresql_t)
+
+allow postgresql_t etc_t:dir rw_dir_perms;
+allow postgresql_t etc_t:lnk_file create;
+
+allow postgresql_t { sysctl_t sysctl_kernel_t }:dir search;
+allow postgresql_t sysctl_kernel_t:file read;
+
+allow postgresql_t devtty_t:chr_file { read write };
+allow postgresql_t devpts_t:dir search;
+
+can_exec(postgresql_t, { postgresql_exec_t bin_t sbin_t ls_exec_t su_exec_t shell_exec_t etc_t })
+allow postgresql_t { bin_t sbin_t }:dir search;
+allow postgresql_t bin_t:lnk_file read;
+allow postgresql_t postgresql_exec_t:lnk_file read;
+
+allow postgresql_t self:sem rw_sem_perms;
+
+allow postgresql_t self:udp_socket recvfrom;
+
+allow postgresql_t initrc_var_run_t:file { getattr read lock };
+
+allow userdomain postgresql_t:unix_stream_socket connectto;
+allow userdomain var_run_postgresql_t:sock_file write;

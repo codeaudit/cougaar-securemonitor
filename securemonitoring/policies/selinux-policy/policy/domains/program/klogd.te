@@ -1,0 +1,57 @@
+#DESC Klogd - Kernel log daemon
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the klogd_t domain.
+#
+type klogd_t, domain, privlog, privmem;
+role system_r types klogd_t;
+uses_shlib(klogd_t)
+type klogd_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, klogd_exec_t, klogd_t)
+allow klogd_t self:process { fork signal };
+
+type klogd_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(klogd_t, tmp_t, klogd_tmp_t)
+allow klogd_t var_t:dir r_dir_perms;
+type klogd_var_run_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans(klogd_t, var_run_t, klogd_var_run_t)
+allow klogd_t proc_t:dir r_dir_perms;
+allow klogd_t proc_t:lnk_file r_file_perms;
+allow klogd_t self:dir r_dir_perms;
+allow klogd_t self:lnk_file r_file_perms;
+
+# read /etc/nsswitch.conf
+allow klogd_t etc_t:file r_file_perms;
+
+# read localization information
+allow klogd_t locale_t:dir r_dir_perms;
+allow klogd_t locale_t:{file lnk_file} r_file_perms;
+
+# Create unix sockets
+allow klogd_t self:unix_dgram_socket create_socket_perms;
+
+# Use the sys_admin and sys_rawio capabilities.
+allow klogd_t klogd_t:capability { sys_admin sys_rawio };
+
+# Inherit and use descriptors from init.
+allow klogd_t init_t:fd use;
+
+# Read /proc/kmsg and /dev/mem.
+allow klogd_t device_t:dir r_dir_perms;
+allow klogd_t proc_kmsg_t:file r_file_perms;
+allow klogd_t memory_device_t:chr_file r_file_perms;
+
+# Write to the console.
+allow klogd_t { initrc_devpts_t console_device_t }:chr_file rw_file_perms;
+
+# Control syslog and console logging
+allow klogd_t kernel_t:system { syslog_mod syslog_console };
+
+# Read /boot/System.map*
+allow klogd_t system_map_t:file r_file_perms;
+allow klogd_t boot_t:dir r_dir_perms;
+allow klogd_t boot_t:{ file lnk_file } r_file_perms;

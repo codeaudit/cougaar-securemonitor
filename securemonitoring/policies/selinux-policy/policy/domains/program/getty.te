@@ -1,0 +1,59 @@
+#DESC Getty - Manage ttys
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the getty_t domain.
+#
+daemon_domain(getty, `, mlstrustedwriter, privfd')
+
+type etc_getty_t, file_type, sysadmfile;
+r_dir_file(getty_t, etc_getty_t)
+
+allow getty_t console_device_t:chr_file setattr;
+
+tmp_domain(getty)
+log_domain(getty)
+
+allow getty_t { etc_t etc_runtime_t }:file { getattr read };
+allow getty_t etc_t:lnk_file read;
+allow getty_t self:process { getpgid getsession };
+allow getty_t self:unix_dgram_socket create_socket_perms;
+allow getty_t self:unix_stream_socket create_socket_perms;
+
+# for ldap and other authentication services
+allow getty_t resolv_conf_t:file { getattr read };
+
+# to allow w to display everyone...
+#allow userdomain ttyfile:chr_file getattr;
+
+# Use capabilities.
+allow getty_t getty_t:capability { dac_override chown sys_tty_config };
+
+# fbgetty needs fsetid for some reason
+allow getty_t getty_t:capability fsetid;
+
+# Run getty in its own domain.
+domain_auto_trans(init_t, getty_exec_t, getty_t)
+
+# Inherit and use descriptors from init.
+allow getty_t init_t:fd use;
+
+# Run login in local_login_t domain.
+allow getty_t bin_t:dir search;
+domain_auto_trans_read(getty_t, login_exec_t, local_login_t)
+
+# Write to /var/run/utmp.
+allow getty_t initrc_var_run_t:file rw_file_perms;
+
+# Write to /var/log/wtmp.
+allow getty_t wtmp_t:file rw_file_perms;
+
+# Chown, chmod, read and write ttys.
+allow getty_t tty_device_t:chr_file { setattr rw_file_perms };
+allow getty_t ttyfile:chr_file { setattr rw_file_perms };
+
+
+rw_dir_create_file(getty_t, var_lock_t)

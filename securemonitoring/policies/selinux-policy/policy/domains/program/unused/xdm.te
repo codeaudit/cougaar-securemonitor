@@ -1,0 +1,150 @@
+#DESC XDM - X Display Manager
+#
+# Authors:  Mark Westerman mark.westerman@westcam.com
+# 
+# Some alterations and documentation by Stephen Smalley <sds@epoch.ncsc.mil>
+#
+
+#################################
+# 
+# Rules for the xdm_t domain.
+#
+# xdm_t is the domain of a X Display Manager process 
+# spawned by getty.
+# xdm_exec_t is the type of the [xgk]dm program
+#
+daemon_domain(xdm, `, privuser, privrole, auth, privowner, privmem')
+tmp_domain(xdm)
+var_lib_domain(xdm)
+# NB we do NOT allow xdm_xserver_t var_lib_xdm_t:dir!!!
+allow xdm_xserver_t var_lib_xdm_t:file { getattr read };
+dontaudit xdm_xserver_t var_lib_xdm_t:dir search;
+type xsession_exec_t, file_type, sysadmfile, exec_type;
+
+allow xdm_t default_context_t:file { read getattr };
+
+can_network(xdm_t)
+allow xdm_t self:unix_stream_socket create_stream_socket_perms;
+allow xdm_t self:unix_dgram_socket create_socket_perms;
+allow xdm_t self:fifo_file rw_file_perms;
+
+# for reboot
+allow xdm_t initctl_t:fifo_file write;
+
+#
+# Use capabilities.
+allow xdm_t self:capability { setgid setuid sys_resource kill };
+
+# Use /dev/mem.
+# Commented out by default.
+#allow xdm_t memory_device_t:chr_file { execute read write };
+
+allow xdm_t random_device_t:chr_file { getattr read };
+
+# Transition to user domains for user sessions.
+domain_trans(xdm_t, xsession_exec_t, unpriv_userdomain)
+
+# Label pid and temporary files with derived types.
+rw_dir_create_file(xdm_xserver_t, xdm_tmp_t)
+allow xdm_xserver_t xdm_tmp_t:sock_file create_file_perms;
+
+# Run helper programs.
+can_exec_any(xdm_t)
+
+# Access devices.
+allow xdm_t apm_bios_t:chr_file { read write };
+allow xdm_t dri_device_t:chr_file create_file_perms;
+allow xdm_t dri_device_t:dir rw_dir_perms;
+allow xdm_t agp_device_t:chr_file rw_file_perms;
+allow xdm_t misc_device_t:chr_file { setattr getattr };
+allow xdm_t psaux_t:chr_file { ioctl read write getattr };
+allow xdm_t mouse_device_t:chr_file { ioctl read write getattr };
+allow xdm_t tty_device_t:chr_file { ioctl read write setattr };
+
+# Access xdm log files.
+file_type_auto_trans(xdm_t, var_log_t, xserver_var_log_t)
+
+allow xdm_t xserver_var_log_t:file create_file_perms;
+
+allow userdomain xdm_xserver_t:unix_stream_socket connectto;
+allow userdomain xdm_xserver_t:shm { read unix_read getattr associate };
+allow userdomain xdm_xserver_t:fd use;
+allow userdomain xdm_xserver_tmpfs_t:file read;
+allow xdm_xserver_t userdomain:shm { unix_read unix_write read write };
+
+ifdef(`gpm.te',
+`# Talk to the console mouse server.
+allow xdm_t gpmctl_t:sock_file { getattr setattr };')
+
+# Update utmp and wtmp.
+allow xdm_t initrc_var_run_t: file { read write lock };
+allow xdm_t wtmp_t:file { append };
+
+# Update lastlog.
+allow xdm_t lastlog_t:file rw_file_perms;
+
+# Ask the security server for SIDs for user sessions.
+allow xdm_t security_t:security { get_user_sids context_to_sid };
+
+# Access the shared memory pseudo file system.
+# Should really define a derived type for this.
+allow xdm_t tmpfs_t:file { read write };
+
+# Need to further investigate these permissions and
+# perhaps define derived types.
+allow xdm_t var_lib_t:dir { write search add_name remove_name  create unlink };
+allow xdm_t var_lib_t:file { create write unlink };
+allow xdm_t var_lock_t:dir { write search add_name remove_name };
+allow xdm_t var_lock_t:file { create write unlink };
+
+# Connect to xfs.
+ifdef(`xfs.te',
+`allow xdm_t xfs_tmp_t:dir { search };
+allow xdm_t xfs_tmp_t:sock_file { write };
+can_unix_connect(xdm_t, xfs_t)')
+
+allow xdm_t self:process { setpgid setsched };
+allow xdm_t etc_t:lnk_file read;
+allow xdm_t etc_runtime_t:file { getattr read };
+
+# Signal any user domain.
+allow xdm_t userdomain:process signal_perms;
+
+allow xdm_t proc_t:file { getattr read };
+
+# Search /proc for any user domain processes.
+allow xdm_t userdomain:dir r_dir_perms;
+allow xdm_t userdomain:{ file lnk_file } r_file_perms;
+
+# Allow xdm access to the user domains
+allow xdm_t home_root_t:dir search;
+allow xdm_t home_type:dir { write search add_name remove_name create setattr };
+allow xdm_t home_type:file { create link read append  write setattr unlink };
+allow xdm_t userdomain:shm { unix_read unix_write read write getattr associate  };
+allow xdm_t tmpfsfile:file { write read };
+allow xdm_t userdomain:fd { use };
+
+# Do not audit denied attempts to access devices.
+dontaudit xdm_t fixed_disk_device_t:blk_file rw_file_perms;
+dontaudit xdm_t removable_device_t:blk_file rw_file_perms;
+dontaudit xdm_t device_t:file_class_set rw_file_perms;
+dontaudit xdm_t misc_device_t:file_class_set rw_file_perms;
+
+# Do not audit denied probes of /proc.
+dontaudit xdm_t domain:dir r_dir_perms;
+dontaudit xdm_t domain:{ file lnk_file } r_file_perms;
+
+# Do not audit attempts to write to the sysadm terminal
+dontaudit xdm_t sysadm_tty_device_t:chr_file { read write };
+
+# Do not audit access to /root
+dontaudit xdm_t sysadm_home_dir_t:dir search;
+
+# Do not audit user access to the X log files due to file handle inheritance
+dontaudit unpriv_userdomain xserver_var_log_t:file append;
+
+# Access sound device.
+allow xdm_t sound_device_t:chr_file { setattr getattr };
+
+# Run the X server in a derived domain.
+xserver_domain(xdm)

@@ -1,0 +1,5 @@
+# Selopt (labeled networking) utilities and daemon
+/usr/local/selinux/bin/flmon            system_u:object_r:selopt_exec_t
+/usr/local/selinux/sbin/ct              system_u:object_r:selopt_exec_t
+/usr/local/selinux/sbin/pt              system_u:object_r:selopt_exec_t
+/usr/local/selinux/sbin/scmpd           system_u:object_r:scmpd_exec_t

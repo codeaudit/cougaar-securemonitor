@@ -1,0 +1,3 @@
+# automount
+/usr/sbin/automount		system_u:object_r:automount_exec_t
+/etc/apm/event\.d/autofs		system_u:object_r:automount_exec_t

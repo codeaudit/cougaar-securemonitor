@@ -1,0 +1,140 @@
+# FLASK
+
+#
+# Security contexts for files in filesystems that
+# cannot support persistent label mappings or use one of the
+# fixed labeling schemes specified in fs_use.
+#
+# Each specifications has the form:
+# 	genfscon fstype pathname-prefix [ -type ] context
+#
+# The entry with the longest matching pathname prefix is used.
+# / refers to the root directory of the file system, and
+# everything is specified relative to this root directory.
+# If there is no entry with a matching pathname prefix, then 
+# the unlabeled initial SID is used.
+#
+# The optional type field specifies the file type as shown in the mode
+# field by ls, e.g. use -c to match only character device files, -b
+# to match only block device files.
+#
+
+# proc (excluding /proc/PID)
+genfscon proc /				system_u:object_r:proc_t
+genfscon proc /kmsg			system_u:object_r:proc_kmsg_t
+genfscon proc /kcore			system_u:object_r:proc_kcore_t
+genfscon proc /sysvipc			system_u:object_r:proc_t
+genfscon proc /sys			system_u:object_r:sysctl_t
+genfscon proc /sys/kernel		system_u:object_r:sysctl_kernel_t
+genfscon proc /sys/kernel/modprobe	system_u:object_r:sysctl_modprobe_t
+genfscon proc /sys/net			system_u:object_r:sysctl_net_t
+genfscon proc /sys/net/unix		system_u:object_r:sysctl_net_unix_t
+genfscon proc /sys/vm			system_u:object_r:sysctl_vm_t
+genfscon proc /sys/dev			system_u:object_r:sysctl_dev_t
+
+# nfs
+genfscon nfs /				system_u:object_r:nfs_t
+
+# iso9660
+genfscon iso9660 /			system_u:object_r:iso9660_t
+
+# vfat, msdos
+genfscon vfat /				system_u:object_r:dosfs_t
+genfscon msdos /			system_u:object_r:dosfs_t
+
+# sysfs
+genfscon sysfs /			system_u:object_r:sysfs_t
+
+# usbdevfs
+genfscon usbdevfs /			system_u:object_r:usbdevfs_t
+genfscon usbdevfs /0 -- 		system_u:object_r:usbdevfs_device_t
+
+# devfs
+genfscon devfs /			system_u:object_r:device_t
+genfscon devfs /.devfsd			system_u:object_r:devfs_control_t
+genfscon devfs /null			system_u:object_r:null_device_t
+genfscon devfs /zero			system_u:object_r:zero_device_t
+genfscon devfs /console		system_u:object_r:console_device_t
+genfscon devfs /kmem			system_u:object_r:memory_device_t
+genfscon devfs /mem			system_u:object_r:memory_device_t
+genfscon devfs /port			system_u:object_r:memory_device_t
+genfscon devfs /random		system_u:object_r:random_device_t
+genfscon devfs /urandom		system_u:object_r:random_device_t
+genfscon devfs /tty	-c		system_u:object_r:devtty_t
+genfscon devfs /tts	-c		system_u:object_r:tty_device_t
+genfscon devfs /vc -c			system_u:object_r:tty_device_t
+genfscon devfs /pts			system_u:object_r:devpts_t
+genfscon devfs /scsi	-b		system_u:object_r:fixed_disk_device_t
+genfscon devfs /ide	-b		system_u:object_r:fixed_disk_device_t
+genfscon devfs /rd	-b		system_u:object_r:fixed_disk_device_t
+genfscon devfs /md	-b		system_u:object_r:fixed_disk_device_t
+genfscon devfs /cdroms -b		system_u:object_r:removable_device_t
+genfscon devfs /floppy -b		system_u:object_r:removable_device_t
+genfscon devfs /evms	-c		system_u:object_r:fixed_disk_device_t
+genfscon devfs /evms	-b		system_u:object_r:fixed_disk_device_t
+genfscon devfs /ubd	-b		system_u:object_r:fixed_disk_device_t
+genfscon devfs /cciss	-b		system_u:object_r:fixed_disk_device_t
+genfscon devfs /ida	-b		system_u:object_r:fixed_disk_device_t
+genfscon devfs /dasd	-b		system_u:object_r:fixed_disk_device_t
+genfscon devfs /flash	-b		system_u:object_r:fixed_disk_device_t
+genfscon devfs /ataraid	-b		system_u:object_r:fixed_disk_device_t
+genfscon devfs /loop	-b		system_u:object_r:fixed_disk_device_t
+genfscon devfs /misc/rtc		system_u:object_r:clock_device_t
+genfscon devfs /net/tun			system_u:object_r:tun_tap_device_t
+ifdef(`watchdog.te', `
+genfscon devfs /misc/watchdog		system_u:object_r:watchdog_device_t
+')
+ifdef(`lpd.te', `
+genfscon devfs /printers	-c	system_u:object_r:printer_t
+genfscon devfs /lp		-c	system_u:object_r:printer_t
+genfscon devfs /usb/lp		-c	system_u:object_r:printer_t
+')
+genfscon devfs /ppp			system_u:object_r:ppp_device_t
+genfscon devfs /fb	-c		system_u:object_r:framebuf_device_t
+genfscon devfs /initctl		system_u:object_r:initctl_t
+ifdef(`syslog.te', `
+genfscon devfs /log			system_u:object_r:devlog_t
+')
+genfscon devfs /misc/psaux		system_u:object_r:mouse_device_t
+genfscon devfs /misc/nvram		system_u:object_r:memory_device_t
+genfscon devfs /input/mouse		system_u:object_r:mouse_device_t
+genfscon devfs /input/mice		system_u:object_r:mouse_device_t
+genfscon devfs /input/event		system_u:object_r:mouse_device_t
+genfscon devfs /cpu/mtrr		system_u:object_r:mtrr_device_t
+genfscon devfs /v4l	-c		system_u:object_r:mtrr_device_t
+ifdef(`gpm.te', `
+genfscon devfs /gpmctl		system_u:object_r:gpmctl_t
+')
+genfscon devfs /ptmx			system_u:object_r:ptmx_t
+genfscon devfs /misc/apm_bios		system_u:object_r:apm_bios_t
+genfscon devfs /sound -c		system_u:object_r:sound_device_t
+ifdef(`vmware.te', `
+genfscon devfs /misc/plex86 -c		system_u:object_r:vmware_device_t
+genfscon devfs /misc/agpgart 		system_u:object_r:agp_device_t
+')
+
+ifdef(`automount.te', `
+genfscon autofs /			system_u:object_r:autofs_t
+')
+
+# romfs
+genfscon romfs /			system_u:object_r:root_t
+genfscon romfs /bin			system_u:object_r:bin_t
+genfscon romfs /bin/mount		system_u:object_r:mount_exec_t
+genfscon romfs /bin/umount		system_u:object_r:mount_exec_t
+genfscon romfs /bin/ash			system_u:object_r:shell_exec_t
+genfscon romfs /etc			system_u:object_r:etc_t
+genfscon romfs /lib			system_u:object_r:lib_t
+genfscon romfs /lib/ld-linux.so.2	system_u:object_r:ld_so_t
+genfscon romfs /lib/libc.so.6		system_u:object_r:shlib_t
+genfscon romfs /lib/modules		system_u:object_r:modules_object_t
+genfscon romfs /linuxrc			system_u:object_r:init_exec_t
+genfscon romfs /linuxrc.conf		system_u:object_r:etc_t
+genfscon romfs /loadmodules		system_u:object_r:shell_exec_t
+genfscon romfs /sbin			system_u:object_r:sbin_t
+genfscon romfs /sbin/init		system_u:object_r:init_exec_t
+genfscon romfs /sbin/insmod		system_u:object_r:insmod_exec_t
+genfscon romfs /sbin/modprobe		system_u:object_r:insmod_exec_t
+genfscon romfs /scripts			system_u:object_r:sbin_t
+genfscon romfs /tmp			system_u:object_r:tmp_t
+genfscon romfs /usr			system_u:object_r:sbin_t

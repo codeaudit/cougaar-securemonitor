@@ -1,0 +1,12 @@
+# spasswd
+/usr/local/selinux/bin/spasswd	system_u:object_r:passwd_exec_t
+/usr/local/selinux/bin/schsh	system_u:object_r:passwd_exec_t
+/usr/local/selinux/bin/schfn	system_u:object_r:passwd_exec_t
+/usr/local/selinux/bin/svipw    system_u:object_r:admin_passwd_exec_t
+/usr/local/selinux/bin/sadminpasswd system_u:object_r:admin_passwd_exec_t
+/usr/bin/spasswd		system_u:object_r:passwd_exec_t
+/usr/bin/passwd			system_u:object_r:passwd_real_exec_t
+/usr/bin/schsh			system_u:object_r:passwd_exec_t
+/usr/bin/schfn			system_u:object_r:passwd_exec_t
+/usr/bin/svipw                 system_u:object_r:admin_passwd_exec_t
+/usr/bin/sadminpasswd          system_u:object_r:admin_passwd_exec_t

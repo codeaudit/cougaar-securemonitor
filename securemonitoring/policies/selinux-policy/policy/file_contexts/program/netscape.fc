@@ -1,0 +1,12 @@
+#  netscape/mozilla
+/root/\.netscape(/.*)?		system_u:object_r:sysadm_netscape_rw_t
+/root/\.mozilla(/.*)?		system_u:object_r:sysadm_netscape_rw_t
+/home/[^/]+/\.netscape(/.*)?	system_u:object_r:user_netscape_rw_t
+/home/[^/]+/\.mozilla(/.*)?	system_u:object_r:user_netscape_rw_t
+/usr/bin/netscape		system_u:object_r:netscape_exec_t
+/usr/bin/mozilla		system_u:object_r:netscape_exec_t
+/usr/bin/mozilla-[0-9].*	system_u:object_r:netscape_exec_t
+/usr/bin/mozilla-bin-[0-9].*	system_u:object_r:netscape_exec_t
+/usr/lib/netscape/.+/communicator/communicator-smotif.real system_u:object_r:netscape_exec_t
+/usr/lib/netscape/base-4/wrapper system_u:object_r:netscape_exec_t
+/usr/lib/mozilla/reg.+		system_u:object_r:netscape_exec_t

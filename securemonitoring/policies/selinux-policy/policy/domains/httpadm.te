@@ -1,0 +1,148 @@
+#DESC Httpd admin -  Domain for httpd administrators
+########################################
+# httpd_admin domain macro and rules for 
+# httpd_admin_t
+########################################
+
+# Uses some types defined in apache.te, so conditionally defined this macro.
+# The intent is to remove this file in the future.
+#
+ifdef(`apache.te', `
+
+include(user_macros.te)
+
+define(`httpd_admin_domain',`
+
+################################
+# Allow httpd_admin_t to do everything user_t can do
+#################################
+
+user_domain($1)
+
+######################################
+# Allow httpd_admin_t to edit the server config files
+######################################
+allow $1_t httpd_config_t:file create_file_perms;
+allow $1_t httpd_config_t:dir rw_dir_perms;
+allow $1_t httpd_config_t:lnk_file link_file_perms;
+allow $1_t httpd_config_t:security { sid_to_context };
+
+######################################################
+# Allow the httpd_admin_t to view or edit the web server log files
+#######################################################
+allow $1_t httpd_log_files_t:file create_file_perms;
+allow $1_t httpd_log_files_t:dir rw_dir_perms ;
+allow $1_t httpd_log_files_t:security { sid_to_context };
+allow $1_t httpd_log_files_t:lnk_file link_file_perms;
+
+##################################################
+# Allow the httpd_admin_t to view files in /etc/httpd/modules
+# directory.  This is where the module libraries for 
+# Apache are kept
+##################################################
+allow $1_t httpd_modules_t:dir r_dir_perms;
+allow $1_t httpd_modules_t:file r_file_perms;
+
+####################################################
+# Allow the httpd_admin_t to do the following to httpd
+# executable and process if you want the httpd admin role to run the binary
+#######################################################
+#allow $1_t httpd_exec_t:file rx_file_perms;
+#allow $1_t httpd_t:security { sid_to_context };
+#allow $1_t httpd_t:process{ sigkill sigstop signal transition};
+
+###########################################################################
+# Allow the httpd admin to edit or create content, scripts, and 
+# htaccess files
+##########################################################################
+allow $1_t httpd_sys_content_t:file create_file_perms;
+allow $1_t httpd_user_content_t:file create_file_perms;
+allow $1_t httpd_sys_content_t:dir rw_dir_perms;
+allow $1_t httpd_user_content_t:dir rw_dir_perms;
+allow $1_t httpd_sys_content_t:lnk_file {create};
+allow $1_t httpd_user_content_t:lnk_file {create};
+
+allow $1_t httpd_sys_script_t:file create_file_perms;
+allow $1_t httpd_sys_script_t:dir create_dir_perms;
+allow $1_t httpd_sys_script_t:lnk_file {create};
+
+allow $1_t httpd_sys_htaccess_t:file create_file_perms;
+allow $1_t httpd_sys_htaccess_t:lnk_file {create};
+
+allow $1_t httpd_sys_script_r_t:file create_file_perms;
+allow $1_t httpd_sys_script_r_t:lnk_file {create};
+allow $1_t httpd_sys_script_r_t:dir create_dir_perms;
+
+allow $1_t httpd_user_script_r_t:file create_file_perms;
+allow $1_t httpd_user_script_r_t:lnk_file {create};
+allow $1_t httpd_user_script_r_t:dir create_dir_perms;
+
+allow $1_t httpd_sys_script_rw_t:file rw_file_perms;
+allow $1_t httpd_sys_script_rw_t:lnk_file {create};
+allow $1_t httpd_sys_script_rw_t:dir rw_dir_perms;
+
+allow $1_t httpd_user_script_rw_t:file rw_file_perms;
+allow $1_t httpd_user_script_rw_t:lnk_file {create};
+allow $1_t httpd_user_script_rw_t:dir rw_dir_perms;
+
+allow $1_t httpd_sys_script_a_t:file ra_file_perms;
+allow $1_t httpd_sys_script_a_t:lnk_file {create};
+allow $1_t httpd_sys_script_a_t:dir ra_dir_perms;
+
+allow $1_t httpd_user_script_a_t:file ra_file_perms;
+allow $1_t httpd_user_script_a_t:lnk_file {create};
+allow $1_t httpd_user_script_a_t:dir ra_dir_perms;
+
+####################################
+# Allow a domain change to httpd_admin_t via the newrole command
+#####################################
+allow $1_t newrole_t:fd use;
+allow $1_t newrole_t:process {sigchld};
+can_exec($1_t, shell_exec_t)
+allow $1_t shell_exec_t:file {entrypoint};
+allow newrole_t $1_t:process {transition};
+
+#############################################################################
+# Allow the httpd admin to use chcon to change contexts  on scripts, web pages,
+# and htaccess files. 
+###########################################################################
+allow $1_t httpd_sys_script_t:dir  {relabelto};
+allow $1_t httpd_sys_script_a_t:dir  {relabelto};
+allow $1_t httpd_sys_script_r_t:dir  {relabelto};
+allow $1_t httpd_sys_script_rw_t:dir  {relabelto};
+
+allow $1_t httpd_user_script_t:dir  {relabelto};
+allow $1_t httpd_user_script_a_t:dir  {relabelto};
+allow $1_t httpd_user_script_r_t:dir  {relabelto};
+allow $1_t httpd_user_script_rw_t:dir  {relabelto};
+
+allow $1_t httpd_sys_script_a_t:file  {relabelto};
+allow $1_t httpd_sys_script_r_t:file  {relabelto};
+allow $1_t httpd_sys_script_rw_t:file  {relabelto};
+
+allow $1_t httpd_user_script_r_t:file  {relabelto};
+allow $1_t httpd_user_script_rw_t:file  {relabelto};
+allow $1_t httpd_user_script_a_t:file  {relabelto};
+
+allow $1_t httpd_sys_content_t:dir {relabelto};
+allow $1_t httpd_user_content_t:dir {relabelto};
+
+allow $1_t httpd_sys_content_t:file {relabelto};
+allow $1_t httpd_sys_htaccess_t:file {relabelto};
+allow $1_t httpd_user_content_t:file {relabelto};
+allow $1_t httpd_user_htaccess_t:file {relabelto};
+
+')
+
+
+# httpd_admin_t has access to all of the httpd files, such as
+# the configuration files and the log files.  They also 
+# have access to system content and/or user content
+#
+type httpd_admin_t, domain;
+role httpd_admin_r types httpd_admin_t;
+every_domain(httpd_admin_t)
+
+httpd_admin_domain(httpd_admin)
+
+')

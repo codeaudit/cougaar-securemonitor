@@ -1,0 +1,38 @@
+#DESC Traceroute - Display network routes
+#
+# Author:  Russell Coker <russell@coker.com.au>
+# based on the work of David A. Wheeler <dwheeler@ida.org>
+#
+
+#################################
+#
+# Rules for the traceroute_t domain.
+#
+# traceroute_t is the domain for the traceroute program.
+# traceroute_exec_t is the type of the corresponding program.
+#
+type traceroute_t, domain, privlog;
+role sysadm_r types traceroute_t;
+role system_r types traceroute_t;
+every_domain(traceroute_t)
+type traceroute_exec_t, file_type, sysadmfile, exec_type;
+
+# Transition into this domain when you run this program.
+domain_auto_trans(initrc_t, traceroute_exec_t, traceroute_t)
+domain_auto_trans(sysadm_t, traceroute_exec_t, traceroute_t)
+
+allow traceroute_t icmp_socket_t:rawip_socket recvfrom;
+
+# Let traceroute create raw ICMP packets.
+#allow traceroute_t traceroute_t:rawip_socket { create bind setopt getopt write read };
+
+# Use capabilities.
+allow traceroute_t traceroute_t:capability { net_admin net_raw setuid setgid };
+
+allow traceroute_t self:{ rawip_socket netlink_socket } create_socket_perms;
+allow traceroute_t any_socket_t:rawip_socket sendto;
+
+# Access the terminal.
+allow traceroute_t admin_tty_type:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow traceroute_t sysadm_gph_t:fd use;')
+

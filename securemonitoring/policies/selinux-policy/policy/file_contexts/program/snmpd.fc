@@ -1,0 +1,5 @@
+# snmpd
+/usr/sbin/snmp(trap)?d		system_u:object_r:snmpd_exec_t
+/var/lib/snmp(/.*)?		system_u:object_r:var_lib_snmpd_t
+/etc/snmp/snmp(trap)?d\.conf	system_u:object_r:etc_snmpd_t
+/usr/share/snmp/mibs/\.index	system_u:object_r:var_lib_snmpd_t

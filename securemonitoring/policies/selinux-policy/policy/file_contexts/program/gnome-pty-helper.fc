@@ -1,0 +1,2 @@
+# gnome-pty-helper
+/usr/sbin/gnome-pty-helper	system_u:object_r:gph_exec_t

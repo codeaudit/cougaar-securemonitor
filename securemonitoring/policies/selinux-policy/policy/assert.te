@@ -1,0 +1,121 @@
+##############################
+#
+# Assertions for the type enforcement (TE) configuration.
+#
+
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+##################################
+#
+# Access vector assertions.
+#
+# An access vector assertion specifies permissions that should not be in
+# an access vector based on a source type, a target type, and a class.
+# If any of the specified permissions are in the corresponding access
+# vector, then the policy compiler will reject the policy configuration.
+# Currently, there is only one kind of access vector assertion, neverallow, 
+# but support for the other kinds of vectors could be easily added.  Access 
+# vector assertions use the same syntax as access vector rules.
+#
+
+#
+# Verify that every type that can be entered by
+# a domain is also tagged as a domain.
+#
+neverallow domain ~domain:process transition;
+
+#
+# Verify that only the insmod_t, ifconfig_t, and kernel_t domains 
+# have the sys_module capability.
+#
+neverallow ~{ insmod_t ifconfig_t kernel_t } self:capability sys_module;
+
+#
+# Verify that executable types, the system dynamic loaders, and the
+# system shared libraries can only be modified by administrators.
+#
+neverallow ~{ldconfig_t admin} { exec_type ld_so_t shlib_t }:file { write append unlink rename };
+
+#
+# Verify that other system software can only be modified by administrators.
+#
+neverallow ~{ldconfig_t admin} { lib_t bin_t sbin_t }:dir { add_name remove_name rename };
+neverallow ~admin { lib_t bin_t sbin_t }:file { write append unlink rename };
+
+#
+# Verify that only certain domains have access to the raw disk devices.
+#
+neverallow ~{ ifdef(`bootloader.te', `bootloader_t') fsadm_t mount_t } fixed_disk_device_t:devfile_class_set { read write append };
+
+#
+# Verify that only the X server and klogd have access to memory devices.
+#
+neverallow ~privmem memory_device_t:devfile_class_set { read write append };
+
+#
+# Verify that /proc/kmsg is only accessible to klogd.
+#
+neverallow ~klogd_t proc_kmsg_t:file ~stat_file_perms;
+
+#
+# Verify that /proc/kcore is inaccessible.
+#
+neverallow * proc_kcore_t:file ~stat_file_perms;
+
+#
+# Verify that sysctl variables are only changeable
+# by initrc and administrators.
+#
+neverallow ~{ initrc_t admin kernel_t insmod_t } sysctl_t:file { write append };
+neverallow ~{ initrc_t admin } sysctl_fs_t:file { write append };
+neverallow ~{ init_t initrc_t admin kernel_t insmod_t } sysctl_kernel_t:file { write append };
+neverallow ~{ initrc_t admin } sysctl_net_t:file { write append };
+neverallow ~{ initrc_t admin } sysctl_net_unix_t:file { write append };
+neverallow ~{ initrc_t admin } sysctl_vm_t:file { write append };
+neverallow ~{ initrc_t admin } sysctl_dev_t:file { write append };
+neverallow ~{ initrc_t admin } sysctl_modprobe_t:file { write append };
+
+#
+# Verify that certain domains are limited to only being
+# entered by their entrypoint types and to only executing
+# the dynamic loader without a transition to another domain.
+#
+
+define(`assert_execute', `
+    ifelse($#, 0, , 
+           $#, 1, 
+           ``neverallow $1_t ~$1_exec_t:file entrypoint; neverallow $1_t ~{ $1_exec_t ld_so_t }:file execute_no_trans;'',
+           `assert_execute($1) assert_execute(shift($@))')')
+
+ifdef(`getty.te', `assert_execute(getty)')
+assert_execute(klogd)
+ifdef(`atd.te', `assert_execute(atd)')
+ifdef(`tcpd.te', `assert_execute(tcpd)')
+ifdef(`portmap.te', `assert_execute(portmap)')
+ifdef(`syslogd.te', `assert_execute(syslogd)')
+ifdef(`rpcd.te', `assert_execute(rpcd)')
+ifdef(`rlogind.te', `assert_execute(rlogind)')
+ifdef(`ypbind.te', `assert_execute(ypbind)')
+ifdef(`xfs.te', `assert_execute(xfs)')
+ifdef(`gpm.te', `assert_execute(gpm)')
+
+ifdef(`login.te', `
+neverallow { local_login_t remote_login_t } ~login_exec_t:file entrypoint;
+neverallow { local_login_t remote_login_t } ~ld_so_t:file execute_no_trans;
+')
+
+#
+# Verify that the passwd domain can only be entered by its
+# entrypoint type and can only execute the dynamic loader
+# and the ordinary passwd program without a transition to another domain.
+#
+ifdef(`passwd.te',
+`neverallow passwd_t ~{ admin_passwd_exec_t passwd_exec_t }:file entrypoint;
+neverallow passwd_t ~{ bin_t sbin_t shell_exec_t ld_so_t passwd_real_exec_t }:file execute_no_trans;')
+
+#
+# Verify that only the admin domains and initrc_t have avc_toggle.
+#
+neverallow ~{ admin initrc_t } kernel_t:system avc_toggle;

@@ -1,0 +1,53 @@
+# 
+# File contexts for VMWare.
+# Contributed by Mark Westerman (mark.westerman@westcam.com)
+# Changes made by NAI Labs.
+# Tested with VMWare 3.1
+#
+/usr/bin/vmnet-bridge           system_u:object_r:vmware_exec_t
+/usr/bin/vmnet-dhcpd            system_u:object_r:vmware_exec_t
+/usr/bin/vmnet-natd             system_u:object_r:vmware_exec_t
+/usr/bin/vmnet-netifup          system_u:object_r:vmware_exec_t
+/usr/bin/vmnet-sniffer          system_u:object_r:vmware_exec_t
+/usr/bin/vmware                 system_u:object_r:vmware_exec_t
+/usr/bin/vmware-config\.pl      system_u:object_r:vmware_exec_t
+/usr/bin/vmware-nmbd            system_u:object_r:vmware_exec_t
+/usr/bin/vmware-ping            system_u:object_r:vmware_exec_t
+/usr/bin/vmware-smbd            system_u:object_r:vmware_exec_t
+/usr/bin/vmware-smbpasswd       system_u:object_r:vmware_exec_t
+/usr/bin/vmware-smbpasswd\.bin  system_u:object_r:vmware_exec_t
+/usr/bin/vmware-wizard          system_u:object_r:vmware_user_exec_t
+/usr/bin/vmware                 system_u:object_r:vmware_user_exec_t
+
+/dev/vmmon                      system_u:object_r:vmware_device_t
+/dev/vmnet0                     system_u:object_r:vmware_device_t
+/dev/vmnet1                     system_u:object_r:vmware_device_t
+/dev/vmnet2                     system_u:object_r:vmware_device_t
+/dev/vmnet3                     system_u:object_r:vmware_device_t
+/dev/vmnet4                     system_u:object_r:vmware_device_t
+/dev/vmnet5                     system_u:object_r:vmware_device_t
+/dev/vmnet6                     system_u:object_r:vmware_device_t
+/dev/vmnet7                     system_u:object_r:vmware_device_t
+/dev/vmnet8                     system_u:object_r:vmware_device_t
+/dev/vmnet9                     system_u:object_r:vmware_device_t
+/dev/plex86			system_u:object_r:vmware_device_t
+
+/etc/vmware.*(/.*)?             system_u:object_r:vmware_sys_conf_t
+/usr/lib/vmware/config          system_u:object_r:vmware_sys_conf_t
+
+/usr/lib/vmware/bin/vmware-mks  system_u:object_r:vmware_user_exec_t
+/usr/lib/vmware/bin/vmware-ui   system_u:object_r:vmware_user_exec_t
+
+#
+#  This only an example of how to protect vmware session configuration
+# files. A general user can execute vmware and start a vmware session
+# but the user cannot modify the session configuration information
+#/usr/local/vmware(/.*)?         system_u:object_r:vmware_user_file_t
+#/usr/local/vmware/[^/]*/.*\.cfg system_u:object_r:vmware_user_conf_t
+
+# The rules below assume that the user's VMWare virtual disks are in the
+# ~/vmware, and the preferences and license files are in ~/.vmware.
+#
+/home/[^/]+/\.vmware(/.*)?	         system_u:object_r:vmware_user_file_t
+/home/[^/]+/\vmware(/.*)?	         system_u:object_r:vmware_user_file_t
+/home/[^/]+/\vmware[^/]*/.*\.cfg    system_u:object_r:vmware_user_conf_t

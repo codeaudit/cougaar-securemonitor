@@ -1,0 +1,7 @@
+# bootloader
+/etc/lilo\.conf.*		system_u:object_r:etc_bootloader_t
+/initrd\.img.*			system_u:object_r:boot_t
+/sbin/lilo.*			system_u:object_r:bootloader_exec_t
+/vmlinuz.*			system_u:object_r:boot_t
+/usr/sbin/mkinitrd		system_u:object_r:bootloader_exec_t
+/etc/mkinitrd/scripts/.*	system_u:object_r:bootloader_exec_t

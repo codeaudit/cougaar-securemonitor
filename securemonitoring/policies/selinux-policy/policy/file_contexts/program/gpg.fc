@@ -1,0 +1,4 @@
+# gpg
+/home/[^/]+/\.gnupg(/.+)?	system_u:object_r:user_gpg_secret_t
+/root/\.gnupg(/.+)?		system_u:object_r:sysadm_gpg_secret_t
+/usr/bin/gpg			system_u:object_r:gpg_exec_t

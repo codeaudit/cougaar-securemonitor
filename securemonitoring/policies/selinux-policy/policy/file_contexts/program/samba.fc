@@ -1,0 +1,18 @@
+# samba scripts
+/usr/sbin/smbd			system_u:object_r:smbd_exec_t
+/usr/sbin/nmbd			system_u:object_r:nmbd_exec_t
+/etc/samba(/.*)?		system_u:object_r:samba_etc_t
+/var/log/samba(/.*)?		system_u:object_r:samba_log_t
+/var/cache/samba(/.*)?		system_u:object_r:samba_var_t
+/var/lib/samba(/.*)?		system_u:object_r:samba_var_t
+/etc/samba/secrets\.tdb		system_u:object_r:samba_secrets_t
+/etc/samba/MACHINE\.SID		system_u:object_r:samba_secrets_t
+/var/run/samba/locking\.tdb	system_u:object_r:var_run_smbd_t
+/var/run/samba/connections\.tdb	system_u:object_r:var_run_smbd_t
+/var/run/samba/sessionid\.tdb	system_u:object_r:var_run_smbd_t
+/var/run/samba/brlock\.tdb	system_u:object_r:var_run_smbd_t
+/var/run/samba/namelist\.debug	system_u:object_r:var_run_nmbd_t
+/var/run/samba/messages\.tdb	system_u:object_r:var_run_nmbd_t
+/var/run/samba/unexpected\.tdb	system_u:object_r:var_run_nmbd_t
+/var/run/samba/smbd\.pid	system_u:object_r:var_run_smbd_t
+/var/run/samba/nmbd\.pid	system_u:object_r:var_run_nmbd_t

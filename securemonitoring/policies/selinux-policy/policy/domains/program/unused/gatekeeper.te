@@ -1,0 +1,44 @@
+#DESC Gatekeeper - OpenH.323 voice over IP gate-keeper
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the gatekeeper_t domain.
+#
+# gatekeeper_exec_t is the type of the gk executable.
+#
+daemon_domain(gatekeeper)
+type etc_gatekeeper_t, file_type, sysadmfile;
+type var_log_gatekeeper_t, file_type, sysadmfile;
+
+# Use the network.
+can_network(gatekeeper_t)
+allow gatekeeper_t self:unix_stream_socket create_socket_perms;
+
+# for stupid symlinks
+tmp_domain(gatekeeper)
+
+# pthreads wants to know the kernel version
+allow gatekeeper_t sysctl_kernel_t:dir r_dir_perms;
+allow gatekeeper_t sysctl_kernel_t:file r_file_perms;
+
+# read config files
+allow gatekeeper_t { etc_t resolv_conf_t etc_gatekeeper_t }:{ file lnk_file } r_file_perms;
+
+allow gatekeeper_t etc_t:dir r_dir_perms;
+allow gatekeeper_t sbin_t:dir r_dir_perms;
+
+allow gatekeeper_t self:process setsched;
+allow gatekeeper_t self:fifo_file rw_file_perms;
+
+allow gatekeeper_t proc_t:file read;
+
+allow gatekeeper_t var_log_t:dir search;
+rw_dir_create_file(gatekeeper_t, var_log_gatekeeper_t)
+
+# this is crap, gk wants to create symlinks in /etc every time it starts and
+# remove them when it exits.
+allow gatekeeper_t etc_t:dir rw_dir_perms;
+allow gatekeeper_t etc_t:lnk_file create_file_perms;

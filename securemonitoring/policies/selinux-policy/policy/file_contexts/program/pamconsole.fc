@@ -1,0 +1,2 @@
+# pam_console_apply
+/sbin/pam_console_apply		system_u:object_r:pam_console_exec_t

@@ -1,0 +1,94 @@
+#DESC Mailman - GNU Mailman mailing list manager
+#
+# Author: Russell Coker <russell@coker.com.au>
+
+type mailman_data_t, file_type, sysadmfile;
+type mailman_archive_t, file_type, sysadmfile;
+
+type mailman_log_t, file_type, sysadmfile, logfile;
+type mailman_lock_t, file_type, sysadmfile, lockfile;
+
+define(`mailman_domain', `
+type mailman_$1_t, domain, privlog;
+type mailman_$1_exec_t, file_type, sysadmfile, exec_type;
+role system_r types mailman_$1_t;
+file_type_auto_trans(mailman_$1_t, var_log_t, mailman_log_t)
+rw_dir_create_file(mailman_$1_t, mailman_data_t)
+uses_shlib(mailman_$1_t)
+can_exec_any(mailman_$1_t)
+allow mailman_$1_t { proc_t sysctl_t sysctl_kernel_t }:dir search;
+allow mailman_$1_t { proc_t sysctl_kernel_t }:file { read getattr };
+allow mailman_$1_t var_lib_t:dir { getattr search };
+allow mailman_$1_t var_lib_t:lnk_file read;
+allow mailman_$1_t device_t:dir search;
+allow mailman_$1_t etc_runtime_t:file { read getattr };
+allow mailman_$1_t etc_t:lnk_file read;
+file_type_auto_trans(mailman_$1_t, var_lock_t, mailman_lock_t)
+allow mailman_$1_t fs_t:filesystem getattr;
+can_network(mailman_$1_t)
+allow mailman_$1_t resolv_conf_t:file { getattr read };
+allow mailman_$1_t self:unix_stream_socket create_socket_perms;
+allow mailman_$1_t var_t:dir { getattr search };
+')
+
+mailman_domain(queue)
+
+# su domain is needed for daily cron job that uses su to run the mail out
+su_mini_domain(mailman_queue)
+role system_r types mailman_queue_su_t;
+allow mailman_queue_su_t crond_t:fifo_file { ioctl read };
+# some of the following could probably be changed to dontaudit, someone who
+# knows mailman well should test this out and send the changes
+allow mailman_queue_t sysadm_home_dir_t:dir { getattr search };
+allow mailman_queue_su_t system_crond_t:fd use;
+allow mailman_queue_su_t system_crond_t:fifo_file write;
+allow mailman_queue_su_t sysadm_home_dir_t:dir search;
+
+mailman_domain(mail)
+dontaudit mailman_mail_t mta_delivery_agent:tcp_socket { read write };
+allow mailman_mail_t mta_delivery_agent:fd use;
+ifdef(`qmail.te', `
+allow mailman_mail_t qmail_spool_t:file { read ioctl getattr };
+# do we really need this?
+allow mailman_mail_t qmail_lspawn_t:fifo_file write;
+')
+
+create_dir_file(mailman_queue_t, mailman_archive_t)
+
+ifdef(`apache.te', `
+mailman_domain(cgi)
+
+# for cgiwrap
+domain_auto_trans(httpd_t, httpd_user_script_t, httpd_user_script_process_t)
+can_exec(httpd_user_script_process_t, httpd_user_script_t)
+allow httpd_user_script_process_t httpd_user_script_t:dir getattr;
+
+domain_auto_trans(httpd_user_script_process_t, mailman_cgi_exec_t, mailman_cgi_t)
+# should have separate types for public and private archives
+r_dir_file(httpd_t, mailman_archive_t)
+allow httpd_t mailman_data_t:dir search;
+r_dir_file(mailman_cgi_t, mailman_archive_t)
+
+dontaudit mailman_cgi_t httpd_log_files_t:file append;
+domain_auto_trans(httpd_t, mailman_cgi_exec_t, mailman_cgi_t)
+allow httpd_t mailman_cgi_t:process signal;
+allow mailman_cgi_t httpd_t:process sigchld;
+allow mailman_cgi_t httpd_t:fd use;
+allow mailman_cgi_t httpd_t:fifo_file { getattr read write ioctl };
+allow mailman_cgi_t httpd_user_script_t:dir search;
+')
+
+allow mta_delivery_agent mailman_data_t:dir search;
+allow mta_delivery_agent mailman_data_t:lnk_file read;
+domain_auto_trans_read(mta_delivery_agent, mailman_mail_exec_t, mailman_mail_t)
+allow mailman_mail_t self:unix_dgram_socket create_socket_perms;
+
+domain_auto_trans(system_crond_t, mailman_queue_exec_t, mailman_queue_t)
+allow mailman_queue_t crond_t:fd use;
+allow mailman_queue_t crond_t:fifo_file { ioctl read write };
+allow mailman_queue_t devtty_t:chr_file { read write };
+allow mailman_queue_t self:process { fork signal sigchld };
+
+
+# so MTA can access /var/lib/mailman/mail/wrapper
+allow mta_delivery_agent var_lib_t:dir search;

@@ -1,0 +1,9 @@
+# pppd
+/usr/sbin/pppd			system_u:object_r:pppd_exec_t
+/usr/sbin/ipppd			system_u:object_r:pppd_exec_t
+/dev/ppp			system_u:object_r:ppp_device_t
+/dev/ippp.*			system_u:object_r:ppp_device_t
+/var/run/pppd\.tdb		system_u:object_r:var_run_pppd_t
+/etc/ppp/.*secrets		system_u:object_r:pppd_secret_t
+/var/run/ipppd.*pid		system_u:object_r:var_run_pppd_t
+/var/log/ppp-connect-errors.*	system_u:object_r:pppd_log_t

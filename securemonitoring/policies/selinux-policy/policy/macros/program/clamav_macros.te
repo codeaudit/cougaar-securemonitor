@@ -1,0 +1,44 @@
+#
+# Macros for clamscan
+#
+# Author:  Brian May <bam@snoopy.apana.org.au>
+#
+
+#
+# clamscan_domain(domain_prefix)
+#
+# Define a derived domain for the clamscan program when executed
+#
+define(`clamscan_domain', `
+# Derived domain based on the calling user domain and the program.
+type $1_clamscan_t, domain, privlog;
+# Transition from the user domain to the derived domain.
+domain_auto_trans($1_t, clamscan_exec_t, $1_clamscan_t)
+# Uses shared librarys
+uses_shlib($1_clamscan_t)
+
+# Access virus signatures
+allow $1_clamscan_t var_lib_t:dir search;
+# /etc/alternatives/oav-virussignatures and /etc/localtime
+allow $1_clamscan_t etc_t:lnk_file read;
+# /var/lib/oav-update and /var/lib/oav-virussignatures
+allow $1_clamscan_t oav_update_var_lib_t:lnk_file read;
+allow $1_clamscan_t oav_update_var_lib_t:dir r_dir_perms;
+allow $1_clamscan_t oav_update_var_lib_t:file r_file_perms;
+
+# Why is this required?
+allow $1_clamscan_t proc_t:dir r_dir_perms;
+allow $1_clamscan_t proc_t:file r_file_perms;
+allow $1_clamscan_t sysctl_kernel_t:dir r_dir_perms;
+allow $1_clamscan_t sysctl_kernel_t:file r_file_perms;
+allow $1_clamscan_t self:unix_stream_socket { connect create read write };
+')
+
+define(`user_clamscan_domain',`
+clamscan_domain($1)
+allow $1_clamscan_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_clamscan_t $1_devpts_t:chr_file rw_file_perms;
+allow $1_clamscan_t $1_home_t:dir r_dir_perms;
+allow $1_clamscan_t $1_home_t:file r_file_perms;
+ifdef(`gnome-pty-helper.te', `allow $1_clamscan_t $1_gph_t:fd use;')
+')

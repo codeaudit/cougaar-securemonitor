@@ -1,0 +1,38 @@
+#DESC SNMPD - Simple Network Management Protocol daemon
+#
+# Author:  Russell Coker <russell@coker.com.au>
+#
+
+#################################
+#
+# Rules for the snmpd_t domain.
+#
+daemon_domain(snmpd)
+
+#temp
+allow snmpd_t var_t:dir getattr;
+
+can_network(snmpd_t)
+
+type snmp_port_t, port_type;
+allow snmpd_t snmp_port_t:{ udp_socket tcp_socket } name_bind;
+
+type etc_snmpd_t, file_type, sysadmfile;
+allow snmpd_t etc_snmpd_t:file { getattr read };
+
+type var_lib_snmpd_t, file_type, sysadmfile;
+file_type_auto_trans(snmpd_t, { var_lib_t usr_t }, var_lib_snmpd_t)
+
+can_udp_send(sysadm_t, snmpd_t)
+can_udp_send(snmpd_t, sysadm_t)
+
+allow snmpd_t self:unix_dgram_socket create_socket_perms;
+allow snmpd_t self:unix_stream_socket create_socket_perms;
+allow snmpd_t etc_t:lnk_file read;
+allow snmpd_t { etc_t etc_runtime_t resolv_conf_t }:file { getattr read };
+allow snmpd_t random_device_t:chr_file read;
+allow snmpd_t self:capability net_bind_service;
+
+allow snmpd_t proc_t:dir search;
+allow snmpd_t proc_t:file r_file_perms;
+allow snmpd_t self:file { getattr read };

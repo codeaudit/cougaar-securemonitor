@@ -1,0 +1,4 @@
+# xauth
+/usr/X11R6/bin/xauth		system_u:object_r:xauth_exec_t
+/home/[^/]+/\.Xauthority.*	system_u:object_r:user_home_xauth_t
+/root/\.Xauthority.*		system_u:object_r:sysadm_home_xauth_t

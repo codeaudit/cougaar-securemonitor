@@ -1,0 +1,78 @@
+#
+# Macros for crontab domains.
+#
+
+#
+# Authors:  Jonathan Crowley (MITRE) <jonathan@mitre.org>
+# Revised by Stephen Smalley <sds@epoch.ncsc.mil>
+#
+
+#
+# crontab_domain(domain_prefix)
+#
+# Define a derived domain for the crontab program when executed by
+# a user domain.  
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/crontab.te. 
+#
+undefine(`crontab_domain')
+define(`crontab_domain',`
+# Derived domain based on the calling user domain and the program.
+type $1_crontab_t, domain, privlog;
+
+# Transition from the user domain to the derived domain.
+domain_auto_trans($1_t, crontab_exec_t, $1_crontab_t)
+
+# The user role is authorized for this domain.
+role $1_r types $1_crontab_t;
+
+# This domain is granted permissions common to most domains (including can_net)
+every_domain($1_crontab_t)
+
+# Use capabilities
+allow $1_crontab_t $1_crontab_t:capability { setuid setgid chown };
+
+# Type for temporary files.
+file_type_auto_trans($1_crontab_t, tmp_t, $1_tmp_t)
+
+# Type of user crontabs once moved to cron spool.
+type $1_cron_spool_t, file_type, sysadmfile;
+# Use the type when creating files in /var/spool/cron.
+allow sysadm_crontab_t $1_cron_spool_t:file { getattr read };
+file_type_auto_trans($1_crontab_t, cron_spool_t, $1_cron_spool_t)
+ifdef(`fcron.te', `
+allow crond_t $1_cron_spool_t:file create_file_perms;
+# fcron wants an instant update of a crontab change for the administrator
+ifelse(`$1', `sysadm', `
+allow $1_crontab_t crond_t:process signal;
+', `
+dontaudit $1_crontab_t crond_t:process signal;
+')dnl end ifelse
+')dnl end ifdef fcron
+
+# crontab signals crond by updating the mtime on the spooldir
+allow $1_crontab_t cron_spool_t:dir setattr;
+# Allow crond to read those crontabs in cron spool.
+allow crond_t $1_cron_spool_t:file r_file_perms;
+
+# Run helper programs as $1_t
+domain_auto_trans($1_crontab_t, { bin_t sbin_t exec_type }, $1_t)
+
+# Read user crontabs 
+allow $1_crontab_t { $1_home_t $1_home_dir_t }:dir r_dir_perms;  
+allow $1_crontab_t $1_home_t:file r_file_perms;  
+dontaudit $1_crontab_t $1_home_dir_t:dir write;
+
+# Access the cron log file.
+allow $1_crontab_t cron_log_t:file r_file_perms;
+allow $1_crontab_t cron_log_t:file { append };
+
+# Access terminals.
+allow $1_crontab_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_crontab_t $1_devpts_t:chr_file rw_file_perms;
+
+# Inherit and use descriptors from gnome-pty-helper.
+ifdef(`gnome-pty-helper.te', `allow $1_crontab_t $1_gph_t:fd use;')
+
+')

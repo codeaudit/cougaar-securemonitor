@@ -1,0 +1,34 @@
+#DESC Ipchains - IP packet filter administration
+#
+# Authors:  Justin Smith <jsmith@mcs.drexel.edu>
+#
+
+#
+# Rules for the ipchains_t domain.
+#
+type ipchains_t, domain, privlog;
+role system_r types ipchains_t;
+role sysadm_r types ipchains_t;
+every_domain(ipchains_t)
+type ipchains_exec_t, file_type, sysadmfile, exec_type;
+domain_auto_trans(initrc_t, ipchains_exec_t, ipchains_t)
+domain_auto_trans(sysadm_t, ipchains_exec_t, ipchains_t)
+
+type ipchains_var_run_t, file_type, sysadmfile, pidfile;
+
+domain_auto_trans(ipchains_t, insmod_exec_t, insmod_t)
+
+domain_auto_trans(ipchains_t, ifconfig_exec_t, ifconfig_t)
+file_type_auto_trans(ipchains_t, var_run_t, ipchains_var_run_t)
+
+# Inherit and use descriptors from init.
+allow ipchains_t init_t:fd use;
+
+allow ipchains_t bin_t:file { execute execute_no_trans };
+allow ipchains_t ipchains_exec_t:file { execute_no_trans };
+allow ipchains_t ipchains_t:capability { net_admin net_raw };
+allow ipchains_t ipchains_t:rawip_socket create_socket_perms;
+
+# Access terminals.
+allow ipchains_t admin_tty_type:chr_file rw_file_perms;
+ifdef(`gnome-pty-helper.te', `allow ipchains_t sysadm_gph_t:fd use;')

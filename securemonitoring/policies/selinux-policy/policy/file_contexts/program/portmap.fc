@@ -1,0 +1,2 @@
+# portmap
+/sbin/portmap			system_u:object_r:portmap_exec_t

@@ -1,0 +1,91 @@
+#
+# Macros for MTA domains.
+#
+
+#
+# Author:   Russell Coker <russell@coker.com.au>
+# Based on the work of: Stephen Smalley <sds@epoch.ncsc.mil>
+#                       Timothy Fraser 
+#
+
+#
+# mail_domain(domain_prefix)
+#
+# Define a derived domain for the sendmail program when executed by
+# a user domain to send outgoing mail.  These domains are separate and
+# independent of the domain used for the sendmail daemon process.
+#
+# The type declaration for the executable type for this program is
+# provided separately in domains/program/mta.te. 
+#
+undefine(`mail_domain')
+define(`mail_domain',`
+# Derived domain based on the calling user domain and the program.
+type $1_mail_t, domain, privlog, user_mail_domain;
+
+ifelse(`$1', `system', `
+# Transition from a system domain to the derived domain.
+domain_auto_trans_read(privmail, sendmail_exec_t, system_mail_t)
+', `
+# Transition from the user domain to the derived domain.
+domain_auto_trans($1_t, sendmail_exec_t, $1_mail_t)
+')
+can_exec($1_mail_t, sendmail_exec_t)
+
+# The user role is authorized for this domain.
+role $1_r types $1_mail_t;
+
+# This domain is granted permissions common to most domains (including can_net)
+every_domain($1_mail_t)
+
+# Use capabilities
+allow $1_mail_t self:capability { setuid setgid chown };
+
+# Execute procmail.
+can_exec($1_mail_t, bin_t)
+ifdef(`procmail.te',`
+can_exec($1_mail_t, procmail_exec_t)')
+
+ifelse(`$1', `system', `
+# Read cron temporary files.
+allow system_mail_t system_crond_tmp_t:file { read getattr };
+allow mta_user_agent system_crond_tmp_t:file { read getattr };
+allow system_mail_t initrc_devpts_t:chr_file { read write getattr };
+
+', `
+# Read user temporary files.
+allow $1_mail_t $1_tmp_t:file { read getattr };
+dontaudit $1_mail_t $1_tmp_t:file append;
+ifdef(`postfix.te', `
+# postfix seems to need write access if the file handle is opened read/write
+allow $1_mail_t $1_tmp_t:file write;
+')
+allow mta_user_agent $1_tmp_t:file { read getattr };
+
+allow mta_user_agent { $1_devpts_t $1_tty_device_t }:chr_file { getattr read write };
+
+# Write to the user domain tty.
+allow $1_mail_t $1_tty_device_t:chr_file rw_file_perms;
+allow $1_mail_t $1_devpts_t:chr_file rw_file_perms;
+
+# Inherit and use descriptors from gnome-pty-helper.
+ifdef(`gnome-pty-helper.te', `allow $1_mail_t $1_gph_t:fd use;')
+
+# Create dead.letter in user home directories.
+file_type_auto_trans($1_mail_t, $1_home_dir_t, $1_home_t)
+
+# if you do not want to allow dead.letter then use the following instead
+#allow $1_mail_t { $1_home_dir_t $1_home_t }:dir r_dir_perms;
+#allow $1_mail_t $1_home_t:file r_file_perms;
+
+# for reading .forward - maybe we need a new type for it?
+# also for delivering mail to maildir
+file_type_auto_trans(mta_delivery_agent, $1_home_dir_t, $1_home_t)
+')
+
+ifdef(`qmail.te', `
+allow $1_mail_t etc_qmail_t:dir search;
+allow $1_mail_t etc_qmail_t:{ file lnk_file } read;
+')
+
+')

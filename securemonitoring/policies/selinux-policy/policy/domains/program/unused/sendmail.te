@@ -1,0 +1,72 @@
+#DESC Sendmail - Mail server
+#
+# Authors:  Stephen Smalley <sds@epoch.ncsc.mil> and Timothy Fraser  
+#
+
+#################################
+#
+# Rules for the sendmail_t domain.
+#
+# sendmail_t is the domain for the sendmail 
+# daemon started by the init rc scripts.
+#
+# depends on mta.te
+#
+type sendmail_t, domain, privlog, mta_delivery_agent;
+role system_r types sendmail_t;
+every_domain(sendmail_t)
+
+type sendmail_tmp_t, file_type, sysadmfile, tmpfile;
+file_type_auto_trans(sendmail_t, tmp_t, sendmail_tmp_t)
+type sendmail_var_log_t, file_type, sysadmfile, logfile;
+file_type_auto_trans(sendmail_t, var_log_t, sendmail_var_log_t)
+type sendmail_var_run_t, file_type, sysadmfile, pidfile;
+file_type_auto_trans(sendmail_t, var_run_t, sendmail_var_run_t)
+
+# Use capabilities
+allow sendmail_t sendmail_t:capability { setuid setgid net_bind_service sys_nice chown };
+
+# Inherit and use descriptors from init.
+allow sendmail_t init_t:fd use;
+
+# Use the network.
+can_network(sendmail_t)
+
+# Bind to the SMTP port.
+allow sendmail_t smtp_port_t:tcp_socket name_bind;
+
+# Write to /etc/aliases and /etc/mail.
+allow sendmail_t etc_aliases_t:file { setattr rw_file_perms };
+allow sendmail_t etc_mail_t:dir rw_dir_perms;
+allow sendmail_t etc_mail_t:file create_file_perms;
+
+# Write to /var/spool/mail and /var/spool/mqueue.
+allow sendmail_t mail_spool_t:dir rw_dir_perms;
+allow sendmail_t mail_spool_t:file create_file_perms;
+allow sendmail_t mqueue_spool_t:dir rw_dir_perms;
+allow sendmail_t mqueue_spool_t:file create_file_perms;
+
+# /usr/sbin/sendmail asks for w access to utmp, but it will operate
+# correctly without it.  Do not audit write denials to utmp.
+dontaudit sendmail_t initrc_var_run_t:file { read write };
+
+# When sendmail runs as user_mail_domain, it needs some extra permissions.
+allow user_mail_domain etc_mail_t:file rw_file_perms;
+
+# Silently deny attempts to access /root.
+dontaudit sendmail_t sysadm_home_dir_t:dir { getattr search };
+dontaudit system_mail_t sysadm_home_dir_t:dir { getattr search };
+
+# Run procmail in its own domain, if defined.
+ifdef(`procmail.te',`
+domain_auto_trans(sendmail_t, procmail_exec_t, procmail_t)
+domain_auto_trans(system_mail_t, procmail_exec_t, procmail_t)
+')
+
+# sendmail -q 
+allow system_mail_t mqueue_spool_t:dir rw_dir_perms;
+allow system_mail_t mqueue_spool_t:file create_file_perms;
+
+# Inherit and use pipes created by rc scripts.
+allow system_mail_t initrc_t:fd use;
+allow system_mail_t initrc_t:fifo_file { getattr read write };
