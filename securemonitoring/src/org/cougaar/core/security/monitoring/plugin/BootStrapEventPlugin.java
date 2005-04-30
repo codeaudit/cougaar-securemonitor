@@ -129,6 +129,10 @@ public class BootStrapEventPlugin extends SensorPlugin implements Observer {
     //System.out.println(" In register method:");
     SecurityManager sm = System.getSecurityManager();
     //System.out.println(" Class is :"+sm.getClass().getName());
+    if (sm == null) { 
+      // No security manager has been installed.
+      return;
+    }
     Method method = null;
     try {
       method = sm.getClass().getMethod("getMREventQueue",null);
